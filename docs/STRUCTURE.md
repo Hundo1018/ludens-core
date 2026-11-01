@@ -49,7 +49,7 @@ counted, not listed.
 - struct `SpanStat` — 0 methods
 - struct `TraceBuffer` — 10 methods
 
-## geometry (layer 1) — 44 modules, 275 public declarations
+## geometry (layer 1) — 45 modules, 280 public declarations
 
 ### `geometry/aabb.mojo`
 - struct `AABB` — 9 methods
@@ -364,6 +364,13 @@ counted, not listed.
 - `def embed(m: TetMesh, p: SIMD[.float32, 4]) -> Embedding`
 - `def place(m: TetMesh, nodes: List[SIMD[.float32, 4]], e: Embedding) -> Vec3`
 - `def tetrahedralize(verts: List[Float64], indices: List[Int], res: Int) -> TetMesh`
+
+### `geometry/trig.mojo`
+- `def cos[dtype: DType, width: SIMDLength, //](x: SIMD[dtype, width]) -> SIMD[dtype, width] where dtype.is_floating_point()`
+- `def cosf(x: Float32) -> Float32`
+- `def sin[dtype: DType, width: SIMDLength, //](x: SIMD[dtype, width]) -> SIMD[dtype, width] where dtype.is_floating_point()`
+- `def sincos[dtype: DType, width: SIMDLength, //](x: SIMD[dtype, width]) -> Tuple[SIMD[dtype, width], SIMD[dtype, width]] where dtype.is_floating_point()`
+- `def sinf(x: Float32) -> Float32`
 
 ### `geometry/vdb_file.mojo`
 - struct `VdbGrid` — 0 methods
@@ -980,7 +987,10 @@ counted, not listed.
 - `def portal(vol: VolumeNav, a: Int, b: Int) -> Vec3`
 - `def smooth_volume(vol: VolumeNav, path: NavPath) -> NavPath`
 
-## scheduler (layer 3) — 14 modules, 62 public declarations
+## scheduler (layer 3) — 15 modules, 63 public declarations
+
+### `scheduler/build_opts.mojo`
+- aliases: `SERIAL_ONLY`
 
 ### `scheduler/dispatch.mojo`
 - trait `Task` — 0 methods
@@ -1358,7 +1368,7 @@ counted, not listed.
 - `def apic_step(mut w: FlipWater2, mut st: ApicState, dt: Float32)`
 
 ### `physics/flip_diffuse.mojo`
-- struct `DiffuseParticles` — 3 methods
+- struct `DiffuseParticles` — 4 methods
 - aliases: `BUBBLE`, `FOAM`, `SPRAY`
 
 ### `physics/floating.mojo`
@@ -2043,7 +2053,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 3 modules, 85 public declarations
+## embed (layer 6) — 3 modules, 100 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2051,10 +2061,12 @@ counted, not listed.
 - `def ld_body_add_sphere(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, mass: Float32, is_static: Int32) -> Int64`
 - `def ld_body_alive(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
 - `def ld_body_apply_impulse(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, jx: Float32, jy: Float32, jz: Float32) -> Int32`
+- `def ld_body_get_material(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, dst: Optional[Pointer[UInt32, MutAnyOrigin]]) -> Int32`
 - `def ld_body_get_state(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, out13: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
 - `def ld_body_get_user(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, dst: Optional[Pointer[UInt64, MutAnyOrigin]]) -> Int32`
 - `def ld_body_remove(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
 - `def ld_body_set_layer(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, category: UInt32, mask: UInt32) -> Int32`
+- `def ld_body_set_material(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, material: UInt32) -> Int32`
 - `def ld_body_set_user(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, user: UInt64) -> Int32`
 - `def ld_body_set_velocity(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, vx: Float32, vy: Float32, vz: Float32, wx: Float32, wy: Float32, wz: Float32) -> Int32`
 - `def ld_body_teleport(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, px: Float32, py: Float32, pz: Float32, qx: Float32, qy: Float32, qz: Float32, qw: Float32) -> Int32`
@@ -2065,9 +2077,12 @@ counted, not listed.
 - `def ld_nav_find_path(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], sx: Float32, sy: Float32, sz: Float32, gx: Float32, gy: Float32, gz: Float32, out_xyz: Optional[Pointer[Float32, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_nav_last_error(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_nav_poly_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_add_fracture_box(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, hx: Float32, hy: Float32, hz: Float32, pieces: Int32, seed: Int32, stress: Float32, density: Float32, first: Optional[Pointer[Int64, MutAnyOrigin]]) -> Int64`
 - `def ld_world_add_system(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], phase: Int32, f: def(Optional[Pointer[NoneType, MutUntrackedOrigin]], Float64, Int64, Optional[Pointer[NoneType, MutUntrackedOrigin]]) abi("C") thin -> Int32, user: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_add_water(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], nx: Int32, ny: Int32, cell: Float32, x0: Float32, y0: Float32, x1: Float32, y1: Float32, seed: Int32) -> Int64`
 - `def ld_world_bind_thread(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], on: Int32) -> Int32`
 - `def ld_world_body_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_bubble_event_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_capture_begin(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], key_every: Int32) -> Int32`
 - `def ld_world_capture_end(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int32`
 - `def ld_world_capture_read(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
@@ -2075,10 +2090,17 @@ counted, not listed.
 - `def ld_world_create(dt: Float64, gx: Float32, gy: Float32, gz: Float32, out_world: Optional[Pointer[Pointer[NoneType, MutUntrackedOrigin], MutAnyOrigin]]) -> Int32`
 - `def ld_world_destroy(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int32`
 - `def ld_world_event_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_export_frame(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_find_user(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], user: UInt64) -> Int64`
+- `def ld_world_fracture_event_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_frame_size(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_get_bodies(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], handles: Optional[Pointer[Int64, MutAnyOrigin]], poses7: Optional[Pointer[Float32, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_get_bubble_events(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_get_counters(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], values: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_get_events(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_get_events_ex(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_get_fracture_events(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_get_fragments(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_hash(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[UInt64, MutAnyOrigin]]) -> Int32`
 - `def ld_world_last_error(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_load(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], data: Optional[Pointer[UInt8, MutAnyOrigin]], n: Int64) -> Int32`
@@ -2096,14 +2118,16 @@ counted, not listed.
 - `def ld_world_subscribe_contacts(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], kind_mask: Int32, f: def(Optional[Pointer[NoneType, MutUntrackedOrigin]], Pointer[Int64, MutAnyOrigin], Optional[Pointer[NoneType, MutUntrackedOrigin]]) abi("C") thin -> Int32, user: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_tick(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_unsubscribe(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], id: Int64) -> Int32`
-- aliases: `ContactFn`, `F32Ptr`, `Handle`, `HandlePtr`, `I32Ptr`, `I64Ptr`, `NPtr`, `SystemFn`, `U64Ptr`, `U8Ptr`, `WPtr`
+- aliases: `ContactFn`, `F32Ptr`, `Handle`, `HandlePtr`, `I32Ptr`, `I64Ptr`, `LD_EVENT_FLAG_PERSISTENT`, `NPtr`, `SystemFn`, `U64Ptr`, `U8Ptr`, `WPtr`
 
 ### `embed/navigation.mojo`
 - struct `EmbedNav` — 2 methods
 
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
-- struct `EmbedWorld` — 26 methods
+- struct `BubbleRec` — 0 methods
+- struct `EmbedWorld` — 31 methods
+- struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods
 - `def fnv1a(data: List[UInt8]) -> UInt64`
