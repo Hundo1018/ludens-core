@@ -32,6 +32,7 @@ construction, which is what makes them eligible.
 """
 
 from max.algorithm import parallelize
+from .build_opts import SERIAL_ONLY
 from std.atomic import Atomic
 
 comptime _PAD = 8  # Int64s per 64-byte cache line (see bench_falseshare)
@@ -90,4 +91,8 @@ def ws_parallel_for[
             if not stole:
                 break
 
-    parallelize(worker, w, w)
+    comptime if SERIAL_ONLY:
+        for t in range(w):
+            worker(t)
+    else:
+        parallelize(worker, w, w)

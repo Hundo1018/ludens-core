@@ -28,9 +28,17 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFINE = re.compile(r"^define [^@]*@\"?([\w.$]+)\"?\(")
-DECLARE = re.compile(r"^declare [^@]*@\"?([\w.$]+)\"?\(")
-CALLEE = re.compile(r"@\"?([\w.$]+)\"?\(")
+# Mojo mangles names into quoted LLVM identifiers (`@"pkg::mod::f[...](...)"`), so a
+# symbol is either a quoted run or a bare word. References count whether or not a call
+# follows: a function address passed as an argument (dispatch trampolines) is reachable too.
+SYM = r'@(?:"([^"]+)"|([\w.$]+))'
+DEFINE = re.compile(r"^define [^@]*" + SYM + r"\(")
+DECLARE = re.compile(r"^declare [^@]*" + SYM + r"\(")
+CALLEE = re.compile(SYM)
+
+
+def _name(m: "re.Match[str]") -> str:
+    return m.group(1) or m.group(2)
 
 
 def parse(ir: str) -> tuple[dict[str, set[str]], set[str]]:
@@ -41,19 +49,19 @@ def parse(ir: str) -> tuple[dict[str, set[str]], set[str]]:
     for line in ir.splitlines():
         m = DEFINE.match(line)
         if m:
-            cur = m.group(1)
+            cur = _name(m)
             bodies[cur] = set()
             continue
         m = DECLARE.match(line)
         if m:
-            declared.add(m.group(1))
+            declared.add(_name(m))
             continue
         if cur is not None:
             if line.startswith("}"):
                 cur = None
                 continue
-            for c in CALLEE.findall(line):
-                bodies[cur].add(c)
+            for m in CALLEE.finditer(line):
+                bodies[cur].add(_name(m))
     return bodies, declared
 
 
@@ -135,6 +143,38 @@ def run(files: list[Path]) -> int:
     return worst
 
 
+# 17.89 W1: what the whole C-ABI may import in the wasm build. Engine-owned: allocator, write,
+# clock. Std-owned (cannot be removed from engine code; ludens-wasm-rt stubs them): the abort
+# report (`dup fdopen fclose fflush`) and Error's stack-trace probe.
+CAPI_ALLOWED = frozenset({"KGEN_CompilerRT_AlignedAlloc", "KGEN_CompilerRT_AlignedFree", "write",
+                          "clock_gettime"})
+CAPI_STD_STUBS = frozenset({"dup", "fdopen", "fclose", "fflush", "KGEN_CompilerRT_GetStackTrace"})
+
+
+def capi_unexpected(ir: str) -> list[str]:
+    """Imports reachable from any `ld_*` export outside CAPI_ALLOWED | CAPI_STD_STUBS."""
+    bodies, _ = parse(ir)
+    got: set[str] = set()
+    for r in (n for n in bodies if n.startswith("ld_")):
+        got |= set(imports(ir, r))
+    return sorted(got - CAPI_ALLOWED - CAPI_STD_STUBS)
+
+
+def capi() -> int:
+    """Emit embed/capi.mojo as the wasm build does and report unexpected imports."""
+    with tempfile.TemporaryDirectory(prefix="wasm_capi_") as d:
+        ll = Path(d) / "capi.ll"
+        r = subprocess.run(["mojo", "build", "--emit", "llvm", "-D", "LUDENS_SERIAL=True", "-D", "ASSERT=none",
+                            "-I", "build", "-o", str(ll), "embed/capi.mojo"],
+                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        if r.returncode != 0:
+            print(f"wasm-probe --capi: emit failed\n{r.stderr[-1500:]}")
+            return 1
+        bad = capi_unexpected(ll.read_text(encoding="utf-8"))
+    print(f"wasm-probe --capi: {'OK' if not bad else 'UNEXPECTED IMPORTS ' + ', '.join(bad)}")
+    return 1 if bad else 0
+
+
 def selftest() -> int:
     ir = """declare void @ext_io(i32)
 declare float @llvm.fma.f32(float, float, float)
@@ -146,6 +186,21 @@ define float @helper(float %a) {
   %1 = call float @llvm.fma.f32(float %a, float %a, float %a)
   ret float %1
 }
+define float @"pkg::k3[T](x)"(float %a) {
+  %1 = call float @"pkg::inner[T](x)"(float %a)
+  ret float %1
+}
+define float @"pkg::inner[T](x)"(float %a) {
+  %1 = call i64 @"ext_quoted"(float %a)
+  store ptr @"pkg::fnptr", ptr %p
+  ret float %a
+}
+declare i64 @"ext_quoted"(float)
+define void @"pkg::fnptr"() {
+  call void @ext_via_ptr()
+  ret void
+}
+declare void @ext_via_ptr()
 define i32 @main() {
   call void @ext_io(i32 1)
   ret i32 0
@@ -159,6 +214,11 @@ define float @k2(float %a) {
         ("transitive callee, intrinsic ignored -> leaf", imports(ir, "k") == [], imports(ir, "k")),
         ("main's runtime import not charged to the kernel", "ext_io" not in imports(ir, "k"), imports(ir, "k")),
         ("direct external call counted", imports(ir, "k2") == ["ext_io"], imports(ir, "k2")),
+        ("quoted mangled names + address-taken callee followed",
+         imports(ir, "pkg::k3[T](x)") == ["ext_quoted", "ext_via_ptr"], imports(ir, "pkg::k3[T](x)")),
+        ("capi gate flags an unlisted import, accepts stubs",
+         capi_unexpected('define i32 @ld_a() {\n call void @pthread_self()\n call void @dup()\n ret i32 0\n}\n'
+                         'declare void @pthread_self()\ndeclare void @dup()\n') == ["pthread_self"], None),
         ("@export names found", exported("@export\ndef a(x: Int) abi(\"C\") -> Int:\n    return x\n") == ["a"], None),
     ]
     with tempfile.TemporaryDirectory(prefix="wasm_split_") as d:
@@ -187,9 +247,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("files", nargs="*")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--capi", action="store_true", help="gate the C-ABI's import set (17.89 W1)")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
+    if a.capi:
+        return capi()
     files = [ROOT / f for f in a.files] or sorted((ROOT / "tools/wasm").glob("kernel_*.mojo"))
     return run(files)
 

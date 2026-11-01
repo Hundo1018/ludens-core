@@ -26,6 +26,7 @@ Rules every function follows (the v0.x contract, docs/design/12.1-embedding.md):
 
 from std.memory import alloc, Layout
 from std.ffi import external_call
+from scheduler.build_opts import SERIAL_ONLY
 from geometry.vec import Real, Vec3
 from geometry.quat import Quat
 from nav.heightfield import NavBakeConfig
@@ -120,7 +121,10 @@ comptime NPtr = type_of(alloc[_CNav](Layout[_CNav](count=1)).unsafe_leak())
 
 
 def _thread() -> UInt:
-    return external_call["pthread_self", UInt]()
+    comptime if SERIAL_ONLY:
+        return 1  # the wasm build is single-threaded (17.89 W1)
+    else:
+        return external_call["pthread_self", UInt]()
 
 
 def _world_any(h: Optional[Handle]) -> Optional[WPtr]:

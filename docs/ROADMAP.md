@@ -859,6 +859,7 @@
 > - **逐 body 旗標與啟用策略**:單步位移超過自身最薄特徵 × 係數才進 CCD;子彈旗標;與已有的過濾 / sensor 規則一致。
 > - **配對枚舉**:O(n²) 改走既有 `BroadPhase`(以掃掠 AABB;不新增 broadphase 種類)。(例:1e4 個子彈體的 CCD 配對不再是 5e7 對)
 > - **與 island 平行 / colored 相容**(每 island 局部 frac),不再退回串行;軟體粒子(點)對 hull / mesh 的射線掃。
+> **W1 進度(2026-11-02,#73)**:`-D LUDENS_SERIAL=True`(`scheduler/build_opts.mojo`)讓 `dispatch_for` / `policy.Parallel` / `ws_parallel_for` 不進 `parallelize`,`embed/capi.mojo` 的執行緒檢查改常數;`pixi run wasm-probe -- --capi` 以 `-D ASSERT=none` 發出 IR 並稽核 `ld_*` 可達匯入:只剩配置器、`write`、`clock_gettime`,加上 std 自帶的 abort 報告(`dup fdopen fclose fflush`)與 `Error` 的 `GetStackTrace`(引擎碼無法移除,由 ludens-wasm-rt 提供 stub)。同時修正 `wasm_probe.py` 不認帶引號的 Mojo 符號、先前低報匯入的缺陷(新增 selftest)。`fminf` / `fmaxf` 與 GPU 剔除待 ludens-wasm-rt #2。
 > **對照組**:Box2D v3(對靜態的 TOI 與 bullet 旗標)、Bullet(`btConvexSweepTest`、motion clamping)、PhysX(`eENABLE_CCD` / speculative CCD / `eENABLE_CCD_FRICTION`)、Jolt(`EMotionQuality::LinearCast`)、Rapier(`ccd_enabled`);Mirtich 1996 conservative advancement、Redon et al. 2002 螺旋運動連續碰撞、Coumans / Catto 的 GDC 2013 連續碰撞演講。內部對照:現行 speculative(一階)+ 盒 swept-SAT(二階)。
 > **優勢區**:`ScrewBody6` 每步的位姿更新本來就是一個定螺旋 `exp_screw3`(`physics/rigid6.mojo:347-349`),螺旋運動 TOI 的運動模型與積分器一致,對照組多半用線性插值或角度近似。優勢區 = 高速旋轉 × 細長 × 薄牆(線性 CCD 抓不到的角向穿透);對 hull / mesh 的優勢區 = 薄殼(牆厚 < 單步位移)。反面:慢速場景 CCD 純屬成本,慢物體路徑須維持與現況逐位相同(現有保證延續),並量 N=1 控制組。
 > **規模軸**:(單步位移 / 最薄特徵)∈ {0.5, 1, 4, 16, 64} × 形狀組合(盒 / 球 / 膠囊 / hull / mesh)× 物體數 n(O(n²) vs broadphase);角速度 × 長寬比;ccd 開 / 關每步成本。

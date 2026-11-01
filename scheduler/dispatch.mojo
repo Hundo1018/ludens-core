@@ -26,6 +26,7 @@ which stays alive on the caller's stack for the duration of the call.
 from std.memory import alloc, Layout
 from std.sys import num_physical_cores
 from max.algorithm import parallelize
+from .build_opts import SERIAL_ONLY
 from .workstealing import ws_parallel_for
 
 comptime Opaque = type_of(alloc[NoneType](Layout[NoneType](count=1)).unsafe_leak())
@@ -80,6 +81,19 @@ def dispatch_for[T: Task](d: Dispatch, mut task: T, n: Int, workers: Int = 0):
     """Run `task.run(i)` for every i in [0, n) with dispatcher `d`;
     `workers > 0` caps the width of `DISPATCH_PARALLEL`."""
     if n <= 0:
+        return
+    comptime if SERIAL_ONLY:
+        if d.kind == DISPATCH_REVERSE:
+            var i = n - 1
+            while i >= 0:
+                task.run(i)
+                i -= 1
+        elif d.kind == DISPATCH_HOST and d.host:
+            var p = Pointer(to=task)
+            d.host.value()(d.ctx, Int64(n), _task_trampoline[T], p.unsafe_bitcast[NoneType]().unsafe_origin_cast[MutUntrackedOrigin]())
+        else:
+            for i in range(n):
+                task.run(i)
         return
     if d.kind == DISPATCH_SERIAL:
         for i in range(n):

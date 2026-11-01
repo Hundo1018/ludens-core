@@ -15,6 +15,7 @@ produce identical results — the parallel run is reproducible, so it can be par
 """
 
 from max.algorithm import parallelize
+from .build_opts import SERIAL_ONLY
 
 
 trait DispatchPolicy:
@@ -38,4 +39,8 @@ struct Parallel(DispatchPolicy):
 
     @staticmethod
     def run[F: def (Int) -> None](body: F, n: Int):
-        parallelize(body, n)
+        comptime if SERIAL_ONLY:
+            for i in range(n):
+                body(i)
+        else:
+            parallelize(body, n)
