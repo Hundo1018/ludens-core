@@ -59,6 +59,25 @@ static int32_t fail_third(ld_world* w, double dt, int64_t tick, void* user) {
     return ++*(int*)user == 3 ? 7 : 0;
 }
 
+/* ABI 0.6 (17.90): the same events as ld_contact_event_ex records. */
+static int64_t ex_total, ex_impulse, ex_mat7, ex_flag_ok, ex_mismatch, ex_tangent;
+static int check_events_ex(ld_world* w, const ld_contact_event* evs, int64_t n) {
+    ld_contact_event_ex* ex = (ld_contact_event_ex*)malloc(sizeof(ld_contact_event_ex) * (size_t)(n + 1));
+    if (n > 0 && ld_world_get_events_ex(w, ex, n - 1) != LD_ERR_BUFFER) { printf("ex short buffer accepted\n"); return 1; }
+    if (ld_world_get_events_ex(w, ex, n) != n) { printf("get_events_ex mismatch\n"); return 1; }
+    for (int64_t i = 0; i < n; i++) {
+        ex_total++;
+        ex_mismatch += !(ex[i].tick == evs[i].tick && ex[i].a == evs[i].a && ex[i].b == evs[i].b &&
+                         ex[i].kind == evs[i].kind && ex[i].feature == evs[i].feature);
+        ex_impulse += ex[i].normal_impulse > 0.0f;
+        ex_mat7 += ex[i].material_a == 7u || ex[i].material_b == 7u;
+        ex_flag_ok += (ex[i].flags == (uint32_t)LD_EVENT_FLAG_PERSISTENT) == (ex[i].kind == LD_EVENT_STAY);
+        ex_tangent += ex[i].tangent_vel_x != 0.0f || ex[i].tangent_vel_y != 0.0f || ex[i].tangent_vel_z != 0.0f;
+    }
+    free(ex);
+    return 0;
+}
+
 /* Reads the last step's event buffer; checks a short buffer is refused. */
 static int drain_events(ld_world* w, int64_t* total, int64_t* began) {
     int64_t n = ld_world_event_count(w);
@@ -67,6 +86,7 @@ static int drain_events(ld_world* w, int64_t* total, int64_t* began) {
     if (ld_world_get_events(w, evs, n) != n) { printf("get_events mismatch\n"); return 1; }
     for (int64_t i = 0; i < n; i++) *began += evs[i].kind == LD_EVENT_BEGAN;
     *total += n;
+    if (check_events_ex(w, evs, n) != 0) return 1;
     free(evs);
     return 0;
 }
@@ -102,6 +122,7 @@ static ld_world* build(host_state* s) {
     for (int i = 0; i < 3; i++)
         ld_body_add_sphere(w, -2.0f + 2.0f * (float)i, 1.0f + 0.5f * (float)i, -2.0f, 0.3f, 0.5f, 0);
     s->player = ld_body_add_box(w, 0.0f, 0.4f, 0.0f, 0.4f, 0.4f, 0.4f, 2.0f, 0);
+    ld_body_set_material(w, s->player, 7u);
     ld_world_add_system(w, LD_PHASE_PRE, drive_player, s);
     ld_world_add_system(w, LD_PHASE_POST, count_post, s);
     ld_world_subscribe_contacts(w, (1 << LD_EVENT_BEGAN) | (1 << LD_EVENT_ENDED), on_contact, s);
@@ -126,6 +147,8 @@ int main(void) {
     uint64_t h = 0;
     ld_world_hash(w, &h);
     printf("ran %d\n", ran);
+    printf("evex %lld %lld %lld %lld %lld %lld %zu\n", (long long)ex_total, (long long)ex_mismatch, (long long)ex_impulse,
+           (long long)ex_mat7, (long long)ex_flag_ok, (long long)ex_tangent, sizeof(ld_contact_event_ex));
     printf("tick %lld\n", (long long)ld_world_tick(w));
     printf("hash %016llx\n", (unsigned long long)h);
     printf("pre %lld post %lld\n", (long long)s.pre_calls, (long long)s.post_calls);

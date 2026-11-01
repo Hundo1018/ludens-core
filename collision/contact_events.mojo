@@ -39,6 +39,7 @@ struct ContactEvent(Copyable, ImplicitlyCopyable, Movable):
     var normal: Vec3  # from a to b
     var approach: Real  # normal approach speed at contact prep (m/s, >= 0)
     var peak: Real  # largest per-step `impulse` since the contact began
+    var tvel: Vec3  # relative velocity of b against a at `point`, normal part removed (m/s; 17.90)
 
     def __init__(out self, a: Int, b: Int, feat: Int, kind: Int):
         """A key-only event; the payload starts at zero."""
@@ -52,6 +53,7 @@ struct ContactEvent(Copyable, ImplicitlyCopyable, Movable):
         self.normal = Vec3(0, 0, 0, 0)
         self.approach = 0
         self.peak = 0
+        self.tvel = Vec3(0, 0, 0, 0)
 
 
 def pack_key(a: Int, b: Int, feat: Int) -> Int:

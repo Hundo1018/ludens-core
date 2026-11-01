@@ -16,11 +16,36 @@ namespace Ludens
         public long kind;
         public long feature;
     }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ld_contact_event_ex
+    {
+        public long tick;
+        public long a;
+        public long b;
+        public long kind;
+        public long feature;
+        public float normal_impulse;
+        public float force;
+        public float approach;
+        public float peak;
+        public float point_x;
+        public float point_y;
+        public float point_z;
+        public float normal_x;
+        public float normal_y;
+        public float normal_z;
+        public float tangent_vel_x;
+        public float tangent_vel_y;
+        public float tangent_vel_z;
+        public uint material_a;
+        public uint material_b;
+        public uint flags;
+    }
     public static unsafe class Native
     {
         public const string Lib = "ludens";
         public const uint LD_ABI_MAJOR = 0;
-        public const uint LD_ABI_MINOR = 4;
+        public const uint LD_ABI_MINOR = 6;
         public const int LD_OK = 0;
         public const int LD_ERR_HANDLE = -1;
         public const int LD_ERR_ARG = -2;
@@ -35,6 +60,7 @@ namespace Ludens
         public const int LD_EVENT_BEGAN = 0;
         public const int LD_EVENT_STAY = 1;
         public const int LD_EVENT_ENDED = 2;
+        public const int LD_EVENT_FLAG_PERSISTENT = 1;
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint ld_abi_version();
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
@@ -135,5 +161,11 @@ namespace Ludens
         public static extern long ld_world_find_user(ld_world* w, ulong user);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int ld_world_set_unit_scale(ld_world* w, float per_meter);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_body_set_material(ld_world* w, long b, uint material);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_body_get_material(ld_world* w, long b, uint* @out);
     }
 }

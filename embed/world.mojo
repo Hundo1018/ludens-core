@@ -34,7 +34,7 @@ from collision.world_query import QueryFilter
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
-comptime ABI_MINOR = 5
+comptime ABI_MINOR = 6
 
 # Status codes (negative = error). Frozen for v0.x: values never change.
 comptime LD_OK = 0
@@ -105,6 +105,16 @@ struct TickEvent(Copyable, ImplicitlyCopyable, Movable):
     var b: Int64
     var kind: Int64
     var feat: Int64
+    # 17.90 payload (`ld_contact_event_ex`); zero for sensors / ENDED events
+    var impulse: Float32
+    var force: Float32
+    var approach: Float32
+    var peak: Float32
+    var point: Vec3
+    var normal: Vec3
+    var tvel: Vec3
+    var mat_a: UInt32
+    var mat_b: UInt32
 
 
 struct EmbedWorld(Movable):
@@ -127,6 +137,8 @@ struct EmbedWorld(Movable):
     # the slot's generation matches `user_gen`
     var user: List[UInt64]
     var user_gen: List[UInt32]
+    var material: List[UInt32]  # 17.90 host material id per body slot (0 = none)
+    var material_gen: List[UInt32]
 
     def __init__(out self, dt: Float64, gravity: Vec3, max_steps: Int = 8) raises:
         if not (dt > 0) or not isfinite(dt):
@@ -153,6 +165,8 @@ struct EmbedWorld(Movable):
         self.error = String()
         self.user = List[UInt64]()
         self.user_gen = List[UInt32]()
+        self.material = List[UInt32]()
+        self.material_gen = List[UInt32]()
 
     # ------------------------------------------------------------ settings
 
@@ -225,6 +239,30 @@ struct EmbedWorld(Movable):
         """Collision layer of a body (host layer -> category bits, and the
         categories it collides with)."""
         self.scene.set_filter(self._id(h).index(), category, mask)
+
+    def set_material(mut self, h: Int64, m: UInt32) raises:
+        """Host material id of a body (17.90; 0 = none), reported on its contact events."""
+        var id = self._id(h)
+        var i = id.index()
+        while len(self.material) <= i:
+            self.material.append(0)
+            self.material_gen.append(0)
+        self.material[i] = m
+        self.material_gen[i] = id.gen
+
+    def get_material(self, h: Int64) raises -> UInt32:
+        var id = self._id(h)
+        return self._material_of(id.index()) if self._material_gen_ok(id) else UInt32(0)
+
+    def _material_gen_ok(self, id: BodyId) -> Bool:
+        var i = id.index()
+        return i < len(self.material) and self.material_gen[i] == id.gen
+
+    def _material_of(self, slot: Int) -> UInt32:
+        """Material of the live body in `slot` (0 if none was set)."""
+        if slot < len(self.material) and self.material_gen[slot] == self.scene.bset.id_of(slot).gen:
+            return self.material[slot]
+        return 0
 
     def set_user(mut self, h: Int64, u: UInt64) raises:
         """Attach a host value (node id, pointer) to a body; 0 clears."""
@@ -359,6 +397,15 @@ struct EmbedWorld(Movable):
                 pack_body(self.scene.bset.id_of(e.b)),
                 Int64(e.kind),
                 Int64(e.feat),
+                Float32(e.impulse),
+                Float32(e.force),
+                Float32(e.approach),
+                Float32(e.peak),
+                e.point,
+                e.normal,
+                e.tvel,
+                self._material_of(e.a),
+                self._material_of(e.b),
             )
             self.tick_events.append(ev)
             self.frame_events.append(ev)

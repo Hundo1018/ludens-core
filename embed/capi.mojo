@@ -649,6 +649,80 @@ def ld_world_get_events(h: Optional[Handle], dst: Optional[I64Ptr], cap: Int64) 
     return Int64(n)
 
 
+# 0.6 (ROADMAP 17.90): the richer contact record. 13 int64 words = 104 bytes:
+# tick, a, b, kind, feature, then 16 four-byte words (floats unless noted):
+#   [0] normal_impulse [1] force [2] approach [3] peak [4..6] point [7..9] normal
+#   [10..12] tangent_vel [13] material_a (u32) [14] material_b (u32) [15] flags (u32)
+comptime _EVENT_EX_WORDS = 13
+comptime _EVENT_EX_TAIL = 10  # first 4-byte word after the five int64 header fields
+comptime LD_EVENT_FLAG_PERSISTENT = 1
+
+
+@export
+def ld_world_get_events_ex(h: Optional[Handle], dst: Optional[I64Ptr], cap: Int64) abi("C") -> Int64:
+    """Like ld_world_get_events, as ld_contact_event_ex records (0.6)."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    var n = len(p[].w.frame_events)
+    if Int(cap) < n or (n > 0 and not dst):
+        return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_get_events_ex: capacity below ld_world_event_count"))
+    for i in range(n):
+        var e = p[].w.frame_events[i]
+        var base = _EVENT_EX_WORDS * i
+        dst.value()[unsafe_offset=base] = e.tick
+        dst.value()[unsafe_offset=base + 1] = e.a
+        dst.value()[unsafe_offset=base + 2] = e.b
+        dst.value()[unsafe_offset=base + 3] = e.kind
+        dst.value()[unsafe_offset=base + 4] = e.feat
+        var f = dst.value().unsafe_bitcast[Float32]()
+        var u = dst.value().unsafe_bitcast[UInt32]()
+        var t = 2 * base + _EVENT_EX_TAIL
+        f[unsafe_offset=t] = e.impulse
+        f[unsafe_offset=t + 1] = e.force
+        f[unsafe_offset=t + 2] = e.approach
+        f[unsafe_offset=t + 3] = e.peak
+        for k in range(3):
+            f[unsafe_offset=t + 4 + k] = Float32(e.point[k])
+            f[unsafe_offset=t + 7 + k] = Float32(e.normal[k])
+            f[unsafe_offset=t + 10 + k] = Float32(e.tvel[k])
+        u[unsafe_offset=t + 13] = e.mat_a
+        u[unsafe_offset=t + 14] = e.mat_b
+        u[unsafe_offset=t + 15] = UInt32(LD_EVENT_FLAG_PERSISTENT) if e.kind == 1 else UInt32(0)
+    return Int64(n)
+
+
+@export
+def ld_body_set_material(h: Optional[Handle], b: Int64, material: UInt32) abi("C") -> Int32:
+    """Host material id (0 = none), reported as material_a / material_b on the
+    body's contact events (0.6). Not saved with the world: set it again after a load."""
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_material(b, material)
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_STALE, String(e)))
+
+
+@export
+def ld_body_get_material(h: Optional[Handle], b: Int64, dst: Optional[Pointer[UInt32, MutAnyOrigin]]) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    if not dst:
+        return Int32(_fail(p, LD_ERR_ARG, "ld_body_get_material: out is null"))
+    try:
+        dst.value()[] = p[].w.get_material(b)
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_STALE, String(e)))
+
+
 # ---------------------------------------------------------- save / restore
 
 

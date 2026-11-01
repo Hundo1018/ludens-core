@@ -4010,6 +4010,7 @@
 > 可選參考 modal 合成器(harness 側,可上 golden)。宿主側 —— 混音 miniaudio(替代:SDL3、Web Audio + AudioWorklet);影片匯出交使用者的 ffmpeg 或瀏覽器 WebCodecs,
 > 預設 AV1 / VP9;渲染以獨立 repo 的 three.js 宿主讀 SoA 姿態與 `diag/draw.mojo` DrawQueue。
 > **待決**:「視訊」指影片媒體、畫面輸出或兩者;核心只出資料或另附參考合成器;宿主層是否另開 repo;瀏覽器優先或原生優先;編解碼器授權容忍度。
+> **核心側進度(2026-11-02,#77 第一段)**:ABI 0.6 追加 `ld_contact_event_ex`(104 B:法向衝量 / 力 / 接近速度 / 峰值 / 接觸點 / 法向 / 切向相對速度 / 材質 a、b / 持續接觸旗標)、`ld_world_get_events_ex`、`ld_body_set_material` / `get_material`(材質不存檔,載入後由宿主重設);`ContactEvent.tvel` 由求解器在事件步末只讀計算。`test_capi` 73/73(C 宿主驗欄位與 `abi_v0.txt` 僅追加)。**未做**:破碎事件、流體氣泡事件(`FractureSet` / `flip_diffuse` 目前不在 `EmbedWorld` 內,需先納入嵌入世界)、回放 / 影格匯出串流。
 
 ---
 

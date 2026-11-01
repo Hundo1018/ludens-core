@@ -70,3 +70,7 @@ int32_t ld_body_set_user(ld_world* w, ld_body b, uint64_t user);
 int32_t ld_body_get_user(ld_world* w, ld_body b, uint64_t* out);
 int64_t ld_world_find_user(ld_world* w, uint64_t user);
 int32_t ld_world_set_unit_scale(ld_world* w, float per_meter);
+typedef struct ld_contact_event_ex {
+int64_t ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* out, int64_t cap);
+int32_t ld_body_set_material(ld_world* w, ld_body b, uint32_t material);
+int32_t ld_body_get_material(ld_world* w, ld_body b, uint32_t* out);

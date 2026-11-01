@@ -1,4 +1,4 @@
-/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.5.
+/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.6.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):
@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #define LD_ABI_MAJOR 0
-#define LD_ABI_MINOR 4
+#define LD_ABI_MINOR 6
 
 #define LD_OK 0
 #define LD_ERR_HANDLE (-1)   /* null or destroyed world / navmesh handle */
@@ -135,6 +135,36 @@ int64_t ld_world_find_user(ld_world* w, uint64_t user);
  * gravity are then all given in host units, and the solver's absolute
  * length tolerances are rescaled to match. A setting, not saved. */
 int32_t ld_world_set_unit_scale(ld_world* w, float per_meter);
+
+/* ---- 0.6 (ROADMAP 17.90): richer contact events. ld_contact_event_ex is 104 bytes:
+ * the five ld_contact_event fields, then impulse and kinematics at the contact. */
+typedef struct ld_contact_event_ex {
+    int64_t tick;
+    ld_body a;
+    ld_body b;
+    int64_t kind;     /* LD_EVENT_* */
+    int64_t feature;
+    float normal_impulse; /* N s this tick, restitution included; 0 for sensors / ENDED */
+    float force;          /* normal_impulse over the time it covers (N) */
+    float approach;       /* normal approach speed at contact prep (m/s) */
+    float peak;           /* largest normal_impulse since the contact began */
+    float point_x; /* contact point carrying most of the impulse */
+    float point_y;
+    float point_z;
+    float normal_x; /* from a to b */
+    float normal_y;
+    float normal_z;
+    float tangent_vel_x; /* velocity of b relative to a at the point, normal part removed (m/s) */
+    float tangent_vel_y;
+    float tangent_vel_z;
+    uint32_t material_a;  /* ld_body_set_material, 0 = none */
+    uint32_t material_b;
+    uint32_t flags;       /* LD_EVENT_FLAG_* */
+} ld_contact_event_ex;
+#define LD_EVENT_FLAG_PERSISTENT 1 /* the contact existed on the previous tick (kind == LD_EVENT_STAY) */
+int64_t ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* out, int64_t cap);
+int32_t ld_body_set_material(ld_world* w, ld_body b, uint32_t material);
+int32_t ld_body_get_material(ld_world* w, ld_body b, uint32_t* out);
 
 #ifdef __cplusplus
 }
