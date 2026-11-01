@@ -121,6 +121,8 @@ def main():
     failed = []
     with tempfile.TemporaryDirectory() as d:
         ref = None
+        family_same = True  # every x86-64 (no FMA) variant is bit-identical to the reference
+        fma_differs = False
         print("| variant | pile | roll | tower |")
         print("|---|---|---|---|")
         for name, flags in VARIANTS:
@@ -139,9 +141,20 @@ def main():
                 if h == rh:
                     cells.append("identical")
                 else:
+                    if flags[:2] == ["--target-cpu", "x86-64"]:
+                        family_same = False
+                    else:
+                        fma_differs = True
                     dr = max(abs(a - b) for a, b in zip(vals, rvals))
                     cells.append("differs, max drift %.2e" % dr)
             print("| %s | %s |" % (name, " | ".join(cells)))
+        print()
+        if family_same:
+            print("verdict: FMA is not a bit factor of the reference build -- every x86-64 variant (-O0 .. -O2) "
+                  "is bit-identical to it; FMA changes bits only in the speed variants%s." % (" (listed above)" if fma_differs else ""))
+        else:
+            print("verdict: an x86-64 variant differs from the reference -- the reference build is NOT optimisation-independent")
+            failed.append("x86-64 family")
         if check and failed:
             sys.exit("fp-probe: over tolerance: " + "; ".join(failed))
 
