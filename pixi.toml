@@ -63,6 +63,8 @@ perf = "python3 scripts/perf.py"
 # Symbol-level test coverage: public engine names some test imports (scripts/symcov.py; ROADMAP 17.82).
 symcov = "python3 scripts/symcov.py"
 # Which exported leaf kernels need no Mojo runtime import (wasm route; scripts/wasm_probe.py; ROADMAP 17.76).
+# The C-ABI as a wasm64 module through ludens-wasm-rt (ROADMAP 17.89 W0; scripts/wasm.sh).
+wasm = { cmd = "bash scripts/wasm.sh", depends-on = ["build"] }
 wasm-probe = { cmd = "python3 scripts/wasm_probe.py", depends-on = ["build"] }
 # Regenerate CHANGELOG.md from Conventional Commit subjects (scripts/changelog.py; ROADMAP 17.81).
 changelog = "python3 scripts/changelog.py"
