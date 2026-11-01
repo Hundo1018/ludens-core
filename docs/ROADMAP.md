@@ -14,6 +14,8 @@
 
 ## 目前位置(2026-10-24)
 
+- **2026-11-01 階段規劃**:未竟事項總表、GPU 層順序(G0–G7,本機有 GPU 可實跑)、wasm 平台(17.89)、音訊 / 視訊選項(17.90 ⏸)
+  見 `docs/design/stage-plan-2026-11.md`。
 - **2026-10-27 階段分流**:🔶 列未做子句的標籤(doable / GPU / UI-editor / env-blocked / stale-done / deferred)
   見 `docs/design/stage-triage-2026-10-27.md`。17.70 / 17.74 / 17.76 / 17.78 / 17.83 / 17.86 已逐列列出;
   17.19 / 17.58 / 17.61 / 17.63 的列已收入同一文件(抽查成立)。doable 項目為階段目標的剩餘工作。
@@ -62,7 +64,7 @@
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 10 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 0 | 0 | 2 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台 | 4 | 2 | 0 | 0 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 3 | 1 | 0 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
 
 ## 原則與決策
@@ -85,6 +87,9 @@
   Python 綁定放在核心 repo 的最上層獨立套件,測試以客戶端方式安裝進乾淨環境(不用 `-I build`)。
 - **網路**:傳輸層與線路格式交給宿主;本庫提供 rollback 核心、預測策略 seam 與 byte payload API(17.16)。
 - **場景格式**跟宿主走(glTF / USD),不自訂(17.12,目前不排)。
+- **wasm 為跨平台交付形態(2026-11-01)**:方向 C 不變;除原生共享庫與 Python wheel 外,以 **wasm64** 模組作為跨平台通用產物
+  (瀏覽器、Node / Deno、WASI、能載入 wasm 的宿主),匯出介面即 12.1 C-ABI。整套 C-ABI 已實測可編成 wasm64 並與原生無 FMA 建置
+  逐位相同;浮點政策(wasm 自有 golden 或擴大決定論承諾)待決。見 17.89、`docs/design/17.89-wasm-platform.md`。
 - **決定論**只承諾同工具鏈、同架構;不做跨平台定點 / 軟浮點。
 
 ## 邊界與排除
@@ -207,6 +212,10 @@
 42. 17.73 營運邊界
 
 **第 7 層 GPU(延後)**
+> **2026-11-01 更新**:GPU 項目改為開始規劃。開發主機有 NVIDIA RTX 3060 Laptop(`has_accelerator()` 為 True,Mojo 1.2.0),
+> 下方「無加速器」的延後理由對本機不成立。順序 G0–G7 與盤點發現(含 `382c1c2` 起 `max_mass_ratio` 預設 10 使
+> `GpuContactSolver` raise 的回歸,2026-11-01 已在本機以 `test_gpu_contact` 實跑確認)見 `docs/design/stage-plan-2026-11.md` §2。
+
 > **分流(2026-10-27,第 7 層與 UI 收束)**:本節為 GPU 與 UI 延後項目的單一位置。狀態與延後理由:
 > - **GPU(第 7 層,延後)**:無加速器的主機無法執行裝置半段;裝置程式碼只以 `pixi run gpu-compile`(`--target-accelerator sm_86`)檢查可編譯。
 >   延後理由:需要 NVIDIA 裝置實跑;`has_accelerator` 在本環境為假,相關測試與 bench 自動跳過。條目 43–46 與 17.62 為此類。
@@ -3605,6 +3614,8 @@
 | 17.75 | [嵌入契約](#1775-嵌入契約--wave-b平台方向-c-前提與-121-同期) | ✅ | B | 宿主 job system 注入、宿主配置器(分兩層)、非同步步進、單位與座標契約成文 + `UnitScale`、錯誤與執行緒契約 |
 | 17.76 | [平台可攜](#1776-平台可攜--wave-b平台方向-c-前提) | 🔶 | B | 目標矩陣 + 實測、每目標一份 golden + 跨目標容差表、浮點位元因子清單、降級矩陣、wasm 核心切分的機器檢查 |
 | 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 🔶 | C | per-host 適配層、批量 SoA 交換、POD 事件緩衝、宿主定義元件、綁定產生、多實例與執行緒 |
+| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 🔶 | B | 整套 C-ABI 編成 wasm64(外接 LLVM 23 + shim)、與原生無 FMA 建置逐位相同;`pixi run wasm`、序列派發建置、CI 閘門、JS / TS 與 WASI 封裝 |
+| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | ⬜ | C | 核心出資料(接觸 / 破碎 / 氣泡的音訊事件、影格匯出);瀏覽器優先、出聲、渲染與影片匯出皆要,放獨立 repo;綁定目標(wgpu-mojo / miniaudio-mojo)實測中 |
 
 ### 待辦與部分完成條目
 
@@ -3966,6 +3977,38 @@
 > **相依**:12.1(邊界凍結,前提)、17.21(Python 先行)、17.75(派發 / 單位契約)、17.76(各平台共享庫產物)、17.11(綁定產生)、17.80(診斷出口)、17.81(發行產物)、17.77(查詢語意)。
 > **邊界**:12.1 擁有 C-ABI 簽名 / 凍結 / 版本政策;17.21 擁有 Python 綁定與 hot reload / CVar;本條只擁有 12.1 之上的 per-host 適配、批量交換、宿主定義元件、綁定產生。
 > 場景格式(17.12,跟宿主 glTF / USD)、網路傳輸(17.16,byte payload 交宿主)、編輯器 UI(`docs/ROADMAP.md` 編輯器邊界 (III))、宿主渲染皆不在本條。
+
+#### 17.89 wasm 平台 — Wave B
+> **狀態**:🔶 部分完成(2026-11-01:可行性實測 ✅,PoC 入 `tools/wasm/poc/`;管線、閘門、封裝未做)。設計筆記 `docs/design/17.89-wasm-platform.md`。
+> **緣起**:使用者 2026-11-01 決定以 wasm 作為跨平台通用的交付形態。方向 C(被嵌入的函式庫)不變,wasm 是同一個 C-ABI 的另一種產物。
+> **現況**:Mojo 1.2.0 無 wasm 目標(`--target-triple wasm32-wasip1` 被拒,modular/modular #4729、#5367 未承諾)。實測路線:
+> `mojo build --emit llvm embed/capi.mojo`(42 MB IR、24 個外部 declare)→ `tools/wasm/poc/retarget.py` → conda-forge LLVM 23.1.4 `opt -O3` / `llc`(wasm64)
+> → `tools/wasm/poc/shim.c` → `wasm-ld -mwasm64`,得 1 381 304 B 模組(4 個宿主匯入),node 24 與 wasmtime 50 可跑。
+> 12 體 240 tick 的世界雜湊 `4624da7477e83eff` 與原生 `--target-cpu x86-64`(無 FMA)相同;帶 FMA 的原生建置為 `b54cefb78d616c8`。1012 體單核:原生 6.18 ms/tick、
+> node 24 9.31、wasmtime 25.8。wasm32 在 `opt -O3` 後 trap(Mojo 編譯期已定 64 位元指標),不可行。
+> **缺口**:W0 `pixi run wasm` 管線(LLVM 23 工具入獨立 pixi feature);W1 編譯期序列派發建置(去掉 `parallelize` / AsyncRT / MXCSR)、wasm 建置剔除 GPU、
+> shim 的 `fminf` / `fmaxf` NaN / ±0 語意;W2 CI wasm 閘門(node ≥ 24 + wasmtime,含 CCD / 軟體 / 導航 / 射線 / 存讀檔 / 回呼場景);W3 JS / TS 與 WASI 封裝、
+> `DISPATCH_HOST` 對映 Web Worker;W4 等上游:wasm32、原生 wasm 目標、WebGPU 輸出。
+> **待決**:浮點政策 —— (a) wasm 自有 golden(建議先做)、(b) 參考建置改無 FMA、(c) 引擎自帶 sin / cos 並關閉縮併。(b)、(c) 擴大 2026-10-09 的決定論承諾。
+> **對照組**:Box2D v3 / Rapier / Jolt 的 wasm 建置(皆由原生 wasm 目標的編譯器產生);noverby 的 Mojo → wasm64 管線(同一路線)。
+> **優勢區**:一份二進位涵蓋瀏覽器、Node / Deno、WASI 與 wasm 宿主;Vec3 的 `SIMD[f32, 4]` 直接對應 wasm `f32x4`。
+> **規模軸**:wasm / 原生每 tick 時間比 vs 物體數(node、wasmtime 各一條);模組大小 vs 匯出集合。
+> **seam?**:否 —— 平台產物,不是引擎內的可替換子系統;wasm 必須過與原生相同的場景與雜湊 / 容差閘門。
+> **相依**:12.1(匯出介面)、17.75(序列 / 宿主派發器)、17.76(容差表、`fp_probe --compare`)、17.81(CI)。
+> **邊界**:不自建 wasm 後端;Safari 等 memory64 上線;GPU 路徑不進 wasm(WebGPU 屬 W4)。
+
+#### 17.90 音訊與視訊 — Wave C
+> **狀態**:⬜ 未開始(2026-11-01 使用者定案方向,見下方「決定」;綁定目標待實測)。方案選項見 `docs/design/stage-plan-2026-11.md` §4。
+> **決定(使用者,2026-11-01)**:(1) 「視訊」= 影片媒體(錄製 / 匯出)與畫面輸出(渲染)兩者都要;(2) 要實際出聲,不只輸出事件資料;
+> (3) 音訊與畫面放獨立 repo;(4) 瀏覽器優先;(5) 授權:LGPL 可接受,H.264 可經平台或使用者自備 ffmpeg 使用。
+> 使用者提出以自己的 `wgpu-mojo` 與 `miniaudio-mojo` 作為綁定目標;兩者目前以 `OwnedDLHandle` 執行期載入動態庫,wasm 無動態載入,
+> 需要靜態 / 匯入式後端,實測中。上游需求已開 issue:wgpu-mojo #13(static link)/ #14(瀏覽器目標)、miniaudio-mojo #2(static link)/ #3(瀏覽器目標);
+> 改動清單見 `docs/design/stage-plan-2026-11.md` §4.2。
+> **緣起**:使用者 2026-11-01 要求尋找音訊與視訊方案。「邊界與排除」把音訊與渲染列為不在本 repo(架構分離);本條區分核心該出的資料與宿主層的工作。
+> **選項摘要**:核心側 —— 擴充接觸事件(法向衝量、切向速度、材質 id、持續接觸旗標)、破碎事件、流體氣泡生成事件,以及回放 / 影格匯出;
+> 可選參考 modal 合成器(harness 側,可上 golden)。宿主側 —— 混音 miniaudio(替代:SDL3、Web Audio + AudioWorklet);影片匯出交使用者的 ffmpeg 或瀏覽器 WebCodecs,
+> 預設 AV1 / VP9;渲染以獨立 repo 的 three.js 宿主讀 SoA 姿態與 `diag/draw.mojo` DrawQueue。
+> **待決**:「視訊」指影片媒體、畫面輸出或兩者;核心只出資料或另附參考合成器;宿主層是否另開 repo;瀏覽器優先或原生優先;編解碼器授權容忍度。
 
 ---
 
@@ -4421,5 +4464,7 @@
 | 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 工程、測試、效能與工具鏈 | 🔶 |
 | 17.87 | [Hook 與文件生成](#1787-hook-與文件生成--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
+| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 嵌入、腳本與平台 | 🔶 |
+| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ⬜ |
 | 17.84 | [數值 / 可微深化](#1784-數值--可微深化--wave-c) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.85 | [分級模擬:依因果可達性分配時間 / 空間解析度](#1785-分級模擬依因果可達性分配時間--空間解析度--wave-c架構) | ECS、排程、執行期與診斷 | ✅ |
