@@ -3,6 +3,8 @@
 # native reference build (`--target-cpu x86-64`, 17.89 floating-point policy c).
 #   - tools/wasm/scenes.py: seven C-ABI scenes (raycast, ccd, saveload, nav, fracture, events, water),
 #     native library vs wasmtime; one hash each, also recorded in tests/golden/wasm_scenes.txt
+#   - tools/wasm/gate_entry.mojo: callbacks (system + contact subscriber) and a soft-body drop, run inside
+#     the module on wasmtime and node vs the native build of the same entry
 #   - tools/wasm/world_hash.mjs: the 12 / 1012 body worlds on node >= 24 vs the native reference binary
 # A scene that comes out `nan` on either side is reported and not compared (the NaN payload is
 # unspecified across hosts); everything else must be equal.
@@ -20,6 +22,11 @@ mkdir -p build
 bash scripts/wasm.sh >/dev/null
 bash scripts/wasm.sh --native >/dev/null
 pixi run capi >/dev/null
+# the scenes that need code inside the module (callbacks, soft body): tools/wasm/gate_entry.mojo
+export LUDENS_WASM_ENTRY=tools/wasm/gate_entry.mojo LUDENS_WASM_EXPORT='gate_*'
+bash scripts/wasm.sh build/gate.wasm >/dev/null
+bash scripts/wasm.sh --native build/gate_ref >/dev/null
+unset LUDENS_WASM_ENTRY LUDENS_WASM_EXPORT
 
 python3 tools/wasm/scenes.py native build/libludens.so > build/wasm_scenes_native.txt
 "${RTRUN[@]}" python tools/wasm/scenes.py wasm build/ludens64.wasm > build/wasm_scenes_wasmtime.txt
@@ -28,13 +35,21 @@ python3 tools/wasm/scenes.py native build/libludens.so > build/wasm_scenes_nativ
   echo "world12x240 $(echo "$ref" | awk '/^hash12 /{print substr($2,3)}')"
   echo "world1012x120 $(echo "$ref" | awk '/^hash1012 /{print substr($2,3)}')"
 } >> build/wasm_scenes_native.txt
+./build/gate_ref | awk '{print $1, substr($2,3)}' >> build/wasm_scenes_native.txt
 {
   echo "world12x240 $("${RTRUN[@]}" node tools/wasm/world_hash.mjs build/ludens64.wasm 240 0 | awk '/^hash /{print $2}')"
   echo "world1012x120 $("${RTRUN[@]}" node tools/wasm/world_hash.mjs build/ludens64.wasm 120 1000 | awk '/^hash /{print $2}')"
 } > build/wasm_scenes_node.txt
-cat build/wasm_scenes_node.txt >> build/wasm_scenes_wasmtime.txt
+"${RTRUN[@]}" node tools/wasm/gate_entry_run.mjs build/gate.wasm >> build/wasm_scenes_node.txt
+"${RTRUN[@]}" python tools/wasm/gate_entry_run.py build/gate.wasm >> build/wasm_scenes_wasmtime.txt
+# every node line must also equal the wasmtime line of the same scene
+while read -r name h; do
+  w=$(awk -v n="$name" '$1==n{print $2}' build/wasm_scenes_wasmtime.txt)
+  [ -z "$w" ] || [ "$w" = "$h" ] || { echo "DIFF  $name node $h wasmtime $w"; nodefail=1; }
+done < build/wasm_scenes_node.txt
+awk 'NR==FNR{seen[$1]=1; next} !($1 in seen)' build/wasm_scenes_wasmtime.txt build/wasm_scenes_node.txt >> build/wasm_scenes_wasmtime.txt
 
-fail=0
+fail=${nodefail:-0}
 while read -r name h; do
   w=$(awk -v n="$name" '$1==n{print $2}' build/wasm_scenes_wasmtime.txt)
   if [ "$h" = nan ] || [ "$w" = nan ]; then echo "SKIP  $name (non-finite state: native $h, wasm $w)"
