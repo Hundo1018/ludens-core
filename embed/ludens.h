@@ -1,4 +1,4 @@
-/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.5.
+/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.6.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):
@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #define LD_ABI_MAJOR 0
-#define LD_ABI_MINOR 4
+#define LD_ABI_MINOR 6
 
 #define LD_OK 0
 #define LD_ERR_HANDLE (-1)   /* null or destroyed world / navmesh handle */
@@ -135,6 +135,80 @@ int64_t ld_world_find_user(ld_world* w, uint64_t user);
  * gravity are then all given in host units, and the solver's absolute
  * length tolerances are rescaled to match. A setting, not saved. */
 int32_t ld_world_set_unit_scale(ld_world* w, float per_meter);
+
+/* ---- 0.6 (ROADMAP 17.90): richer contact events. ld_contact_event_ex is 104 bytes:
+ * the five ld_contact_event fields, then impulse and kinematics at the contact. */
+typedef struct ld_contact_event_ex {
+    int64_t tick;
+    ld_body a;
+    ld_body b;
+    int64_t kind;     /* LD_EVENT_* */
+    int64_t feature;
+    float normal_impulse; /* N s this tick, restitution included; 0 for sensors / ENDED */
+    float force;          /* normal_impulse over the time it covers (N) */
+    float approach;       /* normal approach speed at contact prep (m/s) */
+    float peak;           /* largest normal_impulse since the contact began */
+    float point_x; /* contact point carrying most of the impulse */
+    float point_y;
+    float point_z;
+    float normal_x; /* from a to b */
+    float normal_y;
+    float normal_z;
+    float tangent_vel_x; /* velocity of b relative to a at the point, normal part removed (m/s) */
+    float tangent_vel_y;
+    float tangent_vel_z;
+    uint32_t material_a;  /* ld_body_set_material, 0 = none */
+    uint32_t material_b;
+    uint32_t flags;       /* LD_EVENT_FLAG_* */
+} ld_contact_event_ex;
+#define LD_EVENT_FLAG_PERSISTENT 1 /* the contact existed on the previous tick (kind == LD_EVENT_STAY) */
+int64_t ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* out, int64_t cap);
+int32_t ld_body_set_material(ld_world* w, ld_body b, uint32_t material);
+int32_t ld_body_get_material(ld_world* w, ld_body b, uint32_t* out);
+
+/* ---- 0.6 (ROADMAP 17.90): a destructible box. pieces welded Voronoi fragments; each weld
+ * breaks at stress (Pa) times its seam area and reports a fracture event. One fractured
+ * object per world; such a world cannot be saved or loaded (LD_ERR_STATE). Returns the
+ * fragment count; first gets the first fragment's handle. */
+typedef struct ld_fracture_event {
+    int64_t tick;
+    int64_t kind; /* LD_FRACTURE_* */
+    int64_t bond;
+    ld_body a;    /* fragment handle */
+    ld_body b;    /* fragment handle, -1 = external body or none */
+} ld_fracture_event;
+#define LD_FRACTURE_BOND_BROKEN 0
+#define LD_FRACTURE_EVICTED 1
+int64_t ld_world_add_fracture_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, int32_t pieces, int32_t seed, float stress, float density, ld_body* first);
+int64_t ld_world_get_fragments(ld_world* w, ld_body* out, int64_t cap);
+int64_t ld_world_fracture_event_count(ld_world* w);
+int64_t ld_world_get_fracture_events(ld_world* w, ld_fracture_event* out, int64_t cap);
+
+/* ---- 0.6 (ROADMAP 17.90): a 2D FLIP water tank. nx x ny cells of `cell` metres in the xy
+ * plane (walls all round), filled over [x0, x1] x [y0, y1]; gravity is the world's -y; one tank
+ * per world, and such a world cannot be saved or loaded (LD_ERR_STATE). Particles that turn
+ * into air bubbles during a step call come back as events. Returns the water particle count. */
+typedef struct ld_bubble_event {
+    int64_t tick;
+    float x;
+    float y;
+    float u; /* particle velocity at that moment (m/s) */
+    float v;
+    int64_t reserved;
+} ld_bubble_event;
+int64_t ld_world_add_water(ld_world* w, int32_t nx, int32_t ny, float cell, float x0, float y0, float x1, float y1, int32_t seed);
+int64_t ld_world_bubble_event_count(ld_world* w);
+int64_t ld_world_get_bubble_events(ld_world* w, ld_bubble_event* out, int64_t cap);
+
+/* ---- 0.6 (ROADMAP 17.90): the frame export stream. ld_world_export_frame writes a
+ * little-endian record set to an 8-byte aligned buffer: header 24 B (u32 magic 0x3146444C
+ * "LDF1", u32 version 1, i64 body count, i64 tick), then per live body in slot order 72 B:
+ * i64 handle, f32 pos[3], f32 rot[4] xyzw, f32 vel[3], f32 omega[3], u32 flags
+ * (LD_FRAME_ASLEEP | LD_FRAME_STATIC), u32 material, u32 user (low 32 bits). */
+#define LD_FRAME_ASLEEP 1
+#define LD_FRAME_STATIC 2
+int64_t ld_world_frame_size(ld_world* w);
+int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);
 
 #ifdef __cplusplus
 }

@@ -30,7 +30,8 @@ silently loses its tail elements the moment it crosses a function boundary —
 `collision/hull.mojo` carries the reduced probe.
 """
 
-from std.math import sqrt, floor, cos
+from std.math import sqrt, floor
+from geometry.trig import cos
 from std.collections import Dict
 from geometry.vec import Real, Vec3, dot, length, normalize
 from geometry.aabb import AABB

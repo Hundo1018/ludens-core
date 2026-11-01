@@ -109,7 +109,12 @@ def main() raises:
     var lib = tmp + "/libludens.so"
     var host = tmp + "/host"
 
-    _ = _sh(sp, Python.list("mojo", "build", "--emit", "shared-lib", "-I", "build", "-o", lib, "embed/capi.mojo"))
+    # the reference target on x86-64 (17.89 / #75); other architectures compile for the host
+    var cpu = Python.list("--target-cpu", "x86-64") if String(Python.import_module("platform").machine()) == "x86_64" else Python.list()
+    var build_cmd = Python.list("mojo", "build", "--emit", "shared-lib")
+    build_cmd.extend(cpu)
+    build_cmd.extend(Python.list("-I", "build", "-o", lib, "embed/capi.mojo"))
+    _ = _sh(sp, build_cmd)
     _ = _sh(
         sp,
         Python.list(
@@ -160,6 +165,32 @@ def main() raises:
     s.eqi(Int(get(kv, "began", 2)), nat.ended, "subscriber saw the native run's ENDED count")
     s.eqi(Int(get(kv, "began", 4)), nat.began, "buffered events (ld_world_get_events) carry the same BEGAN count")
     s.eqi(Int(get(kv, "began", 6)), nat.events, "buffered event total == native event total")
+    s.eqi(Int(get(kv, "evex", 0)), nat.events, "ld_world_get_events_ex returns the same number of events")
+    s.eqi(Int(get(kv, "evex", 1)), 0, "ld_contact_event_ex repeats tick / a / b / kind / feature of ld_contact_event")
+    s.check(Int(get(kv, "evex", 2)) > 0, "some events carry a normal impulse (" + get(kv, "evex", 2) + ")")
+    s.check(Int(get(kv, "evex", 3)) > 0, "ld_body_set_material shows up as material_a / material_b (" + get(kv, "evex", 3) + ")")
+    s.eqi(Int(get(kv, "evex", 4)), nat.events, "LD_EVENT_FLAG_PERSISTENT is set exactly on STAY events")
+    s.check(Int(get(kv, "evex", 5)) > 0, "some contacts report a tangential velocity (" + get(kv, "evex", 5) + ")")
+    s.eqi(Int(get(kv, "evex", 6)), 104, "sizeof(ld_contact_event_ex) == 104")
+    s.check(Int(get(kv, "fracture", 0)) >= 4, "ld_world_add_fracture_box made fragments (" + get(kv, "fracture", 0) + ")")
+    s.eqi(Int(get(kv, "fracture", 1)), Int(get(kv, "fracture", 0)), "ld_world_get_fragments returns every fragment")
+    s.eqi(Int(get(kv, "fracture", 2)), 1, "the first fragment handle is fragment 0")
+    s.check(Int(get(kv, "fracture", 3)) > 0, "a falling fractured box breaks welds and reports events (" + get(kv, "fracture", 3) + ")")
+    s.eqi(Int(get(kv, "fracture", 4)), 1, "fracture events name live fragment bodies")
+    s.eqi(Int(get(kv, "fracture", 5)), LD_ERR_STATE, "a world with a fractured object refuses to save")
+    s.eqi(Int(get(kv, "fracture_second", 0)), LD_ERR_ARG, "a second fractured object is refused")
+    s.check(Int(get(kv, "water", 0)) > 100, "ld_world_add_water filled the tank with particles (" + get(kv, "water", 0) + ")")
+    s.eqi(Int(get(kv, "water", 1)), 1, "a dam break turns particles into bubbles and reports events")
+    s.eqi(Int(get(kv, "water", 2)), 1, "bubble events are finite, inside the tank and in tick order")
+    s.eqi(Int(get(kv, "water", 3)), LD_ERR_STATE, "a world with a water tank refuses to save")
+    s.eqi(Int(get(kv, "water_second", 0)), LD_ERR_ARG, "a second water tank is refused")
+    s.eqi(Int(get(kv, "water_bad", 0)), LD_ERR_ARG, "a tank under 2 x 2 cells is refused")
+    s.eqi(Int(get(kv, "frame", 0)), Int(get(kv, "frame", 2)), "ld_world_frame_size == 24 + 72 per body")
+    s.eqi(Int(get(kv, "frame", 1)), Int(get(kv, "frame", 0)), "ld_world_export_frame writes exactly frame_size bytes")
+    s.eqi(Int(get(kv, "frame", 3)), 0x3146444C, "frame magic is LDF1")
+    s.eqi(Int(get(kv, "frame", 4)), 1, "frame header body count == ld_world_body_count")
+    s.eqi(Int(get(kv, "frame", 5)), 1, "frame records repeat ld_world_get_bodies handles and poses bit for bit")
+    s.eqi(Int(get(kv, "frame", 6)), 1, "a short frame buffer is refused with LD_ERR_BUFFER")
     s.check(nat.began > 0, "scenario has contacts beginning (" + String(nat.began) + ")")
     var st = nat.w.state(nat.player)
     s.almost(Float64(get(kv, "player", 0)), Float64(st.pos[0]), "player x (C printout, 6 decimals)", tol=2e-6)

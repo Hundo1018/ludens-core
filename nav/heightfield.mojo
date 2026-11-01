@@ -25,7 +25,8 @@ Integer units: span heights are in `cell_height` steps above `bmin.y`, columns
 are `x + z * width`.
 """
 
-from std.math import sqrt, floor, ceil, cos, pi
+from std.math import sqrt, floor, ceil, pi
+from geometry.trig import cos
 from geometry.vec import Real, Vec3, cross, dot
 
 comptime DIR_DX = SIMD[DType.int32, 4](1, 0, -1, 0)

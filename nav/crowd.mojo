@@ -34,7 +34,8 @@ their indices, so coincident spawns split deterministically instead of
 producing NaN.
 """
 
-from std.math import sqrt, floor, exp, cos, sin, pi
+from std.math import sqrt, floor, exp, pi
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec2, Vec3, dot
 from nav.navmesh import NavMesh, dist3
 from nav.path import NavPath, PolyFunnel, PATH_OFFMESH

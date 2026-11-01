@@ -11,7 +11,8 @@
     field of view over `blend_time` with an easing curve.
 """
 
-from std.math import cos, sin, isfinite
+from std.math import isfinite
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, length
 from geometry.quat import Quat, slerp
 from collision.world_query import QueryFilter

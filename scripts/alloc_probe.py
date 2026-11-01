@@ -192,7 +192,7 @@ def main():
         with open(c, "w") as f:
             f.write(SHIM)
         subprocess.run(["cc", "-O2", "-shared", "-fPIC", c, "-o", so, "-ldl"], check=True)
-        cpu = ["--target-cpu", "skylake"] if os.uname().machine == "x86_64" else []
+        cpu = ["--target-cpu", "x86-64"] if os.uname().machine == "x86_64" else []
         subprocess.run(["mojo", "build"] + cpu + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, check=True)
         env = dict(os.environ, LD_PRELOAD=so)
         r = subprocess.run([exe], cwd=ROOT, env=env, capture_output=True, text=True)

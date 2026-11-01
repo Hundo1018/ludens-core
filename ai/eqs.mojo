@@ -18,7 +18,8 @@ scores, and returns them best first:
 Ties keep generation order, so results are deterministic.
 """
 
-from std.math import sqrt, cos, sin, pi, floor
+from std.math import sqrt, pi, floor
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, dot
 from nav.navmesh import NavMesh, dist3
 from nav.path import PolyFunnel

@@ -33,7 +33,7 @@ def parse_range(r: str) -> range:
 
 
 def build(test: str, out: Path) -> None:
-    cpu = os.environ.get("LUDENS_TARGET_CPU", "skylake")
+    cpu = os.environ.get("LUDENS_TARGET_CPU", "x86-64")
     subprocess.run(
         ["mojo", "build", "--target-cpu", cpu, "-D", "ASSERT=all", "-I", "build", "-o", str(out), test],
         cwd=ROOT, check=True, capture_output=True,

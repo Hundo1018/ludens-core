@@ -13,7 +13,8 @@ over `stall_blend` radians so the curve is continuous. Pre-stall
 CD = cd0 + k CL^2. Defined for any alpha in [-pi, pi] (tumbling).
 """
 
-from std.math import sin, cos, atan2, pi, sqrt
+from std.math import atan2, pi, sqrt
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3, dot, cross, length
 from physics.body_set import BodyId
 from physics.rigid6 import QuatBody6

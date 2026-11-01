@@ -232,7 +232,7 @@ def rotor(axis: Vec3, angle: Real) -> CGA3:
     """Rotation about an axis THROUGH THE ORIGIN: `R = cos(θ/2) - sin(θ/2)·B`
     with B the unit bivector dual to the axis. Identical to the euclidean
     rotor — the conformal basis vectors do not participate."""
-    from std.math import cos, sin
+    from .trig import cos, sin
 
     var l = length(axis)
     var n = axis / l if l > 1e-12 else Vec3(0, 0, 1, 0)

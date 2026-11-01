@@ -35,7 +35,8 @@ With no coupled bodies `sph_rigid_step` moves the fluid exactly as
 `sph_step_boundary`.
 """
 
-from std.math import sqrt, pi, cos, sin, floor
+from std.math import sqrt, pi, floor
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, cross, length, dot
 from .pbf import PbfFluid, poly6, spiky_grad, H
 from .sph import BoundaryParticles, visc_lap

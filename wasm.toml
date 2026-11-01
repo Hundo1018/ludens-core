@@ -1,0 +1,13 @@
+# ludens-wasm-rt manifest (17.89 W0): the C-ABI as a wasm64 module.
+#   pixi run wasm        -> build/ludens64.wasm
+# Serial dispatch and no asserts keep the IR to the allocator, write and the clock (W1).
+[lib]
+name = "ludens"
+mojo_defines = ["LUDENS_SERIAL=True", "ASSERT=none"]
+
+# `--target native` builds the same entry with the same -D list (the reference build); no archive to link
+# yet -- #75 adds libwasmrt_math.a here when sin / cos leave libm.
+[native]
+mojo_defines = ["LUDENS_SERIAL=True", "ASSERT=none"]
+static_libs = []
+link_flags = []

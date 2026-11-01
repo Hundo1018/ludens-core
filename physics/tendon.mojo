@@ -179,7 +179,7 @@ def _rotate_about(v: Vec3, axis: Vec3, ang: Real) -> Vec3:
 
 
 def _cos_sin(a: Real, mut c: Real, mut s: Real):
-    from std.math import cos, sin
+    from geometry.trig import cos, sin
 
     c = cos(a)
     s = sin(a)

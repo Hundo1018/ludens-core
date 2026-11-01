@@ -35,7 +35,8 @@ chassis is marked never-sleeping (a parked car is cheap anyway, a car that sleep
 while the player holds the throttle is a bug).
 """
 
-from std.math import sqrt, sin, cos, atan, atan2
+from std.math import sqrt, atan, atan2
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3, dot, cross, length, normalize_or
 from geometry.quat import Quat
 from collision.world_query import QueryFilter

@@ -43,7 +43,7 @@ def raises(exc_type, fn):
 # ---------------------------------------------------------------- isolation
 check(not os.path.realpath(ludens.__file__).startswith(FORBIDDEN), "ludens imported from the venv, not the repo: " + ludens.__file__)
 check(os.path.dirname(ludens.library_path) == os.path.dirname(ludens.__file__), "libludens.so loaded from the installed package")
-check(ludens.abi_version() == (0, 5), "abi_version == (0, 5)")
+check(ludens.abi_version() == (0, 6), "abi_version == (0, 6)")
 
 
 # ------------------------------------------------- parity scenario (test_capi)
@@ -347,6 +347,38 @@ with ludens.World(1.0 / 60.0, (0, -9.8, 0)) as m1, ludens.World(1.0 / 60.0, (0, 
     check(drift > 0, "without set_unit_scale the same world differs (by %.2g m)" % drift)
     check(raises(ludens.LudensError, lambda: mk.set_unit_scale(0)) is not None, "set_unit_scale(0) is rejected")
 
+
+# ---------------------------------------------------------------- ABI 0.6 (17.90)
+with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as fw:
+    ground = fw.add_box((0, -1, 0), (20, 1, 20), mass=0, static=True)
+    frags = fw.add_fracture_box((0, 3, 0), (0.5, 0.5, 0.5), pieces=10, seed=2, stress=2.0e3)
+    check(len(frags) >= 4, "add_fracture_box returns fragment handles (%d)" % len(frags))
+    broken = 0
+    for _ in range(90):
+        fw.step_ticks(1)
+        broken += len(fw.fracture_events())
+    check(broken > 0, "a falling fractured box reports broken welds (%d)" % broken)
+    frame = fw.export_frame()
+    check(frame[:4] == b"LDF1" and len(frame) == 24 + 72 * (len(frags) + 1), "export_frame has the LDF1 header and one record per body")
+with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as ww:
+    check(ww.add_water(80, 24, 0.025, (0.0, 0.0, 0.25, 0.5), seed=5) > 100, "add_water fills the tank with particles")
+    bubbles = 0
+    for _ in range(90):
+        ww.step_ticks(1)
+        bubbles += len(ww.bubble_events())
+    check(bubbles > 0, "a dam break reports bubble events (%d)" % bubbles)
+    check(raises(ludens.LudensError, lambda: ww.save()) is not None, "a world with a tank refuses to save")
+with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as mw:
+    mw.add_box((0, -1, 0), (20, 1, 20), mass=0, static=True)
+    ball = mw.add_sphere((0, 0.6, 0), 0.5, mass=1.0)
+    ball.material = 9
+    check(ball.material == 9, "Body.material round-trips")
+    seen = []
+    for _ in range(60):
+        mw.step_ticks(1)
+        seen += mw.events_ex()
+    check(any(e.material_a == 9 or e.material_b == 9 for e in seen), "events_ex carries the body's material id")
+    check(any(e.normal_impulse > 0 for e in seen), "events_ex carries a normal impulse")
 
 # ---------------------------------------------------------------- isolation again
 maps = open("/proc/self/maps").read().splitlines()

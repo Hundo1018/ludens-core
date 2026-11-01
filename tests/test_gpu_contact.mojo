@@ -35,6 +35,7 @@ comptime DT: Real = 1.0 / 60.0
 def _cfg() -> SolverConfig:
     var c = SolverConfig()
     c.colored = True
+    c.max_mass_ratio = 0  # the device path does not implement the mass ratio limit (17.19)
     return c
 
 

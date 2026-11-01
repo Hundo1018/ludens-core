@@ -37,7 +37,8 @@ Vertex storage is flat `List[Real]` stride 3, triangles flat `List[Int]`
 stride 3 -- the same layout `TriMesh` takes.
 """
 
-from std.math import sqrt, floor, cos
+from std.math import sqrt, floor
+from .trig import cos
 from .vec import Real, Vec3, dot, cross, length
 
 

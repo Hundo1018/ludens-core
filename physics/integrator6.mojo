@@ -23,7 +23,8 @@ Gates: `tests/test_integrator6.mojo` (cross parity + conservation ordering),
 `benchmarks/bench_rigid6.mojo` (cost + drift tables).
 """
 
-from std.math import sqrt, sin, cos
+from std.math import sqrt
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3, cross
 from geometry.motor import Motor3
 from geometry.galie import exp_screw3

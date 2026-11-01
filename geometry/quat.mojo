@@ -7,7 +7,8 @@ Hamilton product. Depends on `mat.mojo` for matrix conversion, and hosts
 `compose_trs4` (a 3D TRS needs a quaternion) to keep `mat.mojo` quaternion-free.
 """
 
-from std.math import sqrt, sin, cos, acos
+from std.math import sqrt, acos
+from .trig import sin, cos
 from .vec import WorldType, Real, Vec3, normalize, cross
 from .mat import Mat3, Mat4
 

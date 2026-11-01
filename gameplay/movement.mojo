@@ -49,7 +49,8 @@ external velocity. `Mover` wraps it:
 `Mover` is a value type (copy = snapshot) and uses no wall clock.
 """
 
-from std.math import sqrt, isfinite, exp, cos
+from std.math import sqrt, isfinite, exp
+from geometry.trig import cos
 from geometry.vec import Real, Vec3, dot, length
 from physics.rigid6 import Body6
 from physics.solver6 import ContactScene6

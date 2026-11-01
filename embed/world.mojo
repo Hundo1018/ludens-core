@@ -30,11 +30,16 @@ from physics.solver6 import ContactScene6
 from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
 from physics.capture import Capture
+from physics.fracture import FractureSet, EVENT_BOND_BROKEN
+from physics.flip import FlipWater2
+from physics.flip_diffuse import DiffuseParticles
+from geometry.polytope import Polytope
+from geometry.fracture_cut import FragmentSet, scatter_seeds, voronoi_fracture
 from collision.world_query import QueryFilter
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
-comptime ABI_MINOR = 5
+comptime ABI_MINOR = 6
 
 # Status codes (negative = error). Frozen for v0.x: values never change.
 comptime LD_OK = 0
@@ -105,6 +110,39 @@ struct TickEvent(Copyable, ImplicitlyCopyable, Movable):
     var b: Int64
     var kind: Int64
     var feat: Int64
+    # 17.90 payload (`ld_contact_event_ex`); zero for sensors / ENDED events
+    var impulse: Float32
+    var force: Float32
+    var approach: Float32
+    var peak: Float32
+    var point: Vec3
+    var normal: Vec3
+    var tvel: Vec3
+    var mat_a: UInt32
+    var mat_b: UInt32
+
+
+@fieldwise_init
+struct FractureRec(Copyable, ImplicitlyCopyable, Movable):
+    """One fracture event as the host sees it (17.90): body handles of the
+    fragments, -1 where the other side is an external body (or none)."""
+
+    var tick: Int64
+    var kind: Int64  # LD_FRACTURE_BOND_BROKEN / LD_FRACTURE_EVICTED
+    var bond: Int64
+    var a: Int64
+    var b: Int64
+
+
+@fieldwise_init
+struct BubbleRec(Copyable, ImplicitlyCopyable, Movable):
+    """A particle that turned into an air bubble in the world's FLIP water (17.90)."""
+
+    var tick: Int64
+    var x: Float32
+    var y: Float32
+    var u: Float32
+    var v: Float32
 
 
 struct EmbedWorld(Movable):
@@ -117,6 +155,13 @@ struct EmbedWorld(Movable):
     var max_steps: Int
     var tick: Int
     var debt_dropped: Int  # frames whose excess time was dropped (FixedLoop's E22 rule)
+    var fracture: FractureSet  # 17.90: fragments + bonds added by `add_fracture_box`
+    var fracture_on: Bool
+    var frame_fracture: List[FractureRec]
+    var water: FlipWater2  # 17.90: a 2D FLIP tank (xy plane) added by `add_water`
+    var diffuse: DiffuseParticles
+    var water_on: Bool
+    var frame_bubbles: List[BubbleRec]
     var frame_events: List[TickEvent]  # every event of the ticks run by the current / last frame
     var tick_events: List[TickEvent]  # events of the latest tick only
     var error: String
@@ -127,6 +172,8 @@ struct EmbedWorld(Movable):
     # the slot's generation matches `user_gen`
     var user: List[UInt64]
     var user_gen: List[UInt32]
+    var material: List[UInt32]  # 17.90 host material id per body slot (0 = none)
+    var material_gen: List[UInt32]
 
     def __init__(out self, dt: Float64, gravity: Vec3, max_steps: Int = 8) raises:
         if not (dt > 0) or not isfinite(dt):
@@ -148,11 +195,20 @@ struct EmbedWorld(Movable):
         self.max_steps = max_steps
         self.tick = 0
         self.debt_dropped = 0
+        self.fracture = FractureSet(Real(1000), 0)
+        self.fracture_on = False
+        self.frame_fracture = List[FractureRec]()
+        self.water = FlipWater2(2, 2, Real(1))
+        self.diffuse = DiffuseParticles(UInt64(1), 1)
+        self.water_on = False
+        self.frame_bubbles = List[BubbleRec]()
         self.frame_events = List[TickEvent]()
         self.tick_events = List[TickEvent]()
         self.error = String()
         self.user = List[UInt64]()
         self.user_gen = List[UInt32]()
+        self.material = List[UInt32]()
+        self.material_gen = List[UInt32]()
 
     # ------------------------------------------------------------ settings
 
@@ -225,6 +281,94 @@ struct EmbedWorld(Movable):
         """Collision layer of a body (host layer -> category bits, and the
         categories it collides with)."""
         self.scene.set_filter(self._id(h).index(), category, mask)
+
+    def _frag_handle(self, frag: Int) -> Int64:
+        if frag < 0 or frag >= len(self.fracture.bid):
+            return -1
+        return pack_body(self.fracture.bid[frag])
+
+    def add_water(
+        mut self, nx: Int, ny: Int, cell: Real, x0: Real, y0: Real, x1: Real, y1: Real, seed: Int
+    ) raises -> Int:
+        """A 2D FLIP tank of nx x ny cells (xy plane, walls all round) filled in
+        [x0, x1] x [y0, y1], with foam / spray / bubble particles on top. Bubble
+        spawns come back as events. One tank per world; gravity is the world's
+        -y component. Returns the water particle count."""
+        if self.water_on:
+            raise Error("add_water: this world already has a water tank")
+        if nx < 2 or ny < 2 or nx * ny > 1000000 or not (cell > 0) or not isfinite(cell):
+            raise Error("add_water: need 2..1e6 cells and a finite cell size > 0")
+        if not (x1 > x0) or not (y1 > y0) or not isfinite(x0 + y0 + x1 + y1):
+            raise Error("add_water: the fill box must be finite and non-empty")
+        var g = -self.gravity[1]
+        self.water = FlipWater2(nx, ny, cell, g if g > 0 else Real(0))
+        self.water.fill_box(x0, y0, x1, y1)
+        self.diffuse = DiffuseParticles(UInt64(seed))
+        self.water_on = True
+        return self.water.count()
+
+    def _step_water(mut self) raises:
+        var left = Real(self.dt)
+        var guard = 0
+        while left > 0 and guard < 64:
+            var h = min(left, self.water.max_dt())
+            self.water.step(h)
+            self.diffuse.update(self.water, h)
+            left -= h
+            guard += 1
+
+    def add_fracture_box(
+        mut self, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real, density: Real
+    ) raises -> Int64:
+        """A box of Voronoi fragments welded along their shared faces (17.90).
+        Each weld breaks at `stress` (Pa) times its seam area and reports a
+        fracture event. Returns the handle of the first fragment; the others
+        are handles `fragment_handle(1..)`. At most one fractured object per
+        world; the world cannot be saved or loaded while it exists."""
+        if self.fracture_on:
+            raise Error("add_fracture_box: this world already has a fractured object")
+        if pieces < 1 or pieces > 4096:
+            raise Error("add_fracture_box: pieces must be in [1, 4096]")
+        if not (half[0] > 0 and half[1] > 0 and half[2] > 0) or not (stress > 0) or not (density > 0):
+            raise Error("add_fracture_box: half extents, stress and density must be > 0")
+        var src = Polytope.box(0, 0, 0, Float64(half[0]), Float64(half[1]), Float64(half[2]))
+        var seeds = scatter_seeds(src.bounds(), pieces, seed, 0.0, 0.0, 0.0, 0.0)
+        var fs = FragmentSet(List[Polytope](), List[Int](), List[Int]())
+        voronoi_fracture(src, seeds, 0, 1e-9, fs)
+        self.fracture = FractureSet(density, 0)
+        var first = self.fracture.spawn(self.scene, fs, pos, Quat.identity(), Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0))
+        if self.fracture.fragments() == 0:
+            raise Error("add_fracture_box: no fragments produced")
+        _ = self.fracture.bond_neighbors(self.scene, first, stress)
+        self.fracture_on = True
+        return pack_body(self.fracture.bid[first])
+
+    def fragment_handle(self, i: Int) -> Int64:
+        return self._frag_handle(i)
+
+    def set_material(mut self, h: Int64, m: UInt32) raises:
+        """Host material id of a body (17.90; 0 = none), reported on its contact events."""
+        var id = self._id(h)
+        var i = id.index()
+        while len(self.material) <= i:
+            self.material.append(0)
+            self.material_gen.append(0)
+        self.material[i] = m
+        self.material_gen[i] = id.gen
+
+    def get_material(self, h: Int64) raises -> UInt32:
+        var id = self._id(h)
+        return self._material_of(id.index()) if self._material_gen_ok(id) else UInt32(0)
+
+    def _material_gen_ok(self, id: BodyId) -> Bool:
+        var i = id.index()
+        return i < len(self.material) and self.material_gen[i] == id.gen
+
+    def _material_of(self, slot: Int) -> UInt32:
+        """Material of the live body in `slot` (0 if none was set)."""
+        if slot < len(self.material) and self.material_gen[slot] == self.scene.bset.id_of(slot).gen:
+            return self.material[slot]
+        return 0
 
     def set_user(mut self, h: Int64, u: UInt64) raises:
         """Attach a host value (node id, pointer) to a body; 0 clears."""
@@ -338,6 +482,8 @@ struct EmbedWorld(Movable):
         if not (frame_dt >= 0) or not isfinite(frame_dt):
             raise Error("step: frame_dt must be finite and >= 0")
         self.frame_events.clear()
+        self.frame_fracture.clear()
+        self.frame_bubbles.clear()
         self.acc += frame_dt
         var n = 0
         while self.acc >= self.dt and n < self.max_steps:
@@ -359,9 +505,48 @@ struct EmbedWorld(Movable):
                 pack_body(self.scene.bset.id_of(e.b)),
                 Int64(e.kind),
                 Int64(e.feat),
+                Float32(e.impulse),
+                Float32(e.force),
+                Float32(e.approach),
+                Float32(e.peak),
+                e.point,
+                e.normal,
+                e.tvel,
+                self._material_of(e.a),
+                self._material_of(e.b),
             )
             self.tick_events.append(ev)
             self.frame_events.append(ev)
+        if self.fracture_on:
+            _ = self.fracture.poll(self.scene)
+            for k in range(len(self.fracture.events)):
+                var fe = self.fracture.events[k]
+                self.frame_fracture.append(
+                    FractureRec(
+                        Int64(self.tick),
+                        Int64(fe.kind),
+                        Int64(fe.bond),
+                        self._frag_handle(fe.frag_a),
+                        self._frag_handle(fe.frag_b),
+                    )
+                )
+        if self.water_on:
+            try:
+                self._step_water()
+            except e:
+                self.error = String(e)
+            var nb = len(self.diffuse.bubble_ev) // 4
+            for k in range(nb):
+                self.frame_bubbles.append(
+                    BubbleRec(
+                        Int64(self.tick),
+                        Float32(self.diffuse.bubble_ev[4 * k]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 1]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 2]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 3]),
+                    )
+                )
+            self.diffuse.clear_bubble_events()
         if self.capturing:
             self.capture.record(self.scene)
         self.tick += 1
@@ -379,6 +564,7 @@ struct EmbedWorld(Movable):
 
     def save(self) -> List[UInt8]:
         var out = List[UInt8]()
+        debug_assert(not self.fracture_on and not self.water_on, "save of a world with a fractured object or water is refused by the C-ABI")
         _put(out, UInt64(_SAVE_MAGIC))
         _put(out, UInt64(self.tick))
         _put(out, UInt64(self.acc.to_bits()))
@@ -403,6 +589,8 @@ struct EmbedWorld(Movable):
     def load(mut self, data: List[UInt8]) raises:
         """Replace the simulation state with a `save` blob. Settings (dt,
         gravity, solver, systems) are the host's and stay as they are."""
+        if self.fracture_on or self.water_on:
+            raise Error("load: refused while the world has a fractured object or a water tank")
         var pos = 0
         if _get(data, pos) != UInt64(_SAVE_MAGIC):
             raise Error("load: not a ludens world blob")
@@ -443,6 +631,8 @@ struct EmbedWorld(Movable):
         self.user = user^
         self.user_gen = user_gen^
         self.frame_events.clear()
+        self.frame_fracture.clear()
+        self.frame_bubbles.clear()
         self.tick_events.clear()
 
     def hash(self) -> UInt64:

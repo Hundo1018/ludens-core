@@ -13,7 +13,7 @@ and is documented as such. The contact normal points from `a` toward `b`, like
 `SATResult`.
 """
 
-from std.math import cos, sin
+from .trig import cos, sin
 from .vec import WorldType, Real, Vec2, dot, length, normalize_or
 from .sat import SATResult
 

@@ -17,7 +17,7 @@ arch = "bash scripts/arch.sh"
 # Machine gate for docs/ARCHITECTURE.md S1 (layers/cycles/reach-through)
 # plus S3 (every tests/test_*.mojo declares a valid, mechanically-checked
 # tier header): fails the build the same way a compile error would.
-arch-check = { cmd = "bash scripts/arch.sh check && bash scripts/arch.sh tiers --check", depends-on = ["build"] }
+arch-check = { cmd = "bash scripts/arch.sh check && bash scripts/arch.sh tiers --check && python3 scripts/trig_check.py", depends-on = ["build"] }
 # Per-tier test runs (docs/design/17.0b-test-tiers.md): each is just the
 # full runner filtered to one declared tier.
 test-unit = { cmd = "bash scripts/run_tests.sh unit", depends-on = ["build", "arch-check"] }
@@ -31,7 +31,9 @@ test = { cmd = "bash scripts/run_tests.sh unit component integration system", de
 # Build, then run every tier, including stress.
 test-all = { cmd = "bash scripts/run_tests.sh unit component integration system stress", depends-on = ["build", "arch-check"] }
 # Build the C-ABI shared library build/libludens.so (embed/capi.mojo, header embed/ludens.h; ROADMAP 12.1).
-capi = { cmd = "mojo build --emit shared-lib -I build -o build/libludens.so embed/capi.mojo", depends-on = ["build"] }
+capi = { cmd = "mojo build --emit shared-lib --target-cpu x86-64 -I build -o build/libludens.so embed/capi.mojo", depends-on = ["build"] }
+# The speed variant for native embedders (AVX2 + FMA, ~10 % faster per tick; not bit-identical to the reference, 17.89 / #75).
+capi-fast = { cmd = "mojo build --emit shared-lib --target-cpu skylake -I build -o build/libludens-fast.so embed/capi.mojo", depends-on = ["build"] }
 bindings = "python3 scripts/gen_bindings.py"
 # Precompile every package with an f64 world scalar into build64/ (ROADMAP 17.8; scripts/build_f64.sh).
 build-f64 = "bash scripts/build_f64.sh"
@@ -63,6 +65,12 @@ perf = "python3 scripts/perf.py"
 # Symbol-level test coverage: public engine names some test imports (scripts/symcov.py; ROADMAP 17.82).
 symcov = "python3 scripts/symcov.py"
 # Which exported leaf kernels need no Mojo runtime import (wasm route; scripts/wasm_probe.py; ROADMAP 17.76).
+# The C-ABI as a wasm64 module through ludens-wasm-rt (ROADMAP 17.89 W0; scripts/wasm.sh).
+wasm = { cmd = "bash scripts/wasm.sh", depends-on = ["build"] }
+# The wasm gate: C-ABI scenes native vs wasmtime, 12 / 1012 body worlds native vs node (17.89 W2; scripts/wasm_gate.sh).
+wasm-gate = { cmd = "bash scripts/wasm_gate.sh", depends-on = ["build"] }
+# geometry.trig == musl sinf / cosf bit for bit (17.89 / #75; scripts/trig_parity.py)
+trig-parity = { cmd = "python3 scripts/trig_parity.py", depends-on = ["build"] }
 wasm-probe = { cmd = "python3 scripts/wasm_probe.py", depends-on = ["build"] }
 # Regenerate CHANGELOG.md from Conventional Commit subjects (scripts/changelog.py; ROADMAP 17.81).
 changelog = "python3 scripts/changelog.py"

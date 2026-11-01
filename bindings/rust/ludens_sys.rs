@@ -3,7 +3,7 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub const LD_ABI_MAJOR: u32 = 0;
-pub const LD_ABI_MINOR: u32 = 4;
+pub const LD_ABI_MINOR: u32 = 6;
 pub const LD_OK: i32 = 0;
 pub const LD_ERR_HANDLE: i32 = -1;
 pub const LD_ERR_ARG: i32 = -2;
@@ -18,6 +18,11 @@ pub const LD_PHASE_POST: i32 = 1;
 pub const LD_EVENT_BEGAN: i32 = 0;
 pub const LD_EVENT_STAY: i32 = 1;
 pub const LD_EVENT_ENDED: i32 = 2;
+pub const LD_EVENT_FLAG_PERSISTENT: i32 = 1;
+pub const LD_FRACTURE_BOND_BROKEN: i32 = 0;
+pub const LD_FRACTURE_EVICTED: i32 = 1;
+pub const LD_FRAME_ASLEEP: i32 = 1;
+pub const LD_FRAME_STATIC: i32 = 2;
 
 pub type ld_body = i64;
 #[repr(C)]
@@ -36,6 +41,50 @@ pub struct ld_contact_event {
     pub b: ld_body,
     pub kind: i64,
     pub feature: i64,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ld_contact_event_ex {
+    pub tick: i64,
+    pub a: ld_body,
+    pub b: ld_body,
+    pub kind: i64,
+    pub feature: i64,
+    pub normal_impulse: f32,
+    pub force: f32,
+    pub approach: f32,
+    pub peak: f32,
+    pub point_x: f32,
+    pub point_y: f32,
+    pub point_z: f32,
+    pub normal_x: f32,
+    pub normal_y: f32,
+    pub normal_z: f32,
+    pub tangent_vel_x: f32,
+    pub tangent_vel_y: f32,
+    pub tangent_vel_z: f32,
+    pub material_a: u32,
+    pub material_b: u32,
+    pub flags: u32,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ld_fracture_event {
+    pub tick: i64,
+    pub kind: i64,
+    pub bond: i64,
+    pub a: ld_body,
+    pub b: ld_body,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ld_bubble_event {
+    pub tick: i64,
+    pub x: f32,
+    pub y: f32,
+    pub u: f32,
+    pub v: f32,
+    pub reserved: i64,
 }
 pub type ld_system_fn = Option<unsafe extern "C" fn(*mut ld_world, f64, i64, *mut core::ffi::c_void) -> i32>;
 pub type ld_contact_fn = Option<unsafe extern "C" fn(*mut ld_world, *const ld_contact_event, *mut core::ffi::c_void) -> i32>;
@@ -91,4 +140,16 @@ extern "C" {
     pub fn ld_body_get_user(w: *mut ld_world, b: ld_body, out: *mut u64) -> i32;
     pub fn ld_world_find_user(w: *mut ld_world, user: u64) -> i64;
     pub fn ld_world_set_unit_scale(w: *mut ld_world, per_meter: f32) -> i32;
+    pub fn ld_world_get_events_ex(w: *mut ld_world, out: *mut ld_contact_event_ex, cap: i64) -> i64;
+    pub fn ld_body_set_material(w: *mut ld_world, b: ld_body, material: u32) -> i32;
+    pub fn ld_body_get_material(w: *mut ld_world, b: ld_body, out: *mut u32) -> i32;
+    pub fn ld_world_add_fracture_box(w: *mut ld_world, px: f32, py: f32, pz: f32, hx: f32, hy: f32, hz: f32, pieces: i32, seed: i32, stress: f32, density: f32, first: *mut ld_body) -> i64;
+    pub fn ld_world_get_fragments(w: *mut ld_world, out: *mut ld_body, cap: i64) -> i64;
+    pub fn ld_world_fracture_event_count(w: *mut ld_world) -> i64;
+    pub fn ld_world_get_fracture_events(w: *mut ld_world, out: *mut ld_fracture_event, cap: i64) -> i64;
+    pub fn ld_world_add_water(w: *mut ld_world, nx: i32, ny: i32, cell: f32, x0: f32, y0: f32, x1: f32, y1: f32, seed: i32) -> i64;
+    pub fn ld_world_bubble_event_count(w: *mut ld_world) -> i64;
+    pub fn ld_world_get_bubble_events(w: *mut ld_world, out: *mut ld_bubble_event, cap: i64) -> i64;
+    pub fn ld_world_frame_size(w: *mut ld_world) -> i64;
+    pub fn ld_world_export_frame(w: *mut ld_world, buf: *mut u8, cap: i64) -> i64;
 }

@@ -2605,6 +2605,18 @@ position, velocity and solver value.
 
 @bench benchmarks/bench_large_world.mojo
 
+## FMA off vs on (17.89)
+
+The reference build targets `x86-64`, which has no FMA, so the native result
+equals the wasm64 module bit for bit (floating-point policy c; the engine owns
+`sin` / `cos`). `skylake` (AVX2 + FMA) is kept as a speed variant
+(`pixi run capi-fast`); it is not bit-identical to the reference (the two
+hashes below differ by design) and is checked against it with a tolerance.
+The rows are the fastest of 7 runs of the 12 + 1012 body reference scene, 360
+ticks, process start included.
+
+@bench benchmarks/bench_fma_variant.mojo
+
 ## Maturity assessment
 
 - **Every comparable-method seam has a benchmark row.** The seam / parity-test /

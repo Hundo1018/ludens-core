@@ -1,4 +1,4 @@
-"""ctypes declarations for embed/ludens.h (ABI v0.1).
+"""ctypes declarations for embed/ludens.h (ABI v0.6).
 
 Every prototype here mirrors one line of embed/abi_v0.txt; the binding test
 checks the two lists name the same functions.
@@ -22,7 +22,7 @@ from ctypes import (
 )
 
 ABI_MAJOR = 0
-ABI_MINOR = 5
+ABI_MINOR = 6
 
 LD_OK = 0
 LD_ERR_HANDLE = -1
@@ -50,6 +50,46 @@ class ContactEventC(Structure):
         ("kind", c_int64),
         ("feature", c_int64),
     ]
+
+
+class ContactEventExC(Structure):
+    """ld_contact_event_ex (ABI 0.6), 104 bytes."""
+
+    _fields_ = [
+        ("tick", c_int64),
+        ("a", c_int64),
+        ("b", c_int64),
+        ("kind", c_int64),
+        ("feature", c_int64),
+        ("normal_impulse", c_float),
+        ("force", c_float),
+        ("approach", c_float),
+        ("peak", c_float),
+        ("point_x", c_float),
+        ("point_y", c_float),
+        ("point_z", c_float),
+        ("normal_x", c_float),
+        ("normal_y", c_float),
+        ("normal_z", c_float),
+        ("tangent_vel_x", c_float),
+        ("tangent_vel_y", c_float),
+        ("tangent_vel_z", c_float),
+        ("material_a", c_uint32),
+        ("material_b", c_uint32),
+        ("flags", c_uint32),
+    ]
+
+
+class FractureEventC(Structure):
+    """ld_fracture_event (ABI 0.6)."""
+
+    _fields_ = [("tick", c_int64), ("kind", c_int64), ("bond", c_int64), ("a", c_int64), ("b", c_int64)]
+
+
+class BubbleEventC(Structure):
+    """ld_bubble_event (ABI 0.6): a water particle that turned into an air bubble."""
+
+    _fields_ = [("tick", c_int64), ("x", c_float), ("y", c_float), ("u", c_float), ("v", c_float), ("reserved", c_int64)]
 
 
 SYSTEM_FN = CFUNCTYPE(c_int32, c_void_p, c_double, c_int64, c_void_p)
@@ -112,6 +152,19 @@ PROTOTYPES = {
     "ld_body_get_user": (c_int32, [_W, c_int64, POINTER(c_uint64)]),
     "ld_world_find_user": (c_int64, [_W, c_uint64]),
     "ld_world_set_unit_scale": (c_int32, [_W, _F]),
+    # 0.6 (17.90): richer events, a destructible box, the frame export stream
+    "ld_world_get_events_ex": (c_int64, [_W, POINTER(ContactEventExC), c_int64]),
+    "ld_body_set_material": (c_int32, [_W, c_int64, c_uint32]),
+    "ld_body_get_material": (c_int32, [_W, c_int64, POINTER(c_uint32)]),
+    "ld_world_add_fracture_box": (c_int64, [_W, _F, _F, _F, _F, _F, _F, c_int32, c_int32, _F, _F, POINTER(c_int64)]),
+    "ld_world_get_fragments": (c_int64, [_W, POINTER(c_int64), c_int64]),
+    "ld_world_fracture_event_count": (c_int64, [_W]),
+    "ld_world_get_fracture_events": (c_int64, [_W, POINTER(FractureEventC), c_int64]),
+    "ld_world_add_water": (c_int64, [_W, c_int32, c_int32, _F, _F, _F, _F, _F, c_int32]),
+    "ld_world_bubble_event_count": (c_int64, [_W]),
+    "ld_world_get_bubble_events": (c_int64, [_W, POINTER(BubbleEventC), c_int64]),
+    "ld_world_frame_size": (c_int64, [_W]),
+    "ld_world_export_frame": (c_int64, [_W, POINTER(c_uint8), c_int64]),
 }
 
 

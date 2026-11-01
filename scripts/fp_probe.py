@@ -3,10 +3,10 @@
 Which compiler / target factors change simulation bits? Compiles
 `benchmarks/probes/fp_probe.mojo` (three scenes, 300 steps) under each
 variant, runs it, and compares each scene's state hash and largest
-coordinate drift against the reference (skylake, default optimisation).
+coordinate drift against the reference (x86-64, default optimisation).
 
 Variants: CPU targets (x86-64 baseline without FMA, x86-64-v3 / haswell,
-skylake, skylake-avx512, the host CPU) and optimisation levels -O0 .. -O3.
+x86-64, skylake, skylake-avx512, the host CPU) and optimisation levels -O0 .. -O3.
 A target the host cannot run is skipped.
 
     pixi run fp-probe
@@ -38,11 +38,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROBE = "benchmarks/probes/fp_probe.mojo"
 
 VARIANTS = [
-    ("skylake -O (reference)", ["--target-cpu", "skylake"]),
-    ("skylake -O0", ["--target-cpu", "skylake", "-O0"]),
-    ("skylake -O1", ["--target-cpu", "skylake", "-O1"]),
-    ("skylake -O2", ["--target-cpu", "skylake", "-O2"]),
-    ("x86-64 (no FMA, SSE2)", ["--target-cpu", "x86-64"]),
+    ("x86-64 -O (reference: no FMA, SSE2)", ["--target-cpu", "x86-64"]),
+    ("x86-64 -O0", ["--target-cpu", "x86-64", "-O0"]),
+    ("x86-64 -O1", ["--target-cpu", "x86-64", "-O1"]),
+    ("x86-64 -O2", ["--target-cpu", "x86-64", "-O2"]),
+    ("skylake (AVX2 + FMA: the speed variant)", ["--target-cpu", "skylake"]),
     ("haswell (AVX2 + FMA)", ["--target-cpu", "haswell"]),
     ("skylake-avx512", ["--target-cpu", "skylake-avx512"]),
     ("native host CPU", []),
@@ -121,6 +121,8 @@ def main():
     failed = []
     with tempfile.TemporaryDirectory() as d:
         ref = None
+        family_same = True  # every x86-64 (no FMA) variant is bit-identical to the reference
+        fma_differs = False
         print("| variant | pile | roll | tower |")
         print("|---|---|---|---|")
         for name, flags in VARIANTS:
@@ -139,9 +141,20 @@ def main():
                 if h == rh:
                     cells.append("identical")
                 else:
+                    if flags[:2] == ["--target-cpu", "x86-64"]:
+                        family_same = False
+                    else:
+                        fma_differs = True
                     dr = max(abs(a - b) for a, b in zip(vals, rvals))
                     cells.append("differs, max drift %.2e" % dr)
             print("| %s | %s |" % (name, " | ".join(cells)))
+        print()
+        if family_same:
+            print("verdict: FMA is not a bit factor of the reference build -- every x86-64 variant (-O0 .. -O2) "
+                  "is bit-identical to it; FMA changes bits only in the speed variants%s." % (" (listed above)" if fma_differs else ""))
+        else:
+            print("verdict: an x86-64 variant differs from the reference -- the reference build is NOT optimisation-independent")
+            failed.append("x86-64 family")
         if check and failed:
             sys.exit("fp-probe: over tolerance: " + "; ".join(failed))
 

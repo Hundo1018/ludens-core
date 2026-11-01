@@ -38,7 +38,8 @@ narrowphase is axis-aligned, geometrically unconstrained. Restitution is still
 deferred (e = 0 scenes).
 """
 
-from std.math import sqrt, isfinite, sin, cos
+from std.math import sqrt, isfinite
+from geometry.trig import sin, cos
 from std.os import abort
 from std.time import perf_counter_ns
 from std.collections import Dict
@@ -2398,6 +2399,10 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     ev.point = pr.m.points[best]
                 ev.normal = pr.m.normal
                 ev.approach = approach
+                if best >= 0:
+                    # 17.90: sliding speed for friction / scrape sounds; reads state only
+                    var rel = self.bset.bodies[ev.b].velocity_at(ev.point) - self.bset.bodies[ev.a].velocity_at(ev.point)
+                    ev.tvel = rel - pr.m.normal * dot(rel, pr.m.normal)
             ev.peak = max(before, ev.impulse) if ev.kind == EV_STAY else ev.impulse
             peak_of[k] = ev.peak
         self._prev_peak = List[Real](capacity=len(cur))

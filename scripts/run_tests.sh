@@ -21,7 +21,7 @@
 # bug behind a `debug_assert` fails loudly here instead of silently passing
 # in a build that never checks it.
 #
-# Every test compiles for one fixed CPU, `skylake` (AVX2 + FMA, no AVX-512),
+# Every test compiles for one fixed CPU, `x86-64` (the baseline: no FMA; 17.89 / #75),
 # unless LUDENS_TARGET_CPU says otherwise. The golden holds floats whose last
 # digits depend on what the compiler targets: compiled for the host, an
 # AVX-512 Xeon prints `Y-tree energy drift: 0.011868272829287659` where the
@@ -31,13 +31,13 @@
 # `skylake` runs on any AVX2 host (ROADMAP 17.81 cross-machine probe).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# x86-64 pins skylake (above). Other architectures (linux-aarch64, osx-arm64;
+# x86-64 pins x86-64 (above). Other architectures (linux-aarch64, osx-arm64;
 # ROADMAP 17.76) compile for the host until each has a pinned target and its
 # own golden file (scripts/agent_gate.sh picks the file per platform).
 if [ -n "${LUDENS_TARGET_CPU:-}" ]; then
     TARGET_CPU="$LUDENS_TARGET_CPU"
 elif [ "$(uname -m)" = "x86_64" ]; then
-    TARGET_CPU=skylake
+    TARGET_CPU=x86-64
 else
     TARGET_CPU=""
 fi

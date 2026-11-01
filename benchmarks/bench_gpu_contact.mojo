@@ -52,6 +52,7 @@ def _cpu(mut t: BenchTable, side: Int, parallel: Bool) raises:
     var sc = _field(side)
     var cfg = SolverConfig()
     cfg.colored = True
+    cfg.max_mass_ratio = 0  # the device path does not implement the mass ratio limit (17.19)
     cfg.broadphase = True
     cfg.parallel = parallel
     var g = Vec3(0, -9.8, 0, 0)
@@ -69,6 +70,7 @@ def _gpu(mut t: BenchTable, mut ctx: DeviceContext, side: Int) raises:
     var sc = _field(side)
     var cfg = SolverConfig()
     cfg.colored = True
+    cfg.max_mass_ratio = 0  # the device path does not implement the mass ratio limit (17.19)
     cfg.broadphase = True
     var g = Vec3(0, -9.8, 0, 0)
     var solver = GpuContactSolver(ctx)

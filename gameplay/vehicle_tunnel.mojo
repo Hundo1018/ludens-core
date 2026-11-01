@@ -17,7 +17,7 @@ drops into the same `Aero`. `scaled_cd` lets a caller calibrate a lattice
 result against a known reference shape.
 """
 
-from std.math import sin, cos
+from geometry.trig import sin, cos
 from geometry.vec import Real
 from fluid.lbm import Lbm, BC_TUNNEL, CELL_SOLID
 

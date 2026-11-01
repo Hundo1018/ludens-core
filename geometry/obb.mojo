@@ -8,7 +8,7 @@ the hot path. `to_polygon()` bridges to the general SAT for cross-checking in
 tests. The contact normal is oriented from `a` toward `b`, matching `SATResult`.
 """
 
-from std.math import cos, sin
+from .trig import cos, sin
 from .vec import WorldType, Real, Vec2, dot
 from .shape import Polygon
 from .sat import SATResult

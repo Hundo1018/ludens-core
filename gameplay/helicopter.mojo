@@ -20,7 +20,8 @@ from tilt, tail thrust from heading error with the main rotor's reaction
 fed forward.
 """
 
-from std.math import atan2, sin, cos
+from std.math import atan2
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3, cross
 from geometry.quat import Quat
 from physics.body_set import BodyId
