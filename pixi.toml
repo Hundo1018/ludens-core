@@ -32,6 +32,8 @@ test = { cmd = "bash scripts/run_tests.sh unit component integration system", de
 test-all = { cmd = "bash scripts/run_tests.sh unit component integration system stress", depends-on = ["build", "arch-check"] }
 # Build the C-ABI shared library build/libludens.so (embed/capi.mojo, header embed/ludens.h; ROADMAP 12.1).
 capi = { cmd = "mojo build --emit shared-lib --target-cpu x86-64 -I build -o build/libludens.so embed/capi.mojo", depends-on = ["build"] }
+# The speed variant for native embedders (AVX2 + FMA, ~10 % faster per tick; not bit-identical to the reference, 17.89 / #75).
+capi-fast = { cmd = "mojo build --emit shared-lib --target-cpu skylake -I build -o build/libludens-fast.so embed/capi.mojo", depends-on = ["build"] }
 bindings = "python3 scripts/gen_bindings.py"
 # Precompile every package with an f64 world scalar into build64/ (ROADMAP 17.8; scripts/build_f64.sh).
 build-f64 = "bash scripts/build_f64.sh"
