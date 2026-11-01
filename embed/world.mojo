@@ -30,6 +30,9 @@ from physics.solver6 import ContactScene6
 from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
 from physics.capture import Capture
+from physics.fracture import FractureSet, EVENT_BOND_BROKEN
+from geometry.polytope import Polytope
+from geometry.fracture_cut import FragmentSet, scatter_seeds, voronoi_fracture
 from collision.world_query import QueryFilter
 from collision.contact_events import ContactEvent
 
@@ -117,6 +120,18 @@ struct TickEvent(Copyable, ImplicitlyCopyable, Movable):
     var mat_b: UInt32
 
 
+@fieldwise_init
+struct FractureRec(Copyable, ImplicitlyCopyable, Movable):
+    """One fracture event as the host sees it (17.90): body handles of the
+    fragments, -1 where the other side is an external body (or none)."""
+
+    var tick: Int64
+    var kind: Int64  # LD_FRACTURE_BOND_BROKEN / LD_FRACTURE_EVICTED
+    var bond: Int64
+    var a: Int64
+    var b: Int64
+
+
 struct EmbedWorld(Movable):
     var scene: ContactScene6[QuatBody6]
     var cfg: SolverConfig
@@ -127,6 +142,9 @@ struct EmbedWorld(Movable):
     var max_steps: Int
     var tick: Int
     var debt_dropped: Int  # frames whose excess time was dropped (FixedLoop's E22 rule)
+    var fracture: FractureSet  # 17.90: fragments + bonds added by `add_fracture_box`
+    var fracture_on: Bool
+    var frame_fracture: List[FractureRec]
     var frame_events: List[TickEvent]  # every event of the ticks run by the current / last frame
     var tick_events: List[TickEvent]  # events of the latest tick only
     var error: String
@@ -160,6 +178,9 @@ struct EmbedWorld(Movable):
         self.max_steps = max_steps
         self.tick = 0
         self.debt_dropped = 0
+        self.fracture = FractureSet(Real(1000), 0)
+        self.fracture_on = False
+        self.frame_fracture = List[FractureRec]()
         self.frame_events = List[TickEvent]()
         self.tick_events = List[TickEvent]()
         self.error = String()
@@ -239,6 +260,40 @@ struct EmbedWorld(Movable):
         """Collision layer of a body (host layer -> category bits, and the
         categories it collides with)."""
         self.scene.set_filter(self._id(h).index(), category, mask)
+
+    def _frag_handle(self, frag: Int) -> Int64:
+        if frag < 0 or frag >= len(self.fracture.bid):
+            return -1
+        return pack_body(self.fracture.bid[frag])
+
+    def add_fracture_box(
+        mut self, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real, density: Real
+    ) raises -> Int64:
+        """A box of Voronoi fragments welded along their shared faces (17.90).
+        Each weld breaks at `stress` (Pa) times its seam area and reports a
+        fracture event. Returns the handle of the first fragment; the others
+        are handles `fragment_handle(1..)`. At most one fractured object per
+        world; the world cannot be saved or loaded while it exists."""
+        if self.fracture_on:
+            raise Error("add_fracture_box: this world already has a fractured object")
+        if pieces < 1 or pieces > 4096:
+            raise Error("add_fracture_box: pieces must be in [1, 4096]")
+        if not (half[0] > 0 and half[1] > 0 and half[2] > 0) or not (stress > 0) or not (density > 0):
+            raise Error("add_fracture_box: half extents, stress and density must be > 0")
+        var src = Polytope.box(0, 0, 0, Float64(half[0]), Float64(half[1]), Float64(half[2]))
+        var seeds = scatter_seeds(src.bounds(), pieces, seed, 0.0, 0.0, 0.0, 0.0)
+        var fs = FragmentSet(List[Polytope](), List[Int](), List[Int]())
+        voronoi_fracture(src, seeds, 0, 1e-9, fs)
+        self.fracture = FractureSet(density, 0)
+        var first = self.fracture.spawn(self.scene, fs, pos, Quat.identity(), Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0))
+        if self.fracture.fragments() == 0:
+            raise Error("add_fracture_box: no fragments produced")
+        _ = self.fracture.bond_neighbors(self.scene, first, stress)
+        self.fracture_on = True
+        return pack_body(self.fracture.bid[first])
+
+    def fragment_handle(self, i: Int) -> Int64:
+        return self._frag_handle(i)
 
     def set_material(mut self, h: Int64, m: UInt32) raises:
         """Host material id of a body (17.90; 0 = none), reported on its contact events."""
@@ -376,6 +431,7 @@ struct EmbedWorld(Movable):
         if not (frame_dt >= 0) or not isfinite(frame_dt):
             raise Error("step: frame_dt must be finite and >= 0")
         self.frame_events.clear()
+        self.frame_fracture.clear()
         self.acc += frame_dt
         var n = 0
         while self.acc >= self.dt and n < self.max_steps:
@@ -409,6 +465,19 @@ struct EmbedWorld(Movable):
             )
             self.tick_events.append(ev)
             self.frame_events.append(ev)
+        if self.fracture_on:
+            _ = self.fracture.poll(self.scene)
+            for k in range(len(self.fracture.events)):
+                var fe = self.fracture.events[k]
+                self.frame_fracture.append(
+                    FractureRec(
+                        Int64(self.tick),
+                        Int64(fe.kind),
+                        Int64(fe.bond),
+                        self._frag_handle(fe.frag_a),
+                        self._frag_handle(fe.frag_b),
+                    )
+                )
         if self.capturing:
             self.capture.record(self.scene)
         self.tick += 1
@@ -426,6 +495,7 @@ struct EmbedWorld(Movable):
 
     def save(self) -> List[UInt8]:
         var out = List[UInt8]()
+        debug_assert(not self.fracture_on, "save of a world with a fractured object is refused by the C-ABI")
         _put(out, UInt64(_SAVE_MAGIC))
         _put(out, UInt64(self.tick))
         _put(out, UInt64(self.acc.to_bits()))
@@ -450,6 +520,8 @@ struct EmbedWorld(Movable):
     def load(mut self, data: List[UInt8]) raises:
         """Replace the simulation state with a `save` blob. Settings (dt,
         gravity, solver, systems) are the host's and stay as they are."""
+        if self.fracture_on:
+            raise Error("load: refused while the world has a fractured object")
         var pos = 0
         if _get(data, pos) != UInt64(_SAVE_MAGIC):
             raise Error("load: not a ludens world blob")
@@ -490,6 +562,7 @@ struct EmbedWorld(Movable):
         self.user = user^
         self.user_gen = user_gen^
         self.frame_events.clear()
+        self.frame_fracture.clear()
         self.tick_events.clear()
 
     def hash(self) -> UInt64:

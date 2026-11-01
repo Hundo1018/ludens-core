@@ -41,6 +41,15 @@ namespace Ludens
         public uint material_b;
         public uint flags;
     }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ld_fracture_event
+    {
+        public long tick;
+        public long kind;
+        public long bond;
+        public long a;
+        public long b;
+    }
     public static unsafe class Native
     {
         public const string Lib = "ludens";
@@ -61,6 +70,10 @@ namespace Ludens
         public const int LD_EVENT_STAY = 1;
         public const int LD_EVENT_ENDED = 2;
         public const int LD_EVENT_FLAG_PERSISTENT = 1;
+        public const int LD_FRACTURE_BOND_BROKEN = 0;
+        public const int LD_FRACTURE_EVICTED = 1;
+        public const int LD_FRAME_ASLEEP = 1;
+        public const int LD_FRAME_STATIC = 2;
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint ld_abi_version();
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
@@ -167,5 +180,17 @@ namespace Ludens
         public static extern int ld_body_set_material(ld_world* w, long b, uint material);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int ld_body_get_material(ld_world* w, long b, uint* @out);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_add_fracture_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, int pieces, int seed, float stress, float density, long* first);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_get_fragments(ld_world* w, long* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_fracture_event_count(ld_world* w);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_get_fracture_events(ld_world* w, ld_fracture_event* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_frame_size(ld_world* w);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_export_frame(ld_world* w, byte* buf, long cap);
     }
 }

@@ -74,3 +74,10 @@ typedef struct ld_contact_event_ex {
 int64_t ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* out, int64_t cap);
 int32_t ld_body_set_material(ld_world* w, ld_body b, uint32_t material);
 int32_t ld_body_get_material(ld_world* w, ld_body b, uint32_t* out);
+typedef struct ld_fracture_event {
+int64_t ld_world_add_fracture_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, int32_t pieces, int32_t seed, float stress, float density, ld_body* first);
+int64_t ld_world_get_fragments(ld_world* w, ld_body* out, int64_t cap);
+int64_t ld_world_fracture_event_count(ld_world* w);
+int64_t ld_world_get_fracture_events(ld_world* w, ld_fracture_event* out, int64_t cap);
+int64_t ld_world_frame_size(ld_world* w);
+int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);

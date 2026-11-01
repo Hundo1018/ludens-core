@@ -456,6 +456,82 @@ def ld_world_get_bodies(h: Optional[Handle], handles: Optional[I64Ptr], poses7: 
     return Int64(n)
 
 
+# 0.6 (ROADMAP 17.90): the frame export stream. One self-describing little-endian
+# record set per call, for a renderer or a recorder that follows the world:
+#   header 24 B: u32 magic 0x3146444C ("LDF1"), u32 version 1, i64 body count, i64 tick
+#   per live body (slot order) 72 B: i64 handle, f32 pos[3], f32 rot[4] (xyzw),
+#   f32 vel[3], f32 omega[3], u32 flags (bit 0 asleep, bit 1 static), u32 material,
+#   u32 user_lo
+# The buffer must be 8-byte aligned.
+comptime _FRAME_MAGIC = 0x3146444C
+comptime _FRAME_HEADER = 24
+comptime _FRAME_RECORD = 72
+
+
+@export
+def ld_world_frame_size(h: Optional[Handle]) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    return Int64(_FRAME_HEADER + _FRAME_RECORD * _live_count(o.value()))
+
+
+@export
+def ld_world_export_frame(h: Optional[Handle], buf: Optional[U8Ptr], cap: Int64) abi("C") -> Int64:
+    """Write the current frame (poses, velocities, flags, materials) to `buf`;
+    returns the bytes written or LD_ERR_BUFFER below ld_world_frame_size."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    var n = _live_count(p)
+    var need = _FRAME_HEADER + _FRAME_RECORD * n
+    if Int(cap) < need or not buf:
+        return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_export_frame: capacity below ld_world_frame_size"))
+    var w64 = buf.value().unsafe_bitcast[Int64]()
+    var w32 = buf.value().unsafe_bitcast[UInt32]()
+    var f32 = buf.value().unsafe_bitcast[Float32]()
+    w32[unsafe_offset=0] = UInt32(_FRAME_MAGIC)
+    w32[unsafe_offset=1] = 1
+    w64[unsafe_offset=1] = Int64(n)
+    w64[unsafe_offset=2] = Int64(p[].w.tick)
+    ref bset = p[].w.scene.bset
+    var j = 0
+    for i in range(len(bset.bodies)):
+        if bset.is_removed(i):
+            continue
+        var base = _FRAME_HEADER // 4 + (_FRAME_RECORD // 4) * j  # in 4-byte words
+        var id = bset.id_of(i)
+        w64[unsafe_offset=(_FRAME_HEADER + _FRAME_RECORD * j) // 8] = pack_body(id)
+        var pos = bset.bodies[i].position()
+        var q = bset.bodies[i].rotation()
+        var v = bset.bodies[i].linear_velocity()
+        var om = bset.bodies[i].omega_world()
+        for k in range(3):
+            f32[unsafe_offset=base + 2 + k] = Float32(pos[k])
+            f32[unsafe_offset=base + 9 + k] = Float32(v[k])
+            f32[unsafe_offset=base + 12 + k] = Float32(om[k])
+        f32[unsafe_offset=base + 5] = Float32(q.x)
+        f32[unsafe_offset=base + 6] = Float32(q.y)
+        f32[unsafe_offset=base + 7] = Float32(q.z)
+        f32[unsafe_offset=base + 8] = Float32(q.w)
+        var flags = UInt32(0)
+        if bset.sleeping[i]:
+            flags |= 1
+        if bset.motion[i] == 0:
+            flags |= 2
+        w32[unsafe_offset=base + 15] = flags
+        w32[unsafe_offset=base + 16] = p[].w._material_of(i)
+        var user = UInt64(0)
+        try:
+            user = p[].w.get_user(pack_body(id))
+        except:
+            pass
+        w32[unsafe_offset=base + 17] = UInt32(user & 0xFFFFFFFF)
+        j += 1
+    return Int64(need)
+
+
 # ------------------------------------------------------------------ queries
 
 
@@ -617,6 +693,7 @@ def ld_world_step_ticks(h: Optional[Handle], n: Int32) abi("C") -> Int32:
     if n < 0:
         return Int32(_fail(p, LD_ERR_ARG, "ld_world_step_ticks: n must be >= 0"))
     p[].w.frame_events.clear()
+    p[].w.frame_fracture.clear()
     return Int32(_run_ticks(h, p, Int(n)))
 
 
@@ -723,6 +800,95 @@ def ld_body_get_material(h: Optional[Handle], b: Int64, dst: Optional[Pointer[UI
         return Int32(_fail(p, LD_ERR_STALE, String(e)))
 
 
+# 0.6 (ROADMAP 17.90): a destructible box. Fracture events are 5 int64 words:
+# tick, kind (0 bond broken, 1 evicted), bond index, fragment a, fragment b
+# (body handles; -1 = an external body or none).
+comptime _FRACTURE_WORDS = 5
+
+
+@export
+def ld_world_add_fracture_box(
+    h: Optional[Handle],
+    px: Float32,
+    py: Float32,
+    pz: Float32,
+    hx: Float32,
+    hy: Float32,
+    hz: Float32,
+    pieces: Int32,
+    seed: Int32,
+    stress: Float32,
+    density: Float32,
+    first: Optional[I64Ptr],
+) abi("C") -> Int64:
+    """Add a box of `pieces` welded Voronoi fragments (one fractured object per
+    world). Returns the fragment count; `first` receives the first fragment's
+    handle. Each weld breaks at `stress` (Pa) times its seam area. Such a world
+    cannot be saved or loaded (LD_ERR_STATE)."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        var f = p[].w.add_fracture_box(
+            Vec3(Real(px), Real(py), Real(pz), 0),
+            Vec3(Real(hx), Real(hy), Real(hz), 0),
+            Int(pieces),
+            Int(seed),
+            Real(stress),
+            Real(density),
+        )
+        if first:
+            first.value()[] = f
+        return Int64(p[].w.fracture.fragments())
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_world_get_fragments(h: Optional[Handle], dst: Optional[I64Ptr], cap: Int64) abi("C") -> Int64:
+    """Body handles of every fragment (index = the fragment ids used by fracture events)."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    var n = p[].w.fracture.fragments()
+    if Int(cap) < n or (n > 0 and not dst):
+        return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_get_fragments: capacity below the fragment count"))
+    for i in range(n):
+        dst.value()[unsafe_offset=i] = p[].w.fragment_handle(i)
+    return Int64(n)
+
+
+@export
+def ld_world_fracture_event_count(h: Optional[Handle]) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    return Int64(len(o.value()[].w.frame_fracture))
+
+
+@export
+def ld_world_get_fracture_events(h: Optional[Handle], dst: Optional[I64Ptr], cap: Int64) abi("C") -> Int64:
+    """Fracture events of the last step call, as ld_fracture_event records."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    var n = len(p[].w.frame_fracture)
+    if Int(cap) < n or (n > 0 and not dst):
+        return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_get_fracture_events: capacity below ld_world_fracture_event_count"))
+    for i in range(n):
+        var e = p[].w.frame_fracture[i]
+        var base = _FRACTURE_WORDS * i
+        dst.value()[unsafe_offset=base] = e.tick
+        dst.value()[unsafe_offset=base + 1] = e.kind
+        dst.value()[unsafe_offset=base + 2] = e.bond
+        dst.value()[unsafe_offset=base + 3] = e.a
+        dst.value()[unsafe_offset=base + 4] = e.b
+    return Int64(n)
+
+
 # ---------------------------------------------------------- save / restore
 
 
@@ -732,6 +898,8 @@ def ld_world_save_size(h: Optional[Handle]) abi("C") -> Int64:
     if not o:
         return Int64(_why(h))
     var p = o.value()
+    if p[].w.fracture_on:
+        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save_size: a fractured object is not saveable yet"))
     return Int64(len(p[].w.save()))
 
 
@@ -741,6 +909,8 @@ def ld_world_save(h: Optional[Handle], buf: Optional[U8Ptr], cap: Int64) abi("C"
     if not o:
         return Int64(_why(h))
     var p = o.value()
+    if p[].w.fracture_on:
+        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save: a fractured object is not saveable yet"))
     var blob = p[].w.save()
     if Int(cap) < len(blob) or not buf:
         return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_save: capacity below ld_world_save_size"))

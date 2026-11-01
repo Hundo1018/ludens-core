@@ -210,6 +210,57 @@ int main(void) {
     printf("zero_mass %lld\n", (long long)ld_body_add_sphere(w, 0, 0, 0, 1, 0, 0));
     printf("bad_phase %lld\n", (long long)ld_world_add_system(w, 9, count_post, NULL));
     printf("null_out %d\n", ld_body_get_state(w, s.player, NULL));
+    /* ABI 0.6 (17.90): frame export vs the pose query */
+    {
+        int64_t fsz = ld_world_frame_size(w);
+        uint64_t* fbuf = (uint64_t*)malloc((size_t)fsz);
+        int64_t fw = ld_world_export_frame(w, (uint8_t*)fbuf, fsz);
+        int64_t nb2 = ld_world_body_count(w);
+        ld_body* h2 = (ld_body*)malloc(sizeof(ld_body) * (size_t)nb2);
+        float* p2 = (float*)malloc(sizeof(float) * 7 * (size_t)nb2);
+        ld_world_get_bodies(w, h2, p2, nb2);
+        int64_t same = 1;
+        const uint8_t* rec = (const uint8_t*)fbuf + 24;
+        for (int64_t i = 0; i < nb2; i++) {
+            const int64_t* rh = (const int64_t*)(rec + 72 * i);
+            const float* rf = (const float*)(rec + 72 * i + 8);
+            same &= *rh == h2[i];
+            for (int k = 0; k < 3; k++) same &= rf[k] == p2[7 * i + k];
+            for (int k = 0; k < 4; k++) same &= rf[3 + k] == p2[7 * i + 3 + k];
+        }
+        printf("frame %lld %lld %lld %u %lld %lld %d\n", (long long)fsz, (long long)fw, (long long)(24 + 72 * nb2),
+               ((const uint32_t*)fbuf)[0], (long long)(((const int64_t*)fbuf)[1] == nb2), (long long)same,
+               ld_world_export_frame(w, (uint8_t*)fbuf, fsz - 1) == LD_ERR_BUFFER);
+        free(fbuf); free(h2); free(p2);
+    }
+    /* ABI 0.6 (17.90): a destructible box thrown at the ground; its welds break and report events */
+    {
+        ld_world* fw = NULL;
+        ld_world_create(1.0 / 60.0, 0.0f, -9.81f, 0.0f, &fw);
+        ld_body_add_box(fw, 0.0f, -1.0f, 0.0f, 20.0f, 1.0f, 20.0f, 0.0f, 1);
+        ld_body first = -1;
+        int64_t nfrag = ld_world_add_fracture_box(fw, 0.0f, 4.0f, 0.0f, 0.5f, 0.5f, 0.5f, 12, 3, 2.0e3f, 1000.0f, &first);
+        ld_body* fh = (ld_body*)malloc(sizeof(ld_body) * (size_t)(nfrag + 1));
+        int64_t got = ld_world_get_fragments(fw, fh, nfrag);
+        int64_t broken = 0, valid = 1;
+        for (int f = 0; f < 120; f++) {
+            ld_world_step_ticks(fw, 1);
+            int64_t n = ld_world_fracture_event_count(fw);
+            ld_fracture_event* fe = (ld_fracture_event*)malloc(sizeof(ld_fracture_event) * (size_t)(n + 1));
+            if (ld_world_get_fracture_events(fw, fe, n) != n) { printf("fracture events mismatch\n"); return 1; }
+            for (int64_t i = 0; i < n; i++) {
+                broken += fe[i].kind == LD_FRACTURE_BOND_BROKEN;
+                valid &= ld_body_alive(fw, fe[i].a) == 1;
+            }
+            free(fe);
+        }
+        uint8_t tiny[8];
+        printf("fracture %lld %lld %d %lld %lld %d\n", (long long)nfrag, (long long)got, first == fh[0], (long long)broken,
+               (long long)valid, (int)ld_world_save(fw, tiny, 8));
+        printf("fracture_second %lld\n", (long long)ld_world_add_fracture_box(fw, 0, 9, 0, 0.5f, 0.5f, 0.5f, 4, 1, 2.0e3f, 1000.0f, NULL));
+        free(fh);
+        ld_world_destroy(fw);
+    }
     /* ABI 0.3: physics capture */
     printf("capture_bad %d\n", ld_world_capture_begin(w, 0));
     ld_world_capture_begin(w, 10);

@@ -166,6 +166,34 @@ int64_t ld_world_get_events_ex(ld_world* w, ld_contact_event_ex* out, int64_t ca
 int32_t ld_body_set_material(ld_world* w, ld_body b, uint32_t material);
 int32_t ld_body_get_material(ld_world* w, ld_body b, uint32_t* out);
 
+/* ---- 0.6 (ROADMAP 17.90): a destructible box. pieces welded Voronoi fragments; each weld
+ * breaks at stress (Pa) times its seam area and reports a fracture event. One fractured
+ * object per world; such a world cannot be saved or loaded (LD_ERR_STATE). Returns the
+ * fragment count; first gets the first fragment's handle. */
+typedef struct ld_fracture_event {
+    int64_t tick;
+    int64_t kind; /* LD_FRACTURE_* */
+    int64_t bond;
+    ld_body a;    /* fragment handle */
+    ld_body b;    /* fragment handle, -1 = external body or none */
+} ld_fracture_event;
+#define LD_FRACTURE_BOND_BROKEN 0
+#define LD_FRACTURE_EVICTED 1
+int64_t ld_world_add_fracture_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, int32_t pieces, int32_t seed, float stress, float density, ld_body* first);
+int64_t ld_world_get_fragments(ld_world* w, ld_body* out, int64_t cap);
+int64_t ld_world_fracture_event_count(ld_world* w);
+int64_t ld_world_get_fracture_events(ld_world* w, ld_fracture_event* out, int64_t cap);
+
+/* ---- 0.6 (ROADMAP 17.90): the frame export stream. ld_world_export_frame writes a
+ * little-endian record set to an 8-byte aligned buffer: header 24 B (u32 magic 0x3146444C
+ * "LDF1", u32 version 1, i64 body count, i64 tick), then per live body in slot order 72 B:
+ * i64 handle, f32 pos[3], f32 rot[4] xyzw, f32 vel[3], f32 omega[3], u32 flags
+ * (LD_FRAME_ASLEEP | LD_FRAME_STATIC), u32 material, u32 user (low 32 bits). */
+#define LD_FRAME_ASLEEP 1
+#define LD_FRAME_STATIC 2
+int64_t ld_world_frame_size(ld_world* w);
+int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);
+
 #ifdef __cplusplus
 }
 #endif
