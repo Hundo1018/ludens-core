@@ -9,7 +9,7 @@ world driven from Python is bit-identical to one driven from C or Mojo.
 from collections import namedtuple
 import ctypes
 import struct
-from ctypes import byref, c_float, c_int32, c_int64, c_uint8, c_uint64, c_void_p
+from ctypes import POINTER, byref, c_float, c_int32, c_int64, c_uint8, c_uint32, c_uint64, c_void_p
 
 from . import _capi as C
 
@@ -141,6 +141,17 @@ class Body:
     @user.setter
     def user(self, value):
         self.world._check(C.lib.ld_body_set_user(self.world._h, self.handle, int(value)))
+
+    @property
+    def material(self):
+        """Host material id (0 = none), reported on contact events (ABI 0.6); not saved."""
+        out = c_uint32(0)
+        self.world._check(C.lib.ld_body_get_material(self.world._h, self.handle, byref(out)))
+        return out.value
+
+    @material.setter
+    def material(self, value):
+        self.world._check(C.lib.ld_body_set_material(self.world._h, self.handle, int(value)))
 
 
 class World:
@@ -370,6 +381,41 @@ class World:
         buf = (C.ContactEventC * max(n, 1))()
         n = self._check(C.lib.ld_world_get_events(self._h, buf, n))
         return [ContactEvent(e.tick, Body(self, e.a), Body(self, e.b), e.kind, e.feature) for e in buf[:n]]
+
+    def events_ex(self):
+        """Contact events of the last step call with impulse, tangential velocity and
+        material ids (ABI 0.6): a list of `_capi.ContactEventExC` records."""
+        n = self._check(C.lib.ld_world_event_count(self._h))
+        buf = (C.ContactEventExC * max(n, 1))()
+        n = self._check(C.lib.ld_world_get_events_ex(self._h, buf, n))
+        return list(buf[:n])
+
+    def add_fracture_box(self, pos, half, pieces, seed=0, stress=2.0e4, density=1000.0):
+        """A box of `pieces` welded Voronoi fragments (ABI 0.6). Returns the fragment handles.
+        A world with a fractured object cannot be saved or loaded."""
+        first = c_int64(-1)
+        n = self._check(
+            C.lib.ld_world_add_fracture_box(
+                self._h, pos[0], pos[1], pos[2], half[0], half[1], half[2], int(pieces), int(seed), stress, density, byref(first)
+            )
+        )
+        buf = (c_int64 * max(n, 1))()
+        self._check(C.lib.ld_world_get_fragments(self._h, buf, n))
+        return list(buf[:n])
+
+    def fracture_events(self):
+        """Fracture events of the last step call: `_capi.FractureEventC` records."""
+        n = self._check(C.lib.ld_world_fracture_event_count(self._h))
+        buf = (C.FractureEventC * max(n, 1))()
+        n = self._check(C.lib.ld_world_get_fracture_events(self._h, buf, n))
+        return list(buf[:n])
+
+    def export_frame(self):
+        """The current frame as bytes in the ABI 0.6 frame stream layout (see ludens.h)."""
+        n = self._check(C.lib.ld_world_frame_size(self._h))
+        buf = (c_uint64 * ((n + 7) // 8))()
+        n = self._check(C.lib.ld_world_export_frame(self._h, ctypes.cast(buf, POINTER(c_uint8)), n))
+        return bytes(ctypes.string_at(buf, n))
 
     # -- save / restore
 
