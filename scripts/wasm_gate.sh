@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The wasm gate (ROADMAP 17.89 W2 / #74): the C-ABI as wasm64 must hash like the
 # native reference build (`--target-cpu x86-64`, 17.89 floating-point policy c).
-#   - tools/wasm/scenes.py: six C-ABI scenes (raycast, ccd, saveload, nav, fracture, events),
+#   - tools/wasm/scenes.py: seven C-ABI scenes (raycast, ccd, saveload, nav, fracture, events, water),
 #     native library vs wasmtime; one hash each, also recorded in tests/golden/wasm_scenes.txt
 #   - tools/wasm/world_hash.mjs: the 12 / 1012 body worlds on node >= 24 vs the native reference binary
 # A scene that comes out `nan` on either side is reported and not compared (the NaN payload is

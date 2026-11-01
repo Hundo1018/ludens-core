@@ -42,6 +42,9 @@ SIG = {
     "ld_nav_find_path": (I64, [P, F, F, F, F, F, F, P, I64]),
     "ld_world_add_fracture_box": (I64, [P, F, F, F, F, F, F, I32, I32, F, F, P]),
     "ld_world_fracture_event_count": (I64, [P]),
+    "ld_world_add_water": (I64, [P, I32, I32, F, F, F, F, F, I32]),
+    "ld_world_bubble_event_count": (I64, [P]),
+    "ld_world_get_bubble_events": (I64, [P, P, I64]),
 }
 
 
@@ -232,8 +235,24 @@ def scene_events(be):
     return None if st is None else fnv(st, *chunks)
 
 
+def scene_water(be):
+    w = new_world(be)
+    np_ = be.call("ld_world_add_water", w, 80, 24, 0.025, 0.0, 0.0, 0.25, 0.5, 5)
+    chunks = [struct.pack("<q", np_)]
+    for _ in range(60):
+        be.call("ld_world_step_ticks", w, 1)
+        n = be.call("ld_world_bubble_event_count", w)
+        eb = be.buf(32 * max(n, 1))
+        got = be.call("ld_world_get_bubble_events", w, eb.ptr, n)
+        chunks.append(struct.pack("<q", got))
+        chunks.append(eb.get()[: 32 * max(got, 0)])
+    be.call("ld_world_destroy", w)
+    vals = b"".join(chunks)
+    return fnv(vals)
+
+
 SCENES = [("raycast", scene_raycast), ("ccd", scene_ccd), ("saveload", scene_saveload),
-          ("nav", scene_nav), ("fracture", scene_fracture), ("events", scene_events)]
+          ("nav", scene_nav), ("fracture", scene_fracture), ("events", scene_events), ("water", scene_water)]
 
 
 def main():
