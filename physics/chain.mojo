@@ -20,7 +20,8 @@ joint i rotates about `axis` (unit, link frame); the link frame origin sits ON
 the joint; the child pivot is at `pivot` in this link's frame.
 """
 
-from std.math import sqrt, cos, sin, atan2
+from std.math import sqrt, atan2
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, dot, cross, tangent_basis, length
 from geometry.quat import Quat
 from geometry.motor import Motor3

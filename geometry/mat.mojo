@@ -15,7 +15,7 @@ conversion); `compose_trs4` (needs a quaternion) therefore lives there too, to
 keep this module quaternion-free and break the dependency cycle.
 """
 
-from std.math import sin, cos
+from .trig import sin, cos
 from .vec import WorldType, Real, Vec2, Vec3, PadW
 
 

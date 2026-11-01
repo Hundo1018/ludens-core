@@ -27,7 +27,8 @@ Still water spawns nothing (no relative velocity, no outward motion);
 `test_flip_diffuse` measures a dam break.
 """
 
-from std.math import sqrt, floor, cos, sin, pi
+from std.math import sqrt, floor, pi
+from geometry.trig import cos, sin
 from geometry.vec import Real
 from scheduler.rng import SplitMix64
 from .flip import FlipWater2

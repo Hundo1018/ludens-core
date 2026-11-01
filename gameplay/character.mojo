@@ -42,7 +42,8 @@ Its edges are rounded by r so an overlap up to r deep has a push-out
 direction; the default -1 keeps the capsule.
 """
 
-from std.math import sqrt, cos, acos
+from std.math import sqrt, acos
+from geometry.trig import cos
 from geometry.vec import Real, Vec3, dot, length, cross
 from geometry.quat import Quat
 from collision.world_query import QueryFilter, Hit, QueryShape, Penetration, pose3_of

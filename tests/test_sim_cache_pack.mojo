@@ -78,8 +78,8 @@ def main() raises:
         packed.add_frame(f)
     var pb_ = plain.bytes()
     var kb_ = packed.bytes()
-    print("  1 mm plain", len(pb_), "bytes (test_sim_cache records 197494), version", pb_[4], ";  packed version", kb_[4])
-    s.check(len(pb_) == 197494 and pb_[4] == 1 and kb_[4] == 2, "without pack: the version-1 bytes as before; packed is version 2")
+    print("  1 mm plain", len(pb_), "bytes (test_sim_cache records 197486 on x86-64; 197494 with FMA), version", pb_[4], ";  packed version", kb_[4])
+    s.check(len(pb_) == 197486 and pb_[4] == 1 and kb_[4] == 2, "without pack: the version-1 bytes as before; packed is version 2")
 
     var still = PointCacheWriter(1e-3, 16, True)
     still.add_frame(frames[0])

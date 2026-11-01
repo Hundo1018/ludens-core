@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def build(test: str, out: Path) -> bool:
-    cpu = os.environ.get("LUDENS_TARGET_CPU", "skylake")
+    cpu = os.environ.get("LUDENS_TARGET_CPU", "x86-64")
     r = subprocess.run(
         ["mojo", "build", "--target-cpu", cpu, "-D", "ASSERT=all", "-I", "build", "-o", str(out), test],
         cwd=ROOT, capture_output=True,

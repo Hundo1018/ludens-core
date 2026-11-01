@@ -21,7 +21,8 @@ value that cancels it, which removes the jitter an explicit friction model has
 when parked on a slope.
 """
 
-from std.math import sin, atan, sqrt
+from std.math import atan, sqrt
+from geometry.trig import sin
 from geometry.vec import Real
 
 comptime _EPS: Real = 1e-6

@@ -52,7 +52,8 @@ representation-functor discussion). Motors are compared BY ACTION on points
 motors to sample points rather than comparing fields.
 """
 
-from std.math import sin, cos, sqrt, pow
+from std.math import sqrt, pow
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3
 from geometry.motor import Motor2, Motor3
 from geometry.galie import geodesic2, geodesic3

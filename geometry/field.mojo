@@ -17,7 +17,8 @@ pointer from its taped operand. Adjoints of constants are discarded — correct,
 since nothing differentiates w.r.t. a constant.
 """
 
-from std.math import sqrt, cos, sin, exp
+from std.math import sqrt, exp
+from .trig import cos, sin
 from std.memory import alloc, Layout
 from .vec import WorldType, Real
 

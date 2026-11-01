@@ -19,7 +19,8 @@ Deterministic.
 i)` gives slot i in the world; followers `arrive` at their slots.
 """
 
-from std.math import sqrt, cos, sin, floor
+from std.math import sqrt, floor
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, dot
 
 comptime FORMATION_LINE = 0

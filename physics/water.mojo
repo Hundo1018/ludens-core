@@ -25,7 +25,8 @@ point below the local surface pushes up with rho g dV at that point (so the
 torque follows), plus a drag on the velocity relative to the water.
 """
 
-from std.math import sqrt, sin, cos, pi, exp, log, floor
+from std.math import sqrt, pi, exp, log, floor
+from geometry.trig import sin, cos
 from numerics.fft import fft2
 from scheduler.rng import SplitMix64
 from geometry.vec import Real, Vec3

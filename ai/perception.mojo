@@ -21,7 +21,8 @@ older than the observer's `memory_ticks` are dropped by `forget(tick)`.
 a tie, then the lower target id), so decisions over it are deterministic.
 """
 
-from std.math import sqrt, cos, pi
+from std.math import sqrt, pi
+from geometry.trig import cos
 from geometry.vec import Real, Vec3, dot
 from ai.blackboard import Blackboard
 

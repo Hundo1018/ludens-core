@@ -204,7 +204,7 @@ def lsystem(axiom: String, rules: Dict[String, String], iterations: Int) raises 
 
 def turtle(s: String, step: Real, angle: Real) -> List[Vec2]:
     """Segments as point pairs (a0, b0, a1, b1, ...)."""
-    from std.math import sin, cos
+    from geometry.trig import sin, cos
     var x = Real(0)
     var y = Real(0)
     var heading = Real(1.5707963267948966)  # +y

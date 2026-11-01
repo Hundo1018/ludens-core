@@ -37,7 +37,8 @@ and the distance flown so far (for damage falloff, 17.70).
 constant velocity (no gravity), or zero when the target outruns the shot.
 """
 
-from std.math import exp, sqrt, isfinite, cos, acos
+from std.math import exp, sqrt, isfinite, acos
+from geometry.trig import cos
 from geometry.vec import Real, Vec3, dot, cross, length
 from geometry.quat import Quat
 from collision.world_query import QueryFilter

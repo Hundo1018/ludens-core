@@ -17,7 +17,8 @@ stateful RNG (`procedural` is layer 2 and cannot import `scheduler.rng`).
 them: a point survives if a hashed uniform is below it.
 """
 
-from std.math import sqrt, cos, sin, pi
+from std.math import sqrt, pi
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec2
 from .noise import _hash
 

@@ -25,7 +25,14 @@ from .state_io import StateWriter, StateReader
 
 def _solve6(mut a: List[Real], mut b: List[Real]):
     """Gauss elimination with partial pivoting on a 6 x 6 system (row-major
-    `a`, in place); the solution replaces `b`."""
+    `a`, in place); the solution replaces `b`. A pivot that cancels below
+    `1e-7` of the largest entry (c dt / m ~ 1e7 does this: the no-FMA x86-64
+    reference build hits exactly 0, 17.89 / #75) is held at that floor, so the
+    answer stays finite and bounded instead of NaN."""
+    var scale = Real(0)
+    for i in range(36):
+        scale = max(scale, abs(a[i]))
+    var floor = scale * 1e-7
     for col in range(6):
         var piv = col
         for r in range(col + 1, 6):
@@ -40,6 +47,9 @@ def _solve6(mut a: List[Real], mut b: List[Real]):
             b[col] = b[piv]
             b[piv] = tb
         var d = a[col * 6 + col]
+        if abs(d) < floor:
+            d = floor if d >= 0 else -floor
+            a[col * 6 + col] = d
         for r in range(col + 1, 6):
             var f = a[r * 6 + col] / d
             if f == 0:

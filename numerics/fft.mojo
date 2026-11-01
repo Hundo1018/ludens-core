@@ -8,7 +8,8 @@ then columns of a row-major n x n array. Lengths must be powers of two
 (raises otherwise: an engine-level size is a caller's choice, checked once).
 """
 
-from std.math import sin, cos, pi
+from std.math import pi
+from geometry.trig import sin, cos
 from geometry.vec import Real
 
 

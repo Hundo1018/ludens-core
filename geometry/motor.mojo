@@ -16,7 +16,8 @@ Derived by requiring `T P0 rev(T)` to translate the origin by +d; verified
 against the Quat/Mat4 paths in `tests/test_motor_parity.mojo`.
 """
 
-from std.math import sqrt, cos, sin
+from std.math import sqrt
+from .trig import cos, sin
 from .vec import Real, Vec2, Vec3
 from .quat import Quat, compose_trs4
 from .mat import Mat4

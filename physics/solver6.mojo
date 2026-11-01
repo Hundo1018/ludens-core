@@ -38,7 +38,8 @@ narrowphase is axis-aligned, geometrically unconstrained. Restitution is still
 deferred (e = 0 scenes).
 """
 
-from std.math import sqrt, isfinite, sin, cos
+from std.math import sqrt, isfinite
+from geometry.trig import sin, cos
 from std.os import abort
 from std.time import perf_counter_ns
 from std.collections import Dict

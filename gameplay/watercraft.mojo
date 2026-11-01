@@ -13,7 +13,8 @@ longer than a wave's slope scale sees the surface tilt; buoyancy stays vertical.
 Linear and angular damping act in proportion to the submerged fraction.
 """
 
-from std.math import sqrt, sin, cos
+from std.math import sqrt
+from geometry.trig import sin, cos
 from geometry.vec import Real, Vec3
 from geometry.polytope import Polytope, polytope_split, convex_hull
 from physics.body_set import BodyId

@@ -46,7 +46,8 @@ walls only remove the velocity into them (frictionless), so sand needs an
 obstacle as its floor to pile instead of spreading.
 """
 
-from std.math import sqrt, log, exp, sin
+from std.math import sqrt, log, exp
+from geometry.trig import sin
 from geometry.vec import Real, Vec3, dot, length
 from geometry.mat import Mat3
 from geometry.mat3 import Mat3x3, sym_eigen3

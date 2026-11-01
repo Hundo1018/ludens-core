@@ -3,10 +3,10 @@
 Which compiler / target factors change simulation bits? Compiles
 `benchmarks/probes/fp_probe.mojo` (three scenes, 300 steps) under each
 variant, runs it, and compares each scene's state hash and largest
-coordinate drift against the reference (skylake, default optimisation).
+coordinate drift against the reference (x86-64, default optimisation).
 
 Variants: CPU targets (x86-64 baseline without FMA, x86-64-v3 / haswell,
-skylake, skylake-avx512, the host CPU) and optimisation levels -O0 .. -O3.
+x86-64, skylake, skylake-avx512, the host CPU) and optimisation levels -O0 .. -O3.
 A target the host cannot run is skipped.
 
     pixi run fp-probe
@@ -38,11 +38,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROBE = "benchmarks/probes/fp_probe.mojo"
 
 VARIANTS = [
-    ("skylake -O (reference)", ["--target-cpu", "skylake"]),
-    ("skylake -O0", ["--target-cpu", "skylake", "-O0"]),
-    ("skylake -O1", ["--target-cpu", "skylake", "-O1"]),
-    ("skylake -O2", ["--target-cpu", "skylake", "-O2"]),
-    ("x86-64 (no FMA, SSE2)", ["--target-cpu", "x86-64"]),
+    ("x86-64 -O (reference: no FMA, SSE2)", ["--target-cpu", "x86-64"]),
+    ("x86-64 -O0", ["--target-cpu", "x86-64", "-O0"]),
+    ("x86-64 -O1", ["--target-cpu", "x86-64", "-O1"]),
+    ("x86-64 -O2", ["--target-cpu", "x86-64", "-O2"]),
+    ("skylake (AVX2 + FMA: the speed variant)", ["--target-cpu", "skylake"]),
     ("haswell (AVX2 + FMA)", ["--target-cpu", "haswell"]),
     ("skylake-avx512", ["--target-cpu", "skylake-avx512"]),
     ("native host CPU", []),

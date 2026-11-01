@@ -14,7 +14,8 @@ Closed forms (no series):
        + (sin u + v cos u·I)·B̂. `log` inverts via u = atan2(|B_E|, scalar).
 """
 
-from std.math import sqrt, cos, sin, atan2
+from std.math import sqrt, atan2
+from .trig import cos, sin
 from .vec import Real
 from .multivector import PGA2, PGA3
 from .motor import Motor2, Motor3

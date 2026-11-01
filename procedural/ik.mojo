@@ -28,7 +28,8 @@ target and keep the segment lengths; which knee they choose depends on the
 pole (analytic) or the starting pose (FABRIK).
 """
 
-from std.math import sqrt, acos, cos, sin, isfinite
+from std.math import sqrt, acos, isfinite
+from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, dot, cross, length
 
 

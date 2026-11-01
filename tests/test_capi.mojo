@@ -109,7 +109,12 @@ def main() raises:
     var lib = tmp + "/libludens.so"
     var host = tmp + "/host"
 
-    _ = _sh(sp, Python.list("mojo", "build", "--emit", "shared-lib", "-I", "build", "-o", lib, "embed/capi.mojo"))
+    # the reference target on x86-64 (17.89 / #75); other architectures compile for the host
+    var cpu = Python.list("--target-cpu", "x86-64") if String(Python.import_module("platform").machine()) == "x86_64" else Python.list()
+    var build_cmd = Python.list("mojo", "build", "--emit", "shared-lib")
+    build_cmd.extend(cpu)
+    build_cmd.extend(Python.list("-I", "build", "-o", lib, "embed/capi.mojo"))
+    _ = _sh(sp, build_cmd)
     _ = _sh(
         sp,
         Python.list(

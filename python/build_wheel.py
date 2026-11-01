@@ -128,7 +128,7 @@ def build(out_dir, prebuilt=None):
     if prebuilt:
         shutil.copy2(prebuilt, lib)
     else:
-        subprocess.run(["mojo", "build", "--emit", "shared-lib", "-I", "build", "-o", lib, "embed/capi.mojo"], cwd=ROOT, check=True)
+        subprocess.run(["mojo", "build", "--emit", "shared-lib", *(["--target-cpu", "x86-64"] if os.uname().machine == "x86_64" else []), "-I", "build", "-o", lib, "embed/capi.mojo"], cwd=ROOT, check=True)
     for name, src in bundled_deps(lib):
         dst = os.path.join(pkg, name)
         shutil.copy2(os.path.realpath(src), dst)

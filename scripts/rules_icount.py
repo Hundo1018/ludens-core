@@ -32,7 +32,7 @@ FIELDS = {"Ir": r"I\s+refs:\s+([\d,]+)", "D1mr": r"D1\s+misses:\s+([\d,]+)", "DL
 def cpu_flags():
     cpu = os.environ.get("LUDENS_TARGET_CPU", "")
     if not cpu and os.uname().machine == "x86_64":
-        cpu = "skylake"
+        cpu = "x86-64"
     return ["--target-cpu", cpu] if cpu else []
 
 

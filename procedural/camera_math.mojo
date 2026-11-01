@@ -27,7 +27,8 @@
     target with a spring and looks at it, the frame's normal as up.
 """
 
-from std.math import sqrt, tan, exp, acos, sin, atan, isfinite
+from std.math import sqrt, tan, exp, acos, atan, isfinite
+from geometry.trig import sin
 from geometry.vec import Real, Vec3, dot, cross, length
 from geometry.quat import Quat, slerp
 from geometry.mat import Mat4
