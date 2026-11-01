@@ -261,6 +261,31 @@ int main(void) {
         free(fh);
         ld_world_destroy(fw);
     }
+    /* ABI 0.6 (17.90): a dam break in a 2D FLIP tank; particles turning into bubbles are events */
+    {
+        ld_world* ww = NULL;
+        ld_world_create(1.0 / 60.0, 0.0f, -9.81f, 0.0f, &ww);
+        int64_t np = ld_world_add_water(ww, 80, 24, 0.025f, 0.0f, 0.0f, 0.25f, 0.5f, 5);
+        int64_t total = 0, finite = 1, ordered = 1, last_tick = -1;
+        for (int f = 0; f < 90; f++) {
+            ld_world_step_ticks(ww, 1);
+            int64_t n = ld_world_bubble_event_count(ww);
+            ld_bubble_event* be = (ld_bubble_event*)malloc(sizeof(ld_bubble_event) * (size_t)(n + 1));
+            if (ld_world_get_bubble_events(ww, be, n) != n) { printf("bubble events mismatch\n"); return 1; }
+            for (int64_t i = 0; i < n; i++) {
+                finite &= be[i].x == be[i].x && be[i].y == be[i].y && be[i].x >= 0.0f && be[i].x <= 2.0f && be[i].y >= 0.0f && be[i].y <= 0.6f;
+                ordered &= be[i].tick >= last_tick;
+                last_tick = be[i].tick;
+            }
+            total += n;
+            free(be);
+        }
+        uint8_t tiny[8];
+        printf("water %lld %lld %lld %lld\n", (long long)np, (long long)(total > 0), (long long)(finite && ordered), (long long)ld_world_save(ww, tiny, 8));
+        printf("water_second %lld\n", (long long)ld_world_add_water(ww, 8, 8, 0.1f, 0, 0, 0.5f, 0.5f, 1));
+        printf("water_bad %lld\n", (long long)ld_world_add_water(ww, 1, 8, 0.1f, 0, 0, 0.5f, 0.5f, 1));
+        ld_world_destroy(ww);
+    }
     /* ABI 0.3: physics capture */
     printf("capture_bad %d\n", ld_world_capture_begin(w, 0));
     ld_world_capture_begin(w, 10);

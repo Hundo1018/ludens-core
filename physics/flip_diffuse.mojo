@@ -60,6 +60,11 @@ struct DiffuseParticles(Movable):
     var k_d: Real
     var spawned: Int  # total spawned so far
     var max_particles: Int
+    # 17.90: a particle turning into a bubble is an event the host can hear
+    # (x, y, u, v at that moment, 4 words each); `clear_bubble_events` drains it.
+    var bubble_ev: List[Real]
+    var bubble_dropped: Int  # events past `bubble_cap`, newest dropped
+    var bubble_cap: Int
 
     def __init__(out self, seed: UInt64, max_particles: Int = 100000):
         self.x = List[Real]()
@@ -83,9 +88,15 @@ struct DiffuseParticles(Movable):
         self.k_d = 0.5
         self.spawned = 0
         self.max_particles = max_particles
+        self.bubble_ev = List[Real]()
+        self.bubble_dropped = 0
+        self.bubble_cap = 65536
 
     def count(self) -> Int:
         return len(self.x)
+
+    def clear_bubble_events(mut self):
+        self.bubble_ev.clear()
 
     def count_kind(self, k: Int) -> Int:
         var c = 0
@@ -219,6 +230,14 @@ struct DiffuseParticles(Movable):
                 self.kind[d] = SPRAY
                 self.v[d] -= w.gravity * dt
             elif c > 6:
+                if self.kind[d] != BUBBLE:
+                    if len(self.bubble_ev) < 4 * self.bubble_cap:
+                        self.bubble_ev.append(self.x[d])
+                        self.bubble_ev.append(self.y[d])
+                        self.bubble_ev.append(self.u[d])
+                        self.bubble_ev.append(self.v[d])
+                    else:
+                        self.bubble_dropped += 1
                 self.kind[d] = BUBBLE
                 var fv = w.velocity(self.x[d], self.y[d])
                 self.u[d] += self.k_d * (fv[0] - self.u[d])

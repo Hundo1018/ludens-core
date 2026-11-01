@@ -50,6 +50,16 @@ namespace Ludens
         public long a;
         public long b;
     }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ld_bubble_event
+    {
+        public long tick;
+        public float x;
+        public float y;
+        public float u;
+        public float v;
+        public long reserved;
+    }
     public static unsafe class Native
     {
         public const string Lib = "ludens";
@@ -188,6 +198,12 @@ namespace Ludens
         public static extern long ld_world_fracture_event_count(ld_world* w);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern long ld_world_get_fracture_events(ld_world* w, ld_fracture_event* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_add_water(ld_world* w, int nx, int ny, float cell, float x0, float y0, float x1, float y1, int seed);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_bubble_event_count(ld_world* w);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_get_bubble_events(ld_world* w, ld_bubble_event* @out, long cap);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern long ld_world_frame_size(ld_world* w);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]

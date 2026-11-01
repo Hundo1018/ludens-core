@@ -86,6 +86,12 @@ class FractureEventC(Structure):
     _fields_ = [("tick", c_int64), ("kind", c_int64), ("bond", c_int64), ("a", c_int64), ("b", c_int64)]
 
 
+class BubbleEventC(Structure):
+    """ld_bubble_event (ABI 0.6): a water particle that turned into an air bubble."""
+
+    _fields_ = [("tick", c_int64), ("x", c_float), ("y", c_float), ("u", c_float), ("v", c_float), ("reserved", c_int64)]
+
+
 SYSTEM_FN = CFUNCTYPE(c_int32, c_void_p, c_double, c_int64, c_void_p)
 CONTACT_FN = CFUNCTYPE(c_int32, c_void_p, POINTER(ContactEventC), c_void_p)
 
@@ -154,6 +160,9 @@ PROTOTYPES = {
     "ld_world_get_fragments": (c_int64, [_W, POINTER(c_int64), c_int64]),
     "ld_world_fracture_event_count": (c_int64, [_W]),
     "ld_world_get_fracture_events": (c_int64, [_W, POINTER(FractureEventC), c_int64]),
+    "ld_world_add_water": (c_int64, [_W, c_int32, c_int32, _F, _F, _F, _F, _F, c_int32]),
+    "ld_world_bubble_event_count": (c_int64, [_W]),
+    "ld_world_get_bubble_events": (c_int64, [_W, POINTER(BubbleEventC), c_int64]),
     "ld_world_frame_size": (c_int64, [_W]),
     "ld_world_export_frame": (c_int64, [_W, POINTER(c_uint8), c_int64]),
 }

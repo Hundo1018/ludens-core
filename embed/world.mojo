@@ -31,6 +31,8 @@ from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
 from physics.capture import Capture
 from physics.fracture import FractureSet, EVENT_BOND_BROKEN
+from physics.flip import FlipWater2
+from physics.flip_diffuse import DiffuseParticles
 from geometry.polytope import Polytope
 from geometry.fracture_cut import FragmentSet, scatter_seeds, voronoi_fracture
 from collision.world_query import QueryFilter
@@ -132,6 +134,17 @@ struct FractureRec(Copyable, ImplicitlyCopyable, Movable):
     var b: Int64
 
 
+@fieldwise_init
+struct BubbleRec(Copyable, ImplicitlyCopyable, Movable):
+    """A particle that turned into an air bubble in the world's FLIP water (17.90)."""
+
+    var tick: Int64
+    var x: Float32
+    var y: Float32
+    var u: Float32
+    var v: Float32
+
+
 struct EmbedWorld(Movable):
     var scene: ContactScene6[QuatBody6]
     var cfg: SolverConfig
@@ -145,6 +158,10 @@ struct EmbedWorld(Movable):
     var fracture: FractureSet  # 17.90: fragments + bonds added by `add_fracture_box`
     var fracture_on: Bool
     var frame_fracture: List[FractureRec]
+    var water: FlipWater2  # 17.90: a 2D FLIP tank (xy plane) added by `add_water`
+    var diffuse: DiffuseParticles
+    var water_on: Bool
+    var frame_bubbles: List[BubbleRec]
     var frame_events: List[TickEvent]  # every event of the ticks run by the current / last frame
     var tick_events: List[TickEvent]  # events of the latest tick only
     var error: String
@@ -181,6 +198,10 @@ struct EmbedWorld(Movable):
         self.fracture = FractureSet(Real(1000), 0)
         self.fracture_on = False
         self.frame_fracture = List[FractureRec]()
+        self.water = FlipWater2(2, 2, Real(1))
+        self.diffuse = DiffuseParticles(UInt64(1), 1)
+        self.water_on = False
+        self.frame_bubbles = List[BubbleRec]()
         self.frame_events = List[TickEvent]()
         self.tick_events = List[TickEvent]()
         self.error = String()
@@ -265,6 +286,36 @@ struct EmbedWorld(Movable):
         if frag < 0 or frag >= len(self.fracture.bid):
             return -1
         return pack_body(self.fracture.bid[frag])
+
+    def add_water(
+        mut self, nx: Int, ny: Int, cell: Real, x0: Real, y0: Real, x1: Real, y1: Real, seed: Int
+    ) raises -> Int:
+        """A 2D FLIP tank of nx x ny cells (xy plane, walls all round) filled in
+        [x0, x1] x [y0, y1], with foam / spray / bubble particles on top. Bubble
+        spawns come back as events. One tank per world; gravity is the world's
+        -y component. Returns the water particle count."""
+        if self.water_on:
+            raise Error("add_water: this world already has a water tank")
+        if nx < 2 or ny < 2 or nx * ny > 1000000 or not (cell > 0) or not isfinite(cell):
+            raise Error("add_water: need 2..1e6 cells and a finite cell size > 0")
+        if not (x1 > x0) or not (y1 > y0) or not isfinite(x0 + y0 + x1 + y1):
+            raise Error("add_water: the fill box must be finite and non-empty")
+        var g = -self.gravity[1]
+        self.water = FlipWater2(nx, ny, cell, g if g > 0 else Real(0))
+        self.water.fill_box(x0, y0, x1, y1)
+        self.diffuse = DiffuseParticles(UInt64(seed))
+        self.water_on = True
+        return self.water.count()
+
+    def _step_water(mut self) raises:
+        var left = Real(self.dt)
+        var guard = 0
+        while left > 0 and guard < 64:
+            var h = min(left, self.water.max_dt())
+            self.water.step(h)
+            self.diffuse.update(self.water, h)
+            left -= h
+            guard += 1
 
     def add_fracture_box(
         mut self, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real, density: Real
@@ -432,6 +483,7 @@ struct EmbedWorld(Movable):
             raise Error("step: frame_dt must be finite and >= 0")
         self.frame_events.clear()
         self.frame_fracture.clear()
+        self.frame_bubbles.clear()
         self.acc += frame_dt
         var n = 0
         while self.acc >= self.dt and n < self.max_steps:
@@ -478,6 +530,23 @@ struct EmbedWorld(Movable):
                         self._frag_handle(fe.frag_b),
                     )
                 )
+        if self.water_on:
+            try:
+                self._step_water()
+            except e:
+                self.error = String(e)
+            var nb = len(self.diffuse.bubble_ev) // 4
+            for k in range(nb):
+                self.frame_bubbles.append(
+                    BubbleRec(
+                        Int64(self.tick),
+                        Float32(self.diffuse.bubble_ev[4 * k]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 1]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 2]),
+                        Float32(self.diffuse.bubble_ev[4 * k + 3]),
+                    )
+                )
+            self.diffuse.clear_bubble_events()
         if self.capturing:
             self.capture.record(self.scene)
         self.tick += 1
@@ -495,7 +564,7 @@ struct EmbedWorld(Movable):
 
     def save(self) -> List[UInt8]:
         var out = List[UInt8]()
-        debug_assert(not self.fracture_on, "save of a world with a fractured object is refused by the C-ABI")
+        debug_assert(not self.fracture_on and not self.water_on, "save of a world with a fractured object or water is refused by the C-ABI")
         _put(out, UInt64(_SAVE_MAGIC))
         _put(out, UInt64(self.tick))
         _put(out, UInt64(self.acc.to_bits()))
@@ -520,8 +589,8 @@ struct EmbedWorld(Movable):
     def load(mut self, data: List[UInt8]) raises:
         """Replace the simulation state with a `save` blob. Settings (dt,
         gravity, solver, systems) are the host's and stay as they are."""
-        if self.fracture_on:
-            raise Error("load: refused while the world has a fractured object")
+        if self.fracture_on or self.water_on:
+            raise Error("load: refused while the world has a fractured object or a water tank")
         var pos = 0
         if _get(data, pos) != UInt64(_SAVE_MAGIC):
             raise Error("load: not a ludens world blob")
@@ -563,6 +632,7 @@ struct EmbedWorld(Movable):
         self.user_gen = user_gen^
         self.frame_events.clear()
         self.frame_fracture.clear()
+        self.frame_bubbles.clear()
         self.tick_events.clear()
 
     def hash(self) -> UInt64:

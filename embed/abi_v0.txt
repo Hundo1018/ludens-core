@@ -81,3 +81,7 @@ int64_t ld_world_fracture_event_count(ld_world* w);
 int64_t ld_world_get_fracture_events(ld_world* w, ld_fracture_event* out, int64_t cap);
 int64_t ld_world_frame_size(ld_world* w);
 int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);
+typedef struct ld_bubble_event {
+int64_t ld_world_add_water(ld_world* w, int32_t nx, int32_t ny, float cell, float x0, float y0, float x1, float y1, int32_t seed);
+int64_t ld_world_bubble_event_count(ld_world* w);
+int64_t ld_world_get_bubble_events(ld_world* w, ld_bubble_event* out, int64_t cap);

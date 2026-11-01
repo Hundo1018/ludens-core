@@ -184,6 +184,22 @@ int64_t ld_world_get_fragments(ld_world* w, ld_body* out, int64_t cap);
 int64_t ld_world_fracture_event_count(ld_world* w);
 int64_t ld_world_get_fracture_events(ld_world* w, ld_fracture_event* out, int64_t cap);
 
+/* ---- 0.6 (ROADMAP 17.90): a 2D FLIP water tank. nx x ny cells of `cell` metres in the xy
+ * plane (walls all round), filled over [x0, x1] x [y0, y1]; gravity is the world's -y; one tank
+ * per world, and such a world cannot be saved or loaded (LD_ERR_STATE). Particles that turn
+ * into air bubbles during a step call come back as events. Returns the water particle count. */
+typedef struct ld_bubble_event {
+    int64_t tick;
+    float x;
+    float y;
+    float u; /* particle velocity at that moment (m/s) */
+    float v;
+    int64_t reserved;
+} ld_bubble_event;
+int64_t ld_world_add_water(ld_world* w, int32_t nx, int32_t ny, float cell, float x0, float y0, float x1, float y1, int32_t seed);
+int64_t ld_world_bubble_event_count(ld_world* w);
+int64_t ld_world_get_bubble_events(ld_world* w, ld_bubble_event* out, int64_t cap);
+
 /* ---- 0.6 (ROADMAP 17.90): the frame export stream. ld_world_export_frame writes a
  * little-endian record set to an 8-byte aligned buffer: header 24 B (u32 magic 0x3146444C
  * "LDF1", u32 version 1, i64 body count, i64 tick), then per live body in slot order 72 B:

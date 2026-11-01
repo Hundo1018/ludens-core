@@ -360,6 +360,14 @@ with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as fw:
     check(broken > 0, "a falling fractured box reports broken welds (%d)" % broken)
     frame = fw.export_frame()
     check(frame[:4] == b"LDF1" and len(frame) == 24 + 72 * (len(frags) + 1), "export_frame has the LDF1 header and one record per body")
+with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as ww:
+    check(ww.add_water(80, 24, 0.025, (0.0, 0.0, 0.25, 0.5), seed=5) > 100, "add_water fills the tank with particles")
+    bubbles = 0
+    for _ in range(90):
+        ww.step_ticks(1)
+        bubbles += len(ww.bubble_events())
+    check(bubbles > 0, "a dam break reports bubble events (%d)" % bubbles)
+    check(raises(ludens.LudensError, lambda: ww.save()) is not None, "a world with a tank refuses to save")
 with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as mw:
     mw.add_box((0, -1, 0), (20, 1, 20), mass=0, static=True)
     ball = mw.add_sphere((0, 0.6, 0), 0.5, mass=1.0)

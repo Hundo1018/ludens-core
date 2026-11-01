@@ -410,6 +410,19 @@ class World:
         n = self._check(C.lib.ld_world_get_fracture_events(self._h, buf, n))
         return list(buf[:n])
 
+    def add_water(self, nx, ny, cell, fill, seed=1):
+        """A 2D FLIP tank (xy plane, walls all round) of nx x ny cells of `cell` metres, filled over
+        fill = (x0, y0, x1, y1) (ABI 0.6). Returns the particle count. A world with a tank cannot be
+        saved or loaded."""
+        return self._check(C.lib.ld_world_add_water(self._h, int(nx), int(ny), cell, *fill, int(seed)))
+
+    def bubble_events(self):
+        """Particles that turned into air bubbles in the last step call: `_capi.BubbleEventC` records."""
+        n = self._check(C.lib.ld_world_bubble_event_count(self._h))
+        buf = (C.BubbleEventC * max(n, 1))()
+        n = self._check(C.lib.ld_world_get_bubble_events(self._h, buf, n))
+        return list(buf[:n])
+
     def export_frame(self):
         """The current frame as bytes in the ABI 0.6 frame stream layout (see ludens.h)."""
         n = self._check(C.lib.ld_world_frame_size(self._h))

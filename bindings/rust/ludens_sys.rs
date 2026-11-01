@@ -76,6 +76,16 @@ pub struct ld_fracture_event {
     pub a: ld_body,
     pub b: ld_body,
 }
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ld_bubble_event {
+    pub tick: i64,
+    pub x: f32,
+    pub y: f32,
+    pub u: f32,
+    pub v: f32,
+    pub reserved: i64,
+}
 pub type ld_system_fn = Option<unsafe extern "C" fn(*mut ld_world, f64, i64, *mut core::ffi::c_void) -> i32>;
 pub type ld_contact_fn = Option<unsafe extern "C" fn(*mut ld_world, *const ld_contact_event, *mut core::ffi::c_void) -> i32>;
 
@@ -137,6 +147,9 @@ extern "C" {
     pub fn ld_world_get_fragments(w: *mut ld_world, out: *mut ld_body, cap: i64) -> i64;
     pub fn ld_world_fracture_event_count(w: *mut ld_world) -> i64;
     pub fn ld_world_get_fracture_events(w: *mut ld_world, out: *mut ld_fracture_event, cap: i64) -> i64;
+    pub fn ld_world_add_water(w: *mut ld_world, nx: i32, ny: i32, cell: f32, x0: f32, y0: f32, x1: f32, y1: f32, seed: i32) -> i64;
+    pub fn ld_world_bubble_event_count(w: *mut ld_world) -> i64;
+    pub fn ld_world_get_bubble_events(w: *mut ld_world, out: *mut ld_bubble_event, cap: i64) -> i64;
     pub fn ld_world_frame_size(w: *mut ld_world) -> i64;
     pub fn ld_world_export_frame(w: *mut ld_world, buf: *mut u8, cap: i64) -> i64;
 }

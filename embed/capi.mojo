@@ -694,6 +694,7 @@ def ld_world_step_ticks(h: Optional[Handle], n: Int32) abi("C") -> Int32:
         return Int32(_fail(p, LD_ERR_ARG, "ld_world_step_ticks: n must be >= 0"))
     p[].w.frame_events.clear()
     p[].w.frame_fracture.clear()
+    p[].w.frame_bubbles.clear()
     return Int32(_run_ticks(h, p, Int(n)))
 
 
@@ -889,6 +890,69 @@ def ld_world_get_fracture_events(h: Optional[Handle], dst: Optional[I64Ptr], cap
     return Int64(n)
 
 
+# 0.6 (ROADMAP 17.90): a 2D FLIP water tank and its bubble events. A bubble event is
+# 4 int64 words (ld_bubble_event): tick, then x|y and u|v as float32 pairs, then 0.
+comptime _BUBBLE_WORDS = 4
+
+
+@export
+def ld_world_add_water(
+    h: Optional[Handle],
+    nx: Int32,
+    ny: Int32,
+    cell: Float32,
+    x0: Float32,
+    y0: Float32,
+    x1: Float32,
+    y1: Float32,
+    seed: Int32,
+) abi("C") -> Int64:
+    """Add a 2D FLIP tank (xy plane, nx x ny cells of `cell` metres, walls all
+    round) filled over [x0, x1] x [y0, y1]; gravity is the world's -y. One tank
+    per world; such a world cannot be saved or loaded (LD_ERR_STATE). Returns
+    the water particle count."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(p[].w.add_water(Int(nx), Int(ny), Real(cell), Real(x0), Real(y0), Real(x1), Real(y1), Int(seed)))
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_world_bubble_event_count(h: Optional[Handle]) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    return Int64(len(o.value()[].w.frame_bubbles))
+
+
+@export
+def ld_world_get_bubble_events(h: Optional[Handle], dst: Optional[I64Ptr], cap: Int64) abi("C") -> Int64:
+    """Particles that turned into air bubbles during the last step call, as
+    ld_bubble_event records."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    var n = len(p[].w.frame_bubbles)
+    if Int(cap) < n or (n > 0 and not dst):
+        return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_get_bubble_events: capacity below ld_world_bubble_event_count"))
+    for i in range(n):
+        var e = p[].w.frame_bubbles[i]
+        var base = _BUBBLE_WORDS * i
+        dst.value()[unsafe_offset=base] = e.tick
+        var f = dst.value().unsafe_bitcast[Float32]()
+        f[unsafe_offset=2 * base + 2] = e.x
+        f[unsafe_offset=2 * base + 3] = e.y
+        f[unsafe_offset=2 * base + 4] = e.u
+        f[unsafe_offset=2 * base + 5] = e.v
+        dst.value()[unsafe_offset=base + 3] = 0
+    return Int64(n)
+
+
 # ---------------------------------------------------------- save / restore
 
 
@@ -898,8 +962,8 @@ def ld_world_save_size(h: Optional[Handle]) abi("C") -> Int64:
     if not o:
         return Int64(_why(h))
     var p = o.value()
-    if p[].w.fracture_on:
-        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save_size: a fractured object is not saveable yet"))
+    if p[].w.fracture_on or p[].w.water_on:
+        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save_size: a fractured object or water tank is not saveable yet"))
     return Int64(len(p[].w.save()))
 
 
@@ -909,8 +973,8 @@ def ld_world_save(h: Optional[Handle], buf: Optional[U8Ptr], cap: Int64) abi("C"
     if not o:
         return Int64(_why(h))
     var p = o.value()
-    if p[].w.fracture_on:
-        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save: a fractured object is not saveable yet"))
+    if p[].w.fracture_on or p[].w.water_on:
+        return Int64(_fail(p, LD_ERR_STATE, "ld_world_save: a fractured object or water tank is not saveable yet"))
     var blob = p[].w.save()
     if Int(cap) < len(blob) or not buf:
         return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_save: capacity below ld_world_save_size"))
