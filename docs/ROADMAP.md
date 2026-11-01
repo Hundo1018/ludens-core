@@ -3987,7 +3987,7 @@
 > **狀態**:🔶 部分完成(2026-11-01:可行性實測 ✅,PoC 入 `tools/wasm/poc/`;管線、閘門、封裝未做)。設計筆記 `docs/design/17.89-wasm-platform.md`。
 > **緣起**:使用者 2026-11-01 決定以 wasm 作為跨平台通用的交付形態。方向 C(被嵌入的函式庫)不變,wasm 是同一個 C-ABI 的另一種產物。
 > **現況**:Mojo 1.2.0 無 wasm 目標(`--target-triple wasm32-wasip1` 被拒,modular/modular #4729、#5367 未承諾)。實測路線:
-> `mojo build --emit llvm embed/capi.mojo`(42 MB IR、24 個外部 declare)→ `tools/wasm/poc/retarget.py` → conda-forge LLVM 23.1.4 `opt -O3` / `llc`(wasm64)
+> `mojo build --emit llvm embed/capi.mojo`(42 MB IR、24 個外部 declare)→ PoC 的 retarget 腳本(已刪,由 ludens-wasm-rt 取代) → conda-forge LLVM 23.1.4 `opt -O3` / `llc`(wasm64)
 > → `tools/wasm/poc/shim.c` → `wasm-ld -mwasm64`,得 1 381 304 B 模組(4 個宿主匯入),node 24 與 wasmtime 50 可跑。
 > 12 體 240 tick 的世界雜湊 `4624da7477e83eff` 與原生 `--target-cpu x86-64`(無 FMA)相同;帶 FMA 的原生建置為 `b54cefb78d616c8`。1012 體單核:原生 6.18 ms/tick、
 > node 24 9.31、wasmtime 25.8。wasm32 在 `opt -O3` 後 trap(Mojo 編譯期已定 64 位元指標),不可行。
