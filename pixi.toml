@@ -67,6 +67,8 @@ symcov = "python3 scripts/symcov.py"
 # Which exported leaf kernels need no Mojo runtime import (wasm route; scripts/wasm_probe.py; ROADMAP 17.76).
 # The C-ABI as a wasm64 module through ludens-wasm-rt (ROADMAP 17.89 W0; scripts/wasm.sh).
 wasm = { cmd = "bash scripts/wasm.sh", depends-on = ["build"] }
+# The wasm gate: C-ABI scenes native vs wasmtime, 12 / 1012 body worlds native vs node (17.89 W2; scripts/wasm_gate.sh).
+wasm-gate = { cmd = "bash scripts/wasm_gate.sh", depends-on = ["build"] }
 # geometry.trig == musl sinf / cosf bit for bit (17.89 / #75; scripts/trig_parity.py)
 trig-parity = { cmd = "python3 scripts/trig_parity.py", depends-on = ["build"] }
 wasm-probe = { cmd = "python3 scripts/wasm_probe.py", depends-on = ["build"] }

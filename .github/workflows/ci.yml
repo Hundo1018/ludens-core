@@ -64,6 +64,27 @@ jobs:
           name: gate-log
           path: build/agent_gate.log
 
+  # ROADMAP 17.89 W2 (#74): the C-ABI as wasm64 hashes like the native reference build
+  # (node 24 + wasmtime from ludens-wasm-rt's pixi environment).
+  wasm:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      LUDENS_WASM_RT: ${{ github.workspace }}/ludens-wasm-rt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Hundo1018/ludens-wasm-rt
+          path: ludens-wasm-rt
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          locked: true
+          cache: true
+      - name: wasm gate (scenes native vs wasmtime, worlds native vs node)
+        run: pixi run wasm-gate
+
   # ROADMAP 17.76: the same gate on linux-aarch64 and osx-arm64. A probe
   # until each platform has its own golden (tests/golden/test_stdout.<os>-<arch>.txt):
   # failures are reported, not blocking.
