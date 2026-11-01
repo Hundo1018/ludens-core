@@ -144,8 +144,9 @@ def run(files: list[Path]) -> int:
 
 
 # 17.89 W1: what the whole C-ABI may import in the wasm build. Engine-owned: allocator, write,
-# clock. Std-owned (cannot be removed from engine code; ludens-wasm-rt stubs them): the abort
-# report (`dup fdopen fclose fflush`) and Error's stack-trace probe.
+# clock. Std-owned (cannot be removed from engine code): the abort report (`dup fdopen fclose
+# fflush`) and Error's stack-trace probe. ludens-wasm-rt's runtime defines them, so the linked
+# wasm module imports only `host_write` and `host_now_ns` (measured 2026-11-02, build/ludens64.wasm).
 CAPI_ALLOWED = frozenset({"KGEN_CompilerRT_AlignedAlloc", "KGEN_CompilerRT_AlignedFree", "write",
                           "clock_gettime"})
 CAPI_STD_STUBS = frozenset({"dup", "fdopen", "fclose", "fflush", "KGEN_CompilerRT_GetStackTrace"})
