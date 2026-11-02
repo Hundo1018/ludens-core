@@ -1717,7 +1717,7 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571327
 [PASS] sim_cache - 10 / 10 checks
 --- tests/test_sim_cache_pack.mojo ---
   bytes / point / frame (varint -> packed): err 0.01: 3.052246 -> 1.0996583 err 0.001: 3.2142904 -> 2.244515 err 0.0001: 3.800537 -> 3.4400554
-  1 mm plain 197486 bytes (test_sim_cache records 197486 on x86-64; 197494 with FMA), version 1 ;  packed version 2
+  1 mm plain 197486 bytes (test_sim_cache records 197486 on x86-64 (no FMA) and 197494 where the compiler contracts to FMA (aarch64)), version 1 ;  packed version 2
   still frame packed: cache 1467 bytes for 256 points x 2 frames
 [PASS] sim_cache_pack - 4 / 4 checks
 --- tests/test_simd_generic.mojo ---
