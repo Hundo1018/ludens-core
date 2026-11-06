@@ -2131,7 +2131,7 @@ wall on the left: exit ok True  at x 1.6
   3 s on 35 deg: dx at mu 0.45 -5.8746033  mu 0.75 5.2446976  mu 0.9 7.3349304
 [PASS] vehicle_slope - 3 / 3 checks
 --- tests/test_vehicle_truck.mojo ---
-[PASS] vehicle_truck - 6 / 6 checks
+[PASS] vehicle_truck - 8 / 8 checks
 --- tests/test_vehicle_wheel.mojo ---
 [PASS] vehicle_wheel - 133 / 133 checks
 --- tests/test_water.mojo ---

@@ -485,7 +485,8 @@ struct Vehicle[W: WheelCast = RayWheel](Movable):
         if self.shift_timer > 0:
             te = 0
         var total = te * ratio * self.cfg.drive.efficiency  # along the gear direction
-        # Axle shares: two driven axles split by front_bias, otherwise equal.
+        # Axle shares: two driven axles that include axle 0 split by front_bias, otherwise equal (a pair like axles
+        # 1 and 2 used to get 1 - front_bias each, 20 % more torque than the engine made).
         var axles = 0
         for a in range(4):
             if (axle_mask >> a) & 1 == 1:
@@ -494,7 +495,7 @@ struct Vehicle[W: WheelCast = RayWheel](Movable):
             if (axle_mask >> a) & 1 == 0:
                 continue
             var share = Real(1) / Real(axles)
-            if axles == 2:
+            if axles == 2 and (axle_mask & 1) == 1:
                 share = self.cfg.drive.front_bias if a == 0 else (1 - self.cfg.drive.front_bias)
             var t_axle = total * share
             var a0 = -1

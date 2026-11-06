@@ -73,6 +73,27 @@ def main() raises:
             front_drive += abs(v.wheels[w].drive_torque)
         else:
             rear_drive += abs(v.wheels[w].drive_torque)
+    # the two driven rear axles share the engine torque equally; the sum is the engine's (no torque is created)
+    var ax1 = Real(0)
+    var ax2 = Real(0)
+    for w in range(len(v.wheels)):
+        if cfg.wheels[w].axle == 1:
+            ax1 += v.wheels[w].drive_torque
+        elif cfg.wheels[w].axle == 2:
+            ax2 += v.wheels[w].drive_torque
+    s.check(abs(ax1 - ax2) <= 0.02 * (abs(ax1) + abs(ax2)) and ax1 > 0, "rear axle 1 and axle 2 get equal drive torque: " + String(ax1) + " and " + String(ax2) + " N m")
+    # conservation: the wheels together receive the engine torque times gear ratio and efficiency, no more
+    var t_sum = ax1 + ax2
+    var om = Real(0)
+    var nd = 0
+    for w in range(len(v.wheels)):
+        if cfg.wheels[w].driven:
+            om += v.wheels[w].omega
+            nd += 1
+    var gr = cfg.drive.gear_ratio(v.gear)
+    var abs_rpm = abs(om / Real(nd) * gr * 9.549297)
+    var expect_total = cfg.drive.engine_torque(v.rpm, abs_rpm, 1.0) * gr * cfg.drive.efficiency
+    s.check(v.shift_timer > 0 or abs(t_sum - expect_total) <= 0.03 * expect_total, "wheel torque sum " + String(t_sum) + " N m vs engine " + String(expect_total) + " N m (gear " + String(v.gear) + ", shift timer " + String(v.shift_timer) + ")")
     s.check(front_drive == 0 and rear_drive > 0, "drive torque only on the rear axles: front " + String(front_drive) + " N m, rear " + String(rear_drive) + " N m")
 
     var sc2 = road()
