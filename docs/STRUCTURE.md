@@ -2013,7 +2013,7 @@ counted, not listed.
 
 ### `gameplay/vehicle_drive.mojo`
 - struct `DriveConfig` — 3 methods
-- struct `TorqueCurve` — 4 methods
+- struct `TorqueCurve` — 5 methods
 - `def split_axle(kind: Int, torque: Float32, w_left: Float32, w_right: Float32, preload: Float32, lock: Float32, max_bias: Float32) -> Tuple[Float32, Float32]`
 - aliases: `DIFF_LOCKED`, `DIFF_LSD`, `DIFF_OPEN`, `RAD_S_TO_RPM`
 

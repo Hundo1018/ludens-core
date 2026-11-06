@@ -3,7 +3,7 @@
 
   1. Parked: the six wheel loads sum to the weight (1 %) and each axle carries a third of it within 2 % (measured 6.7e-7; the preset puts the
      centre of mass where the three axles share equally; ).
-  2. Driving: full throttle for 8 s on a flat road keeps the heading (|yaw| < 0.05 rad) and gains speed; only the
+  2. Driving: full throttle for 8 s on a flat road keeps the heading (|yaw| < 0.05 rad) and reaches more than 18 m/s (the sedan's 300 Nm curve gave 6.4 m/s); only the
      two rear axles (4 wheels) receive drive torque, the front axle none.
   3. Steering: a constant steer input turns the truck; the turn radius is within 30 % of the bicycle model
      L / tan(delta) with L the front-to-mid-rear distance (measured value reported).
@@ -65,7 +65,7 @@ def main() raises:
     var rot = sc.bset.bodies[id.index()].q
     var heading = rot.rotate(Vec3(1, 0, 0, 0))
     var yaw = atan(heading[2] / heading[0])
-    s.check(fwd > 3.0 and abs(yaw) < 0.05, "8 s of full throttle: " + String(fwd) + " m/s forward, travelled " + String(pos[0] - x0) + " m, yaw " + String(yaw) + " rad")
+    s.check(fwd > 18.0 and abs(yaw) < 0.05, "8 s of full throttle: " + String(fwd) + " m/s forward, travelled " + String(pos[0] - x0) + " m, yaw " + String(yaw) + " rad")
     var front_drive = Real(0)
     var rear_drive = Real(0)
     for w in range(len(v.wheels)):
@@ -81,7 +81,7 @@ def main() raises:
     run(v2, sc2, VehicleInput.idle(), 240)
     sc2.set_velocity(id2, Vec3(6, 0, 0, 0), Vec3(0, 0, 0, 0))
     v2.sync_wheels(6)
-    run(v2, sc2, VehicleInput(0.3, 0, 0.5, 0), 360)
+    run(v2, sc2, VehicleInput(0.08, 0, 0.5, 0), 360)
     var w2 = sc2.bset.bodies[id2.index()]
     var speed = length(Vec3(w2.vel[0], 0, w2.vel[2], 0))
     var yawrate = abs(w2.omega[1])

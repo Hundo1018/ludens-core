@@ -2,7 +2,7 @@
 
 `VehicleConfig` already takes up to 8 wheels on axles 0..3 and splits engine torque across the driven axles; what was
 missing was a preset that uses it. `truck_config(...)` builds a 6x4: a steered front axle (axle 0, undriven) and two
-driven rear axles (axles 1 and 2), dual-sided, with the mass, inertia, spring rate and brake torque scaled from the
+driven rear axles (axles 1 and 2), dual-sided, with a diesel torque curve and six gears, and with the mass, inertia, spring rate and brake torque scaled from the
 sedan's defaults to a heavy chassis. The wheel loads, not the config, decide how the weight is shared; the test
 (`test_vehicle_truck`) measures that.
 """
@@ -10,6 +10,7 @@ sedan's defaults to a heavy chassis. The wheel loads, not the config, decide how
 from geometry.vec import Real, Vec3
 from physics.rigid6 import Inertia3
 from .vehicle import VehicleConfig, WheelConfig
+from .vehicle_drive import TorqueCurve
 
 
 def truck_config(mass: Real = 8000, wheelbase: Real = 4.4, axle_gap: Real = 1.4, track: Real = 1.9) raises -> VehicleConfig:
@@ -53,5 +54,16 @@ def truck_config(mass: Real = 8000, wheelbase: Real = 4.4, axle_gap: Real = 1.4,
     cfg.brake_torque = cfg.brake_torque * k * Real(0.5)
     cfg.handbrake_torque = cfg.handbrake_torque * k * Real(0.5)
     cfg.max_steer = 0.4
+    # diesel drivetrain: a wide, low-rpm torque band and six ratios; the sedan's curve peaks at 300 Nm
+    cfg.drive.torque = TorqueCurve.diesel_truck()
+    cfg.drive.idle_rpm = 600
+    cfg.drive.launch_rpm = 1200
+    cfg.drive.redline_rpm = 2500
+    cfg.drive.up_rpm = 2200
+    cfg.drive.down_rpm = 1100
+    cfg.drive.gears = [Real(7.0), Real(4.2), Real(2.7), Real(1.8), Real(1.25), Real(1.0)]
+    cfg.drive.final_drive = 4.1
+    cfg.drive.engine_brake = 400
+    cfg.drive.shift_time = 0.5
     cfg.validate()
     return cfg^

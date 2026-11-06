@@ -2959,7 +2959,7 @@
 
 ### 待辦與部分完成條目
 
-> **進度註(2026-11-06,多軸卡車,#98 的一項)**:`VehicleConfig` 本來就接受 8 個輪子、軸 0..3,驅動力矩分給有驅動的軸;缺的是用到它的預設。`gameplay/vehicle_truck.mojo` 的 `truck_config(mass, wheelbase, axle_gap, track)`:6x4,前軸轉向無驅動,後兩軸驅動;軸位置由質心均分三軸載重算出(b = (wheelbase - axle_gap) / 3,a = 2 b + axle_gap)。`tests/test_vehicle_truck.mojo`(integration,6/6):8 t 卡車停放後六輪載重和 78399.99 N 對重量 78400 N,三軸各 26133 N(偏差 6.7e-7);全油門 8 s 前進 25.7 m、6.4 m/s、偏航 0.0 rad(用轎車扭矩曲線,所以加速慢);驅動力矩只在後軸(前 0,後 3732 N m);6 m/s 起、轉向 0.5 x 最大轉角的穩態半徑 28.8 m,對自行車模型 25.2 m(L = 5.1 m)差 14 %。**未做**:卡車專用扭矩曲線 / 變速箱、拖車、軸間差速鎖、載重變化下的懸吊。#98 仍開著。
+> **進度註(2026-11-06,多軸卡車,#98 的一項)**:`VehicleConfig` 本來就接受 8 個輪子、軸 0..3,驅動力矩分給有驅動的軸;缺的是用到它的預設。`gameplay/vehicle_truck.mojo` 的 `truck_config(mass, wheelbase, axle_gap, track)`:6x4,前軸轉向無驅動,後兩軸驅動,柴油扭矩曲線(`TorqueCurve.diesel_truck()`:1200–1600 rpm 為 1800 Nm,2600 rpm 前收斂)與六檔;軸位置由質心均分三軸載重算出(b = (wheelbase - axle_gap) / 3,a = 2 b + axle_gap)。`tests/test_vehicle_truck.mojo`(integration,6/6):8 t 卡車停放後六輪載重和對重量 78400 N 相差 0.01 N,三軸各 26133 N(偏差 6.7e-7);全油門 8 s 前進 99.7 m、20.95 m/s、偏航 0.0 rad(第一版沿用轎車的 300 Nm 曲線只有 6.4 m/s、25.7 m);驅動力矩只在後軸;6 m/s 起、油門 0.08、轉向 0.5 x 最大轉角的穩態半徑 27.9 m,對自行車模型 25.2 m(L = 5.1 m)差 11 %(油門 0.3 時速度升高、半徑 32.0 m,差 27 %,是不足轉向)。**未做**:拖車、軸間差速鎖、載重變化下的懸吊。#98 仍開著。
 #### 17.14 導航
 
 > **狀態**:✅ 完成(Wave C;剩餘順序第 (1) 項)。2026-10-11 交付,設計筆記 `docs/design/17.14-navigation.md`。

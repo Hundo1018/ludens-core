@@ -71,6 +71,20 @@ struct TorqueCurve(Copyable, Movable):
         c.add(7000, 150)
         return c^
 
+    @staticmethod
+    def diesel_truck() -> Self:
+        """A 7-10 L turbo diesel: 1800 Nm from 1200 to 1600 rpm, falling off above 2000 rpm (governed near 2500)."""
+        var c = Self()
+        c.add(0, 900)
+        c.add(600, 1100)
+        c.add(1000, 1600)
+        c.add(1200, 1800)
+        c.add(1600, 1800)
+        c.add(2000, 1500)
+        c.add(2400, 900)
+        c.add(2600, 200)
+        return c^
+
     def at(self, r: Real) -> Real:
         var n = len(self.rpm)
         if n == 0:
