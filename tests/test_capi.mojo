@@ -207,6 +207,17 @@ def main() raises:
     s.eqi(Int(get(kv, "get_bodies", 2)), LD_ERR_BUFFER, "get_bodies with capacity count-1 -> LD_ERR_BUFFER")
     s.eqi(Int(get(kv, "last_pose_is_player", 0)), 1, "get_bodies handles and poses line up")
 
+    # --- 0.7 transfer
+    s.eqi(Int(get(kv, "xfer", 1)), 1, "transfer_save writes exactly transfer_size bytes")
+    s.eqi(Int(get(kv, "xfer", 3)), LD_ERR_BUFFER, "transfer_save into a buffer one byte short -> LD_ERR_BUFFER")
+    s.eqi(Int(get(kv, "xfer", 5)), 0, "transfer_load with the names in another order -> LD_OK")
+    s.eqi(Int(get(kv, "xfer", 7)), 1, "transfer: save, run 60, load, run 60: same hash")
+    s.eqi(Int(get(kv, "xfer", 9)), -106, "missing registered name -> LD_ERR_XFER_REGISTRATION")
+    s.eqi(Int(get(kv, "xfer", 11)), -106, "no names at all -> LD_ERR_XFER_REGISTRATION")
+    s.eqi(Int(get(kv, "xfer", 13)), -101, "truncated blob -> LD_ERR_XFER_TRUNCATED")
+    s.eqi(Int(get(kv, "xfer", 15)), -103, "other format version -> LD_ERR_XFER_VERSION")
+    s.eqi(Int(get(kv, "xfer", 17)), -102, "damaged magic -> LD_ERR_XFER_MAGIC")
+
     # --- save / load
     s.check(get(kv, "save", 0) == get(kv, "save", 2), "save writes ld_world_save_size bytes")
     s.eqi(Int(get(kv, "save", 4)), LD_ERR_BUFFER, "save into a short buffer -> LD_ERR_BUFFER")

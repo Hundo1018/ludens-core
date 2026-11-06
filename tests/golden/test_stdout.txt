@@ -157,7 +157,7 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
 [PASS] camera_spring - 8 / 8 checks
 --- tests/test_capi.mojo ---
   gen_bindings: up to date (62 functions);  rust host hash e8b9cc5196858e23  c host hash e8b9cc5196858e23
-[PASS] capi - 92 / 92 checks
+[PASS] capi - 101 / 101 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61208 bytes ( 501 per frame incl. keyframes )
   draw_frame(100): 18 commands = 5 body points + 13 contact arrows

@@ -64,7 +64,7 @@ namespace Ludens
     {
         public const string Lib = "ludens";
         public const uint LD_ABI_MAJOR = 0;
-        public const uint LD_ABI_MINOR = 6;
+        public const uint LD_ABI_MINOR = 7;
         public const int LD_OK = 0;
         public const int LD_ERR_HANDLE = -1;
         public const int LD_ERR_ARG = -2;
@@ -84,6 +84,13 @@ namespace Ludens
         public const int LD_FRACTURE_EVICTED = 1;
         public const int LD_FRAME_ASLEEP = 1;
         public const int LD_FRAME_STATIC = 2;
+        public const int LD_ERR_XFER_TRUNCATED = -101;
+        public const int LD_ERR_XFER_MAGIC = -102;
+        public const int LD_ERR_XFER_VERSION = -103;
+        public const int LD_ERR_XFER_SCALAR = -104;
+        public const int LD_ERR_XFER_SETTINGS = -105;
+        public const int LD_ERR_XFER_REGISTRATION = -106;
+        public const int LD_ERR_XFER_CORRUPT = -107;
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint ld_abi_version();
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
@@ -208,5 +215,11 @@ namespace Ludens
         public static extern long ld_world_frame_size(ld_world* w);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern long ld_world_export_frame(ld_world* w, byte* buf, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_transfer_size(ld_world* w, byte* registered);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_transfer_save(ld_world* w, byte* registered, byte* buf, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_world_transfer_load(ld_world* w, byte* registered, byte* data, long n);
     }
 }

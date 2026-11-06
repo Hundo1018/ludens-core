@@ -2053,7 +2053,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 150 public declarations
+## embed (layer 6) — 6 modules, 153 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2117,6 +2117,9 @@ counted, not listed.
 - `def ld_world_step_ticks(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], n: Int32) -> Int32`
 - `def ld_world_subscribe_contacts(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], kind_mask: Int32, f: def(Optional[Pointer[NoneType, MutUntrackedOrigin]], Pointer[Int64, MutAnyOrigin], Optional[Pointer[NoneType, MutUntrackedOrigin]]) abi("C") thin -> Int32, user: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_tick(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_transfer_load(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], registered: Optional[Pointer[UInt8, MutAnyOrigin]], data: Optional[Pointer[UInt8, MutAnyOrigin]], n: Int64) -> Int32`
+- `def ld_world_transfer_save(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], registered: Optional[Pointer[UInt8, MutAnyOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_transfer_size(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], registered: Optional[Pointer[UInt8, MutAnyOrigin]]) -> Int64`
 - `def ld_world_unsubscribe(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], id: Int64) -> Int32`
 - aliases: `ContactFn`, `F32Ptr`, `Handle`, `HandlePtr`, `I32Ptr`, `I64Ptr`, `LD_EVENT_FLAG_PERSISTENT`, `NPtr`, `SystemFn`, `U64Ptr`, `U8Ptr`, `WPtr`
 

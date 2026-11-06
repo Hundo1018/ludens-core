@@ -49,6 +49,7 @@ from embed.world import (
     PHASE_POST,
 )
 from embed.navigation import EmbedNav
+from embed.transfer import XFER_OK, transfer_check, transfer_load, transfer_save
 from diag.counters import COUNT as COUNTER_COUNT, counter_name
 
 comptime Handle = type_of(alloc[NoneType](Layout[NoneType](count=1)).unsafe_leak())
@@ -1003,6 +1004,88 @@ def ld_world_load(h: Optional[Handle], data: Optional[U8Ptr], n: Int64) abi("C")
             d[unsafe_offset=i] = src[unsafe_offset=i]
     try:
         p[].w.load(blob)
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_FORMAT, String(e)))
+
+
+def _names(p: Optional[U8Ptr]) -> List[String]:
+    """The registered names a host passes as one NUL-terminated string, names separated by '\n' (NULL or "" = none)."""
+    var out = List[String]()
+    if not p:
+        return out^
+    var src = p.value()
+    var cur = List[UInt8]()
+    var i = 0
+    while src[unsafe_offset=i] != 0:
+        var c = src[unsafe_offset=i]
+        if c == 10:
+            if len(cur) > 0:
+                out.append(String(unsafe_from_utf8=cur))
+            cur = List[UInt8]()
+        else:
+            cur.append(c)
+        i += 1
+    if len(cur) > 0:
+        out.append(String(unsafe_from_utf8=cur))
+    return out^
+
+
+@export
+def ld_world_transfer_size(h: Optional[Handle], registered: Optional[U8Ptr]) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(len(transfer_save(p[].w, _names(registered))))
+    except e:
+        return Int64(_fail(p, LD_ERR_STATE, String(e)))
+
+
+@export
+def ld_world_transfer_save(h: Optional[Handle], registered: Optional[U8Ptr], buf: Optional[U8Ptr], cap: Int64) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        var blob = transfer_save(p[].w, _names(registered))
+        if Int(cap) < len(blob) or not buf:
+            return Int64(_fail(p, LD_ERR_BUFFER, "ld_world_transfer_save: capacity below ld_world_transfer_size"))
+        var d = buf.value()
+        var src = blob.unsafe_ptr()
+        for i in range(len(blob)):
+            d[unsafe_offset=i] = src[unsafe_offset=i]
+        return Int64(len(blob))
+    except e:
+        return Int64(_fail(p, LD_ERR_STATE, String(e)))
+
+
+@export
+def ld_world_transfer_load(h: Optional[Handle], registered: Optional[U8Ptr], data: Optional[U8Ptr], n: Int64) abi("C") -> Int32:
+    """0 or a negative status: LD_ERR_XFER_* (-101 .. -107) say which transfer check failed and leave the world
+    unchanged; the usual LD_ERR_* for a bad handle, buffer or state."""
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    if p[].in_step:
+        return Int32(_fail(p, LD_ERR_STATE, "ld_world_transfer_load: called from a callback"))
+    if n < 0 or (n > 0 and not data):
+        return Int32(_fail(p, LD_ERR_ARG, "ld_world_transfer_load: bad buffer"))
+    var blob = List[UInt8](length=Int(n), fill=0)
+    if n > 0:
+        var src = data.value()
+        var d = blob.unsafe_ptr()
+        for i in range(Int(n)):
+            d[unsafe_offset=i] = src[unsafe_offset=i]
+    var names = _names(registered)
+    var status = transfer_check(p[].w, blob, names)
+    if status != XFER_OK:
+        return Int32(_fail(p, -100 + status, "ld_world_transfer_load: " + String(status)))
+    try:
+        transfer_load(p[].w, blob, names)
         return Int32(LD_OK)
     except e:
         return Int32(_fail(p, LD_ERR_FORMAT, String(e)))

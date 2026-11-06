@@ -1,4 +1,4 @@
-/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.6.
+/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.7.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):
@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #define LD_ABI_MAJOR 0
-#define LD_ABI_MINOR 6
+#define LD_ABI_MINOR 7
 
 #define LD_OK 0
 #define LD_ERR_HANDLE (-1)   /* null or destroyed world / navmesh handle */
@@ -209,6 +209,23 @@ int64_t ld_world_get_bubble_events(ld_world* w, ld_bubble_event* out, int64_t ca
 #define LD_FRAME_STATIC 2
 int64_t ld_world_frame_size(ld_world* w);
 int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);
+
+/* ---- 0.7 (ROADMAP 17.91): hand a world to a new module instance (editor code hot reload). `registered` is what
+ * the host has registered again (systems, contact subscriptions): names separated by '\n' in one NUL-terminated
+ * string, NULL = none. The blob adds to ld_world_save a format version, the scalar width, a hash of the settings
+ * that change results (dt, gravity, solver), the host material ids and a checksum. ld_world_transfer_load checks
+ * all of it before it touches the world and returns which check failed (the world is unchanged then). Order of
+ * checks: truncated / magic, version, scalar width, checksum, settings, registered names. */
+#define LD_ERR_XFER_TRUNCATED (-101)
+#define LD_ERR_XFER_MAGIC (-102)
+#define LD_ERR_XFER_VERSION (-103)
+#define LD_ERR_XFER_SCALAR (-104)
+#define LD_ERR_XFER_SETTINGS (-105)
+#define LD_ERR_XFER_REGISTRATION (-106)
+#define LD_ERR_XFER_CORRUPT (-107)
+int64_t ld_world_transfer_size(ld_world* w, const uint8_t* registered);
+int64_t ld_world_transfer_save(ld_world* w, const uint8_t* registered, uint8_t* buf, int64_t cap);
+int32_t ld_world_transfer_load(ld_world* w, const uint8_t* registered, const uint8_t* data, int64_t n);
 
 #ifdef __cplusplus
 }

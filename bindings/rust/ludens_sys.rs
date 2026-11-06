@@ -3,7 +3,7 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub const LD_ABI_MAJOR: u32 = 0;
-pub const LD_ABI_MINOR: u32 = 6;
+pub const LD_ABI_MINOR: u32 = 7;
 pub const LD_OK: i32 = 0;
 pub const LD_ERR_HANDLE: i32 = -1;
 pub const LD_ERR_ARG: i32 = -2;
@@ -23,6 +23,13 @@ pub const LD_FRACTURE_BOND_BROKEN: i32 = 0;
 pub const LD_FRACTURE_EVICTED: i32 = 1;
 pub const LD_FRAME_ASLEEP: i32 = 1;
 pub const LD_FRAME_STATIC: i32 = 2;
+pub const LD_ERR_XFER_TRUNCATED: i32 = -101;
+pub const LD_ERR_XFER_MAGIC: i32 = -102;
+pub const LD_ERR_XFER_VERSION: i32 = -103;
+pub const LD_ERR_XFER_SCALAR: i32 = -104;
+pub const LD_ERR_XFER_SETTINGS: i32 = -105;
+pub const LD_ERR_XFER_REGISTRATION: i32 = -106;
+pub const LD_ERR_XFER_CORRUPT: i32 = -107;
 
 pub type ld_body = i64;
 #[repr(C)]
@@ -152,4 +159,7 @@ extern "C" {
     pub fn ld_world_get_bubble_events(w: *mut ld_world, out: *mut ld_bubble_event, cap: i64) -> i64;
     pub fn ld_world_frame_size(w: *mut ld_world) -> i64;
     pub fn ld_world_export_frame(w: *mut ld_world, buf: *mut u8, cap: i64) -> i64;
+    pub fn ld_world_transfer_size(w: *mut ld_world, registered: *const u8) -> i64;
+    pub fn ld_world_transfer_save(w: *mut ld_world, registered: *const u8, buf: *mut u8, cap: i64) -> i64;
+    pub fn ld_world_transfer_load(w: *mut ld_world, registered: *const u8, data: *const u8, n: i64) -> i32;
 }

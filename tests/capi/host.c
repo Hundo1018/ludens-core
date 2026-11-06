@@ -193,6 +193,31 @@ int main(void) {
     printf("load_short %d\n", ld_world_load(w, blob, 5));
     free(blob);
 
+    /* -- 0.7 module-swap transfer: same world, registered names must match */
+    int64_t tsz = ld_world_transfer_size(w, (const uint8_t*)"zone\nsensor");
+    uint8_t* tb = (uint8_t*)malloc((size_t)tsz);
+    int64_t tsaved = ld_world_transfer_save(w, (const uint8_t*)"zone\nsensor", tb, tsz);
+    int64_t tsmall = ld_world_transfer_save(w, (const uint8_t*)"zone\nsensor", tb, tsz - 1);
+    ld_world_step_ticks(w, 60);
+    uint64_t ta = 0, tc = 0;
+    ld_world_hash(w, &ta);
+    int32_t t_ok = ld_world_transfer_load(w, (const uint8_t*)"sensor\nzone", tb, tsz);
+    ld_world_step_ticks(w, 60);
+    ld_world_hash(w, &tc);
+    int32_t t_reg = ld_world_transfer_load(w, (const uint8_t*)"zone", tb, tsz);
+    int32_t t_none = ld_world_transfer_load(w, NULL, tb, tsz);
+    int32_t t_trunc = ld_world_transfer_load(w, (const uint8_t*)"zone\nsensor", tb, tsz - 1);
+    tb[8] = 99;
+    int32_t t_ver = ld_world_transfer_load(w, (const uint8_t*)"zone\nsensor", tb, tsz);
+    tb[8] = 1;
+    tb[0] ^= 0xFF;
+    int32_t t_magic = ld_world_transfer_load(w, (const uint8_t*)"zone\nsensor", tb, tsz);
+    printf("xfer saved_eq_size %d small %lld ok %d replay_equal %d reg %d none %d trunc %d ver %d magic %d\n",
+           (int)(tsaved == tsz), (long long)tsmall, t_ok, (int)(ta == tc), t_reg, t_none, t_trunc, t_ver, t_magic);
+    tb[0] ^= 0xFF;
+    ld_world_transfer_load(w, (const uint8_t*)"zone\nsensor", tb, tsz); /* rewind: the rest of the host continues from here */
+    free(tb);
+
     /* -- error paths */
     char msg[256];
     printf("null_world %d\n", ld_world_step(NULL, 0.1));

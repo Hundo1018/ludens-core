@@ -39,7 +39,7 @@ from collision.world_query import QueryFilter
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
-comptime ABI_MINOR = 6
+comptime ABI_MINOR = 7
 
 # Status codes (negative = error). Frozen for v0.x: values never change.
 comptime LD_OK = 0
