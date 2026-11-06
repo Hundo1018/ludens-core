@@ -121,7 +121,7 @@ def main() raises:
             Vec3(Real(1.0 / 3.0), Real(10.0 / 3.0), Real(-0.1), 0.0),
             Quat(Real(0.1), Real(0.2), Real(0.3), Real(0.9273618495495704)),
             Vec3(Real(0.1), 0.0, Real(-1.0 / 7.0), 0.0), Vec3(0.0, Real(1.0 / 9.0), 0.0, 0.0),
-            3, 0xFFFFFFFE, 0, 0, BodyProps.defaults(),
+            3, 0xFFFFFFFE, 0, 0, BodyProps.defaults(), False,
         )
     )
     var awk_world = fresh()
@@ -137,7 +137,7 @@ def main() raises:
     edited.bodies[2].pos = Vec3(edited.bodies[2].pos[0] + 1.0, edited.bodies[2].pos[1], edited.bodies[2].pos[2], 0.0)
     edited.gravity = Vec3(0.0, -3.0, 0.0, 0.0)
     edited.bodies.append(SceneBody(BODY_SPHERE, Vec3(0.5, 0.0, 0.0, 0.0), 1.0, False, Vec3(0.0, 20.0, 0.0, 0.0), Quat.identity(),
-                                   Vec3(0.0, 0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0, 0.0), 1, 0xFFFFFFFF, 0, 0, BodyProps.defaults()))
+                                   Vec3(0.0, 0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0, 0.0), 1, 0xFFFFFFFF, 0, 0, BodyProps.defaults(), False))
     var target = scene_to_fields(edited)
     var changes = scene_diff(base, target)
     var changed = 0

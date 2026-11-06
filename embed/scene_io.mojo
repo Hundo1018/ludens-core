@@ -21,7 +21,7 @@ Real numbers are written as `Float64` text, which round-trips every `Real` bit f
 document -> text -> document changes nothing.
 """
 from std.math import isfinite
-from collision.collider_set import SHAPE_BOX, SHAPE_SPHERE
+from collision.collider_set import SHAPE_BOX, SHAPE_CAPSULE, SHAPE_SPHERE
 from embed.world import EmbedWorld, pack_body, unpack_body
 from geometry.quat import Quat
 from geometry.vec import Real, Vec3
@@ -32,6 +32,7 @@ from physics.rigid6 import Inertia3
 comptime SCENE_FORMAT_VERSION = 1
 comptime BODY_BOX = 0
 comptime BODY_SPHERE = 1
+comptime BODY_CAPSULE = 2  # size = (radius, half length of the cylinder part, 0)
 
 comptime CHANGE_ADDED = 0
 comptime CHANGE_REMOVED = 1
@@ -87,13 +88,14 @@ struct SceneBody(Copyable, Movable):
     var material: UInt32
     var user: UInt64
     var props: BodyProps
+    var kinematic: Bool  # moved by its velocity, unaffected by forces (17.24); `mass` is kept for inertia
 
     @staticmethod
     def empty() -> Self:
         """A placeholder record (a body that does not exist): a unit box at the origin with default properties."""
         return Self(
             BODY_BOX, Vec3(1, 1, 1, 0), Real(1), False, Vec3(0, 0, 0, 0), Quat.identity(), Vec3(0, 0, 0, 0),
-            Vec3(0, 0, 0, 0), 1, 0xFFFFFFFF, 0, 0, BodyProps.defaults(),
+            Vec3(0, 0, 0, 0), 1, 0xFFFFFFFF, 0, 0, BodyProps.defaults(), False,
         )
 
 
@@ -138,19 +140,26 @@ def _same_inertia(a: Inertia3, b: Inertia3) -> Bool:
 
 def export_body(world: EmbedWorld, i: Int) raises -> SceneBody:
     """The scene record of live slot `i`. Raises, naming the feature, if the body is something scene v1 cannot represent."""
-    if world.scene.bset.is_kinematic(i):
-        raise Error("export_scene: body " + String(i) + " is kinematic (not representable in scene v1)")
+    var kin = world.scene.bset.is_kinematic(i)
     var shape = world.scene.colliders.shape[i]
-    if shape != SHAPE_BOX and shape != SHAPE_SPHERE:
-        raise Error("export_scene: body " + String(i) + " has shape kind " + String(shape) + " (scene v1 has box and sphere)")
+    if shape != SHAPE_BOX and shape != SHAPE_SPHERE and shape != SHAPE_CAPSULE:
+        raise Error("export_scene: body " + String(i) + " has shape kind " + String(shape) + " (scene v1 has box, sphere and capsule)")
     ref b = world.scene.bset.bodies[i]
     var half = world.scene.colliders.half[i]
     var is_static = world.scene.bset.is_static(i)
-    var kind = BODY_BOX if shape == SHAPE_BOX else BODY_SPHERE
+    var kind = BODY_BOX
+    if shape == SHAPE_SPHERE:
+        kind = BODY_SPHERE
+    elif shape == SHAPE_CAPSULE:
+        kind = BODY_CAPSULE
     var mass = Real(0)
     if not is_static:
         mass = b.inertia.mass
-        var derived = Inertia3.box(mass, half[0], half[1], half[2]) if kind == BODY_BOX else Inertia3.sphere(mass, half[0])
+        var derived = Inertia3.box(mass, half[0], half[1], half[2])
+        if kind == BODY_SPHERE:
+            derived = Inertia3.sphere(mass, half[0])
+        elif kind == BODY_CAPSULE:
+            derived = Inertia3.capsule(mass, half[0], half[1])
         if not _same_inertia(derived, b.inertia):
             raise Error("export_scene: body " + String(i) + " has a custom inertia tensor (scene v1 derives it from mass and shape)")
     ref bs = world.scene.bset
@@ -168,9 +177,9 @@ def export_body(world: EmbedWorld, i: Int) raises -> SceneBody:
     )
     var h = pack_body(world.scene.bset.id_of(i))
     return SceneBody(
-            kind, half, mass, is_static, b.pos, b.q, b.vel, b.omega,
+            kind, half if kind != BODY_CAPSULE else Vec3(half[0], half[1], Real(0), 0), mass, is_static, b.pos, b.q, b.vel, b.omega,
             world.scene.colliders.category[i], world.scene.colliders.mask[i],
-            world.get_material(h), world.get_user(h), props^,
+            world.get_material(h), world.get_user(h), props^, kin,
     )
 
 
@@ -248,8 +257,12 @@ def _validate(doc: SceneDoc) raises:
     for i in range(len(doc.bodies)):
         ref b = doc.bodies[i]
         var at = "import_scene: body " + String(i) + ": "
-        if b.kind != BODY_BOX and b.kind != BODY_SPHERE:
+        if b.kind != BODY_BOX and b.kind != BODY_SPHERE and b.kind != BODY_CAPSULE:
             raise Error(at + "unknown kind " + String(b.kind))
+        if b.kind == BODY_CAPSULE and not (isfinite(b.size[0]) and b.size[0] > 0 and isfinite(b.size[1]) and b.size[1] > 0):
+            raise Error(at + "capsule radius and half length must be finite and > 0")
+        if b.kinematic and b.is_static:
+            raise Error(at + "a body cannot be both static and kinematic")
         if b.kind == BODY_BOX and not (_finite3(b.size) and b.size[0] > 0 and b.size[1] > 0 and b.size[2] > 0):
             raise Error(at + "half extents must be finite and > 0")
         if b.kind == BODY_SPHERE and not (isfinite(b.size[0]) and b.size[0] > 0):
@@ -314,8 +327,12 @@ def add_body_record(mut world: EmbedWorld, s: SceneBody) raises -> Int64:
     var h: Int64
     if s.kind == BODY_BOX:
         h = world.add_box(s.pos, s.size, s.mass, s.is_static)
+    elif s.kind == BODY_CAPSULE:
+        h = world.add_capsule(s.pos, s.size[0], s.size[1], s.mass, s.is_static)
     else:
         h = world.add_sphere(s.pos, s.size[0], s.mass, s.is_static)
+    if s.kinematic:
+        world.set_kinematic(h)
     var slot = unpack_body(h).index()
     world.scene.bset.bodies[slot].q = s.rot
     world.scene.bset.bodies[slot].vel = s.vel
@@ -361,9 +378,11 @@ def _push_vec(mut out: List[SceneField], path: String, v: Vec3):
 
 def _push_body(mut out: List[SceneField], i: Int, b: SceneBody):
     var p = "body." + String(i) + "."
-    _push(out, p + "kind", "box" if b.kind == BODY_BOX else "sphere")
+    _push(out, p + "kind", "box" if b.kind == BODY_BOX else ("sphere" if b.kind == BODY_SPHERE else "capsule"))
     _push_vec(out, p + "size", b.size)
     _push(out, p + "static", "true" if b.is_static else "false")
+    if b.kinematic:  # only written when set, so scenes without kinematic bodies keep their rows
+        _push(out, p + "kinematic", "true")
     _push(out, p + "mass", _t(b.mass))
     _push_vec(out, p + "pos", b.pos)
     _push(out, p + "rot.x", _t(b.rot.x))
@@ -421,6 +440,9 @@ struct _Rows:
         self.d = Dict[String, String]()
         for i in range(len(fields)):
             self.d[fields[i].path] = fields[i].text
+
+    def has(self, path: String) -> Bool:
+        return path in self.d
 
     def text(self, path: String) raises -> String:
         if path not in self.d:
@@ -482,8 +504,10 @@ def scene_from_fields(fields: List[SceneField]) raises -> SceneDoc:
             kind = BODY_BOX
         elif kind_text == "sphere":
             kind = BODY_SPHERE
+        elif kind_text == "capsule":
+            kind = BODY_CAPSULE
         else:
-            raise Error("scene_from_fields: `" + p + "kind` must be box or sphere, got `" + kind_text + "`")
+            raise Error("scene_from_fields: `" + p + "kind` must be box, sphere or capsule, got `" + kind_text + "`")
         doc.bodies.append(
             SceneBody(
                 kind, rows.vec(p + "size"), rows.real(p + "mass"), rows.flag(p + "static"),
@@ -502,6 +526,7 @@ def scene_from_fields(fields: List[SceneField]) raises -> SceneDoc:
                     rows.flag(p + "report"), rows.real(p + "sleep_lin"), rows.real(p + "sleep_ang"),
                     rows.int(p + "locks"),
                 ),
+                rows.has(p + "kinematic") and rows.flag(p + "kinematic"),
             )
         )
     return doc^
@@ -589,7 +614,7 @@ def same_shape(a: SceneBody, b: SceneBody) -> Bool:
     removed and added again)."""
     return (
         a.kind == b.kind and a.size[0] == b.size[0] and a.size[1] == b.size[1] and a.size[2] == b.size[2]
-        and a.mass == b.mass and a.is_static == b.is_static
+        and a.mass == b.mass and a.is_static == b.is_static and a.kinematic == b.kinematic
     )
 
 

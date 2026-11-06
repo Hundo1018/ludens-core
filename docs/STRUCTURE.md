@@ -2053,7 +2053,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 148 public declarations
+## embed (layer 6) — 6 modules, 149 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2142,7 +2142,7 @@ counted, not listed.
 - `def scene_from_fields(fields: List[SceneField]) -> SceneDoc`
 - `def scene_to_fields(doc: SceneDoc) -> List[SceneField]`
 - `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody)`
-- aliases: `BODY_BOX`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
+- aliases: `BODY_BOX`, `BODY_CAPSULE`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
 
 ### `embed/transfer.mojo`
 - struct `TransferInfo` — 0 methods
@@ -2166,7 +2166,7 @@ counted, not listed.
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 32 methods
+- struct `EmbedWorld` — 34 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods

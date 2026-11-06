@@ -269,6 +269,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] sat - 9 / 9 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_kinematic.mojo ---
+[PASS] scene_kinematic - 21 / 21 checks
 --- tests/test_sdf.mojo ---
 [PASS] sdf - 15 / 15 checks
 --- tests/test_sdf3.mojo ---
