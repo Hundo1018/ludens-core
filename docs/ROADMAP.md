@@ -64,7 +64,7 @@
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 10 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 3 | 1 | 0 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 4 | 1 | 0 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
 
 ## 原則與決策
@@ -3636,6 +3636,7 @@
 | 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 🔶 | C | per-host 適配層、批量 SoA 交換、POD 事件緩衝、宿主定義元件、綁定產生、多實例與執行緒 |
 | 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 🔶 | B | 整套 C-ABI 編成 wasm64(外接 LLVM 23 + shim)、與原生無 FMA 建置逐位相同;`pixi run wasm`、序列派發建置、CI 閘門、JS / TS 與 WASI 封裝 |
 | 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | ⬜ | C | 核心出資料(接觸 / 破碎 / 氣泡的音訊事件、影格匯出);瀏覽器優先、出聲、渲染與影片匯出皆要,放獨立 repo;綁定目標(wgpu-mojo / miniaudio-mojo)實測中 |
+| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 🔶 | B | 編輯器程式碼熱重載走「舊模組存、新模組載」:`embed/transfer.mojo` 的移交 blob(版本、純量寬度、設定雜湊、宿主材質、已註冊名稱、校驗和 + `save`)在載入前逐項檢查並回具名狀態碼,失敗時世界不變;兩個獨立建置之間移交後逐位相同。C-ABI 對應函式、wasm64 實測未做。 |
 
 ### 待辦與部分完成條目
 
@@ -4034,6 +4035,19 @@
 > **下游追蹤(#77 驗收)**:綁定目標 —— wgpu-mojo [#15–#20](https://github.com/Hundo1018/wgpu-mojo/issues)、miniaudio-mojo [#4–#6](https://github.com/Hundo1018/miniaudio-mojo/issues);宿主側 —— ludens-shell [#1–#5](https://github.com/Hundo1018/ludens-shell/issues);工具鏈 —— ludens-wasm-rt [#1–#8](https://github.com/Hundo1018/ludens-wasm-rt/issues)。破碎物件 / 水槽世界的存讀檔仍拒絕,留待後續。
 
 ---
+
+#### 17.91 換模組世界移交(熱重載)
+
+> **狀態**:🔶 部分完成(2026-11-06 第一片:Mojo 端 API、測試、跨建置實測;C-ABI 對應函式與 wasm64 實測未做)。消費者:ludens-shell #14(程式碼熱重載)。issue:ludens-engine #84。
+> **做法**:殼把世界從舊模組存出、建立新模組實例、載入。`EmbedWorld.save` / `load` 只還原模擬狀態(設定、系統、宿主材質 id 不在其中),所以 `embed/transfer.mojo` 在外面包一層移交 blob:魔數、`TRANSFER_VERSION`、純量寬度、設定雜湊(dt、重力、單位比例、max_steps 與影響結果的 `SolverConfig` 欄位;`parallel` / `workers` / `dispatch` / `parallel_collision` 為執行方式,不計入)、宿主材質表、已註冊名稱集合的雜湊、payload 校驗和,最後是 `save` 的內容。
+> **API**:`transfer_save(world, registered)`、`transfer_check(world, blob, registered) -> Int`(不改任何東西)、`transfer_load(mut world, blob, registered)`(失敗時世界不變,錯誤字串以 `transfer_load(-N)` 開頭)、`transfer_info(blob)`(只讀標頭)。狀態碼:`XFER_TRUNCATED -1`、`XFER_MAGIC -2`、`XFER_VERSION -3`、`XFER_SCALAR -4`、`XFER_SETTINGS -5`、`XFER_REGISTRATION -6`、`XFER_CORRUPT -7`。
+> **不在 blob 裡(新模組重建)**:已註冊系統與接觸訂閱(宿主以名稱重新註冊,`registered` 的集合不同即拒絕;順序無關)、設定(新實例以相同值建立,雜湊不同即拒絕)、擷取(`capture_*`)與 trace、待取事件清單、宿主指標 / 回呼(`user` 的 `UInt64` 在 blob 裡)、破碎物件與水(`save` 本身拒絕)。
+> **測量**:
+> - `tests/test_transfer.mojo` 29 項:60 tick 時移交到新實例,再跑 120 tick 的雜湊等於不中斷的世界;宿主材質與 user data 保留;版本、純量寬度、重力 / dt / 求解器欄位、註冊集合不符各自回具名狀態碼且目標世界不變(`workers` 不影響);payload 任一位元組翻轉都不被接受;blob 每個長度的前綴(0 到 size-1)都被拒絕;空世界載入到有物體的世界會取代它。變異測試:拿掉材質還原,1 項失敗;設定雜湊拿掉重力,1 項失敗;拿掉校驗和比對,2 項失敗;還原後 29/29。
+> - 跨建置:`pixi run python scripts/xfer_probe.py` 以 `experiments/xfer_probe.mojo` 建兩個程式(第二個以 `-D XFER_EXTRA=True` 多一個被呼叫的無關函式),A 跑 60 tick 存 blob 再跑 120 tick,B 載入後跑 120 tick:blob 15 084 bytes,兩邊雜湊 `7951823624565538389`;對照:B 只跑 119 tick 得到 `15404143680321627531`。
+> - 耗時(`experiments/exp_transfer_cost.mojo`,單次、4 核容器,方塊 + 每體一個材質與 user data):1e3 / 1e4 / 1e5 物體,`transfer_save` 1.5 / 13 / 183 ms,`transfer_check` 0.8 / 6.2 / 48 ms,`transfer_load`(含 check)4.1 / 35 / 375 ms,blob 228 KB / 2.3 MB / 22.8 MB;對照 `save` 0.8 / 5.9 / 91 ms、`load` 1.9 / 16 / 215 ms。移交約為單純存 / 讀的 2 倍,每次熱重載一次,可接受。
+> **未做**:C-ABI 函式(`ld_world_transfer_*` 為 ABI 次版本新增,要追加進凍結清單);wasm64 的跨建置實測(以 ludens-shell 的 wasm-rt 驅動建兩個模組,並與原生比對雜湊);aarch64。
+> **相依 / 連結**:17.21「遺留待辦:Mojo 系統的 hot reload」(本條只做世界移交,系統由殼重新註冊)、6.10、ludens-shell #14。
 
 ## 工程、測試、效能與工具鏈
 
@@ -4489,5 +4503,6 @@
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 嵌入、腳本與平台 | 🔶 |
 | 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ⬜ |
+| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
 | 17.84 | [數值 / 可微深化](#1784-數值--可微深化--wave-c) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.85 | [分級模擬:依因果可達性分配時間 / 空間解析度](#1785-分級模擬依因果可達性分配時間--空間解析度--wave-c架構) | ECS、排程、執行期與診斷 | ✅ |

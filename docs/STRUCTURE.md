@@ -2053,7 +2053,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 5 modules, 131 public declarations
+## embed (layer 6) — 6 modules, 148 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2143,6 +2143,16 @@ counted, not listed.
 - `def scene_to_fields(doc: SceneDoc) -> List[SceneField]`
 - `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody)`
 - aliases: `BODY_BOX`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
+
+### `embed/transfer.mojo`
+- struct `TransferInfo` — 0 methods
+- `def settings_hash(world: EmbedWorld) -> UInt64`
+- `def transfer_check(world: EmbedWorld, blob: List[UInt8], registered: List[String]) -> Int`
+- `def transfer_info(blob: List[UInt8]) -> TransferInfo`
+- `def transfer_load(mut world: EmbedWorld, blob: List[UInt8], registered: List[String])`
+- `def transfer_save(world: EmbedWorld, registered: List[String]) -> List[UInt8]`
+- `def transfer_status_name(status: Int) -> String`
+- aliases: `TRANSFER_MAGIC`, `TRANSFER_VERSION`, `XFER_CORRUPT`, `XFER_MAGIC`, `XFER_OK`, `XFER_REGISTRATION`, `XFER_SCALAR`, `XFER_SETTINGS`, `XFER_TRUNCATED`, `XFER_VERSION`
 
 ### `embed/undo.mojo`
 - struct `BodyRec` — 0 methods

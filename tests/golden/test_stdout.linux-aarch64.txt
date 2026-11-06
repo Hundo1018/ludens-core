@@ -309,6 +309,8 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
   probe: island spans 40  lanes >= 1 True
   probe: [PASS] trace_on_probe - 8 / 8 checks
 [PASS] trace_runtime - 1 / 1 checks
+--- tests/test_transfer.mojo ---
+[PASS] transfer - 29 / 29 checks
 --- tests/test_tree.mojo ---
   Y-tree ABA vs dense worst rel err: 1.481562583314746e-07
   hanging Y max |qdd|: 0.0

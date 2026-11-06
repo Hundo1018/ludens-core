@@ -2050,6 +2050,8 @@ observer at x = 100: proxies 13
   probe: island spans 40  lanes >= 1 True
   probe: [PASS] trace_on_probe - 8 / 8 checks
 [PASS] trace_runtime - 1 / 1 checks
+--- tests/test_transfer.mojo ---
+[PASS] transfer - 29 / 29 checks
 --- tests/test_transform.mojo ---
 [PASS] transform - 208 / 208 checks
 --- tests/test_tree.mojo ---
