@@ -8,7 +8,11 @@ sedan's defaults to a heavy chassis. The wheel loads, not the config, decide how
 """
 
 from geometry.vec import Real, Vec3
-from physics.rigid6 import Inertia3
+from physics.body_set import BodyId
+from physics.joints6 import Joint6
+from physics.joint_ext import D6_FREE, D6_LIMITED
+from physics.rigid6 import Inertia3, QuatBody6
+from physics.solver6 import ContactScene6
 from .vehicle import VehicleConfig, WheelConfig
 from .vehicle_drive import TorqueCurve
 
@@ -87,3 +91,22 @@ def semi_trailer_config(mass: Real = 12000, length: Real = 8.0, track: Real = 1.
         cfg.wheels.append(WheelConfig(Vec3(-length / 2 + 1.2, -0.3, z, 0), 0.5, 0.15, 6.0, 1, Real(0.0), False, False, Real(0.5)))
     cfg.validate()
     return cfg^
+
+
+def fifth_wheel(
+    mut sc: ContactScene6[QuatBody6], tractor: BodyId, trailer: BodyId, point: Vec3, max_pitch: Real = 0.15, max_roll: Real = 0.1
+) raises -> Int:
+    """A fifth-wheel coupling between a tractor and a semi-trailer: the anchors are tied at the world `point`, yaw about
+    the tractor's up axis is free (the trailer swings behind the tractor), and pitch and roll are limited to +-`max_pitch`
+    and +-`max_roll` rad. A ball hitch (`gameplay.vehicle_kinds.hitch`) leaves all three free, so a semi-trailer rests on
+    its landing gear or its wheels; this one carries the front of the trailer and keeps it level. A D6 joint
+    (`ContactScene6.set_d6_axis`), axes in the tractor's frame (x forward, y up, z right): 3 = roll, 4 = yaw, 5 = pitch."""
+    if not (max_pitch > 0) or not (max_roll > 0):
+        raise Error("fifth_wheel: pitch and roll limits must be > 0")
+    ref a = sc.bset.bodies[tractor.index()]
+    ref b = sc.bset.bodies[trailer.index()]
+    var j = sc.add_joint(Joint6.d6(tractor.index(), trailer.index(), a.to_local(point), b.to_local(point)))
+    sc.set_d6_axis(j, 3, D6_LIMITED, -max_roll, max_roll)
+    sc.set_d6_axis(j, 4, D6_FREE)
+    sc.set_d6_axis(j, 5, D6_LIMITED, -max_pitch, max_pitch)
+    return j

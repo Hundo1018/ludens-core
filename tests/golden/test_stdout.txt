@@ -663,6 +663,8 @@ displacement grid vs exact sums: worst 8.2701445e-06 m
 [PASS] fft_ocean - 8 / 8 checks
 --- tests/test_fields.mojo ---
 [PASS] fields - 16 / 16 checks
+--- tests/test_fifth_wheel.mojo ---
+[PASS] fifth_wheel - 5 / 5 checks
 --- tests/test_filter_events.mojo ---
   gap — unfiltered 0.49889916  same-layer excluded 0.4  one-sided mask 0.4
   sensor: crate y at step 30 1.764792  free-fall reference 1.764792
