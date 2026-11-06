@@ -330,6 +330,8 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
 [PASS] vdb_zip - 14 / 14 checks
 --- tests/test_vec.mojo ---
 [PASS] vec - 13 / 13 checks
+--- tests/test_vehicle_truck.mojo ---
+[PASS] vehicle_truck - 6 / 6 checks
 --- tests/test_workstealing.mojo ---
 [PASS] workstealing - 4 / 4 checks
 --- tests/test_abilities.mojo ---
