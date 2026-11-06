@@ -26,7 +26,7 @@ from geometry.vec import Real, Vec3, length
 from geometry.quat import Quat
 from physics.body_set import BodyId
 from physics.rigid6 import Inertia3, Pose6, QuatBody6
-from physics.joints6 import Joint6
+from physics.joints6 import JOINT_BROKEN, Joint6
 from physics.solver6 import ContactScene6
 from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
@@ -318,6 +318,17 @@ struct EmbedWorld(Movable):
 
     def remove_joint(mut self, j: Int) raises:
         self.scene.remove_joint(j)
+
+    def joint_record(self, j: Int) raises -> Joint6:
+        """The raw state of joint slot `j` (kind, bodies by slot, anchors, axes), for an undo log to keep."""
+        if j < 0 or j >= len(self.scene.joints):
+            raise Error("joint_record: joint index out of range")
+        return self.scene.joints[j]
+
+    def restore_joint(mut self, j: Int, rec: Joint6) raises:
+        """Put joint slot `j` back to `rec` (accumulated impulses start at zero, as for a new joint). A live record
+        needs both of its bodies alive."""
+        self.scene.restore_joint(j, rec)
 
     def joint_count(self) -> Int:
         """Joint slots ever added, removed ones included (indices never shift)."""

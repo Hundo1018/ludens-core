@@ -486,6 +486,21 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         self.joints[c].acc_ang = Vec3(0, 0, 0, 0)
         self._ensure_ext()
 
+    def restore_joint(mut self, c: Int, rec: Joint6) raises:
+        """Put joint slot `c` back to `rec`, e.g. to undo `remove_joint` or to make a slot inert again. A live
+        record needs both bodies alive. Accumulated impulses restart at zero, as for a joint just added."""
+        if c < 0 or c >= len(self.joints):
+            raise Error("ContactScene6.restore_joint: joint index out of range")
+        if rec.kind != JOINT_BROKEN:
+            if rec.a < 0 or rec.a >= len(self.bset.bodies) or rec.b < 0 or rec.b >= len(self.bset.bodies):
+                raise Error("ContactScene6.restore_joint: body index out of range")
+            if self.bset.is_removed(rec.a) or self.bset.is_removed(rec.b):
+                raise Error("ContactScene6.restore_joint: a body of the joint is not alive")
+        self.joints[c] = rec
+        self.joints[c].acc = Vec3(0, 0, 0, 0)
+        self.joints[c].acc_ang = Vec3(0, 0, 0, 0)
+        self._ensure_ext()
+
     def joint_is_plain(self, c: Int) -> Bool:
         """True when joint `c` has the state `add_joint` gives a new joint at the bodies' current poses: no limit,
         motor, spring, cone or D6, the zero-angle references where creation would put them, no break thresholds.

@@ -2082,6 +2082,8 @@ observer at x = 100: proxies 13
 [PASS] tween - 359 / 359 checks
 --- tests/test_undo.mojo ---
 [PASS] undo - 52 / 52 checks
+--- tests/test_undo_joints.mojo ---
+[PASS] undo_joints - 18 / 18 checks
 --- tests/test_unit_scale.mojo ---
   s = 2^-7: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
   s = 2^-3: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
