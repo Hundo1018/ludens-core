@@ -287,6 +287,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] sdf_grid - 11 / 11 checks
 --- tests/test_shape.mojo ---
 [PASS] shape - 7 / 7 checks
+--- tests/test_sparse_sdf.mojo ---
+[PASS] sparse_sdf - 19 / 19 checks
 --- tests/test_sparse_set.mojo ---
 [PASS] sparse_set - 14 / 14 checks
 --- tests/test_spline.mojo ---

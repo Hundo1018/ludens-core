@@ -988,6 +988,8 @@
 >   慣量公式;64 段請求得 16 段;三角柱站立。
 > - **橢球**:以 hull 細分超過 30 面上限,接觸幾何會被截斷,故本輪不提供 `add_ellipsoid`(只給慣量),待 support-mapping 接觸入口。
 
+> **稀疏 SDF(2026-11-06,後續片)**:`geometry/sparse_sdf.mojo` `SparseSdfGrid`——8×8×8 節點的磚,只存有節點落在 `band` 內(含外圈一個節點)的磚,其餘磚讀為 `sign * band`(每磚一個符號)。實作 `DistanceField3`(`sphere_trace` 直接可用)。`from_dense`(由密集格建)與 `from_field`(不配置密集格,以磚中心距離略過遠處的磚,假設場是 1-Lipschitz)、`to_dense`。取樣公式與 `SdfGrid` 相同,所以真實距離在 `band - 2 cell` 內的點,距離與梯度與密集格逐位相同(`tests/test_sparse_sdf.mojo` 19 項,6000+ 隨機點);遠處符號正確。變異測試:拿掉外圈,57 個格子讀錯,測試失敗。量測(`experiments/exp_sparse_sdf.mojo`,球半徑 0.3 倍盒寬,band = 4 格,單次):res 64 / 128 / 192 的密集格 1.0 / 8.0 / 27.0 MiB,稀疏 0.55 / 1.9 / 4.3 MiB(儲存 280 of 512 / 928 of 4096 / 2080 of 13824 磚);`from_field` 建置 1.5 / 1.2 / 3.6 ms 對密集 1.7 / 7.3 / 34 ms;100 萬次 `distance` 每次約 41 ns,密集約 18 ns(磚表多一層查找,約 2.3 倍)。**未做**:`SHAPE_SDF` 碰撞體仍收密集 `SdfGrid`(要用請先 `to_dense`),快照(`physics/serialize`)不存稀疏格;`sdf_contact` 目前只收 `Sdf3`。
+
 #### 17.53 查詢擴充 — Wave A(承接 17.13 的待辦)
 > **狀態**:✅ 完成(CPU;2026-10-14:凸形掃掠 / 重疊、距離與最近點對、all-hits / any-hit、命中三角形與重心座標、單面選項、mesh BVH / heightfield DDA 射線遍歷、持久預篩 `QueryIndex`、批次派發、角色盒形選項、命中 / 載具輪表面材質、批次平行加速(LBVH + 共用 index)、CGA 假說(否定)✅;GPU 批次對真實形狀屬第 7 層)。
 > **現況**:
