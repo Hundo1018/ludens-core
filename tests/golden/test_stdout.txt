@@ -1623,6 +1623,8 @@ replay: scripted run equals live True  posts one frame later differ True
 [PASS] save_checkpoint - 6 / 6 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_joints.mojo ---
+[PASS] scene_joints - 23 / 23 checks
 --- tests/test_scene_kinematic.mojo ---
 [PASS] scene_kinematic - 21 / 21 checks
 --- tests/test_scene_materials.mojo ---
