@@ -4050,7 +4050,8 @@
 > - 耗時(`experiments/exp_transfer_cost.mojo`,單次、4 核容器,方塊 + 每體一個材質與 user data):1e3 / 1e4 / 1e5 物體,`transfer_save` 1.5 / 13 / 183 ms,`transfer_check` 0.8 / 6.2 / 48 ms,`transfer_load`(含 check)4.1 / 35 / 375 ms,blob 228 KB / 2.3 MB / 22.8 MB;對照 `save` 0.8 / 5.9 / 91 ms、`load` 1.9 / 16 / 215 ms。移交約為單純存 / 讀的 2 倍,每次熱重載一次,可接受。
 > - wasm64(ludens-shell PR #26,`pixi run -e wasm xfer-parity`):模組 A 在 tick 60 存出,另外建置、多了無關程式碼的模組 B 載入後跑 120 tick,雜湊 `7951823624565538389`,與原生不中斷、原生換模組、wasm64 不中斷三者相同;blob 兩邊都是 15 084 bytes。
 > - C-ABI 0.7(2026-11-06):`ld_world_transfer_size` / `ld_world_transfer_save` / `ld_world_transfer_load`,已註冊名稱以 `\n` 分隔的字串傳入(NULL = 無),狀態碼 `LD_ERR_XFER_*`(-101 .. -107,對應 Mojo 端 `XFER_*`),追加進 `abi_v0.txt`;Rust / C# 綁定重新產生。`tests/test_capi.mojo` 101/101(新增 9 項,C 宿主:size == 寫入長度、緩衝少 1 byte → `LD_ERR_BUFFER`、名稱換順序 → OK、存、跑 60、載、跑 60 雜湊相同、少一個名稱 / 沒有名稱 → -106、截斷 → -101、版本改 99 → -103、魔數損壞 → -102)。注意:`test_capi` 要以 `--target-cpu x86-64` 執行(`run_tests.sh` 如此);不加時原生側會使用 FMA,與 C 宿主載入的共享庫相差約 1e-4,三項比對失敗,與本次變更無關(以舊版原始碼對照確認)。
-> **未做**:Python 綁定的 `transfer_*` 包裝;aarch64。
+> Python 綁定(2026-11-06):`World.transfer_save(registered)` / `transfer_load(blob, registered)`,失敗丟 `TransferError`(`.code`、`.reason`);`client_check.py` 加 4 項(名稱換順序可載入並雜湊相同、缺名稱、截斷、名稱含換行),`test_python_binding` 14/14;`ludens` 套件的最低 ABI 升為 0.7。
+> **未做**:aarch64。
 > **相依 / 連結**:17.21「遺留待辦:Mojo 系統的 hot reload」(本條只做世界移交,系統由殼重新註冊)、6.10、ludens-shell #14。
 
 ## 工程、測試、效能與工具鏈

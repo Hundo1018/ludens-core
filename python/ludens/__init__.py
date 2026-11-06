@@ -27,6 +27,7 @@ from .world import (
     CallbackError,
     ContactEvent,
     FormatError,
+    TransferError,
     HandleError,
     Hit,
     LudensError,
