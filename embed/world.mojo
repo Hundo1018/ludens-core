@@ -275,6 +275,15 @@ struct EmbedWorld(Movable):
             raise Error("set_kinematic: the handle is not a live body")
         self.scene.set_kinematic(id)
 
+    def set_material_friction(mut self, material: Int, mu: Real) raises:
+        """Friction of surface material `material` (ids 0..65535), used for mesh / heightfield triangles and
+        `surface_friction`. The table is part of the snapshot."""
+        self.scene.set_material_friction(material, mu)
+
+    def set_material_softness(mut self, material: Int, hertz: Real, zeta: Real) raises:
+        """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0)."""
+        self.scene.set_material_softness(material, hertz, zeta)
+
     def reserve_slot(mut self, h: Int64) raises:
         """One-shot: the next body added gets exactly the identity `h` had (its slot and generation). The slot must be
         free and `h` from an earlier life of it. Undo of a remove uses this; bodies added and removed in between

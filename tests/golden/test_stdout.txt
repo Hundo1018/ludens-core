@@ -1625,6 +1625,8 @@ replay: scripted run equals live True  posts one frame later differ True
 [PASS] scene_io - 44 / 44 checks
 --- tests/test_scene_kinematic.mojo ---
 [PASS] scene_kinematic - 21 / 21 checks
+--- tests/test_scene_materials.mojo ---
+[PASS] scene_materials - 17 / 17 checks
 --- tests/test_scheduler_parity.mojo ---
 [PASS] scheduler_parity - 147 / 147 checks
 --- tests/test_schema.mojo ---

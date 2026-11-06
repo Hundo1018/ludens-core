@@ -3273,7 +3273,7 @@
 
 #### 17.12 可編輯場景 / prefab / 實例化
 
-> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;關節、凸殼、網格為後續片)
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;關節、凸殼、網格為後續片)
 > **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
 > **決定(2026-11-02)**:編輯器放在 ludens-shell;場景檔案格式由 ludens-shell 定義(ludens-shell #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-shell #12)。
 > **現況**:`physics/serialize.mojo` = 全狀態 f32 bit-pattern 決定論快照(自註「非 asset reference」)。
@@ -3290,7 +3290,8 @@
 > - `tests/test_scene_io.mojo` 44 項。seam:場景路徑與快照路徑建出的世界,tick 0 與 300 tick 後雜湊逐位相同。1/3、2/7、1/9 與一般旋轉經 世界 → 列 → 世界 不失真。diff 只列出改動的 3 列與新增物體的 44 列,套用回去等於目標。壞文件(版本、尺寸、質量、非單位四元數、缺列、格式錯)被拒絕且不改世界。1000 物體往返逐位相同。使用者資料的 2^64 級數值保留(`Int` 解析在 2^63 失敗,改逐位解析)。屬性以引擎的設定函式建出的世界,往返後 tick 0 與 300 tick 後雜湊逐位相同(模擬跑 300 tick 才抓得到彙總旗標漏設);對照組:屬性確實改變模擬。變異測試:拿掉匯入時的旋轉寫入,5 項失敗;拿掉全部屬性套用或只拿掉阻尼的設定,各 2 項失敗;還原後 44/44。
 > - 量測(一般執行,方塊,Real = Float32,單次、4 核容器):1e3 / 1e4 物體,匯出 0.35 / 2.1 ms,匯入 0.46 / 5.2 ms,轉成列 6.7 / 59 ms,由列讀回 16 / 285 ms,無變更的 diff 18 / 382 ms;對照快照存 / 讀 0.28 / 2.6 ms 與 0.93 / 10 ms;列數 44 008 / 440 008(每物體 44 列)。文字路徑比快照慢約兩個數量級;場景存檔頻率低,可接受。diff 目前以兩張字典建構,可改為依路徑順序合併。
 > **第二片(2026-11-06)**:膠囊(`BODY_CAPSULE`,`size` = 半徑、圓柱半長)與運動學物體(`SceneBody.kinematic`,列 `body.N.kinematic` 只在為真時輸出,所以沒有運動學物體的場景列數不變)。`EmbedWorld` 新增 `add_capsule` 與 `set_kinematic`(此前嵌入邊界沒有這兩個入口)。`tests/test_scene_kinematic.mojo` 21 項:場景路徑 == 原世界 == 快照路徑,tick 0 與 300 tick 後逐位相同(運動學方塊以 1 m/s 持續移動);列數 8 + 44 × 4 + 1;靜態 + 運動學、半長 0 的膠囊被拒絕且不改世界;刪除膠囊與運動學方塊後 undo,列相同、句柄相同;把物體改成運動學後 undo 再 redo。變異測試:匯入時不呼叫 `set_kinematic`,6 項失敗。`test_scene_io` 44/44、`test_undo` 52/52 不變。
-> **遺留待辦**:關節 / 材質表 / 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
+> **第三片(2026-11-06)**:表面材質表(17.50 的 `material_mu` / `material_hz` / `material_zeta`):`SceneDoc.materials`、`EmbedWorld.set_material_friction` / `set_material_softness`、列 `materials.count` 與 `material.K.{id,friction,hertz,zeta}`(表為空時不輸出,既有場景列數不變)。`tests/test_scene_materials.mojo` 17 項:場景路徑 == 快照路徑,tick 0 與 300 tick 後逐位相同;表在快照雜湊內;無表 / 有表的列數;列的往返恆等;改一個摩擦值 = 一列差異,套用後等於目標;重複 id、id 超出範圍、什麼都沒設、負阻尼被拒絕且不改世界。變異測試:匯入時不套用柔度,3 項失敗。注意:表只作用於網格 / 高度場三角形與 `surface_friction`,而嵌入邊界尚無法建立網格,所以目前只有查詢能看到它;undo 不涵蓋此表(世界層級,不屬於任何物體)。
+> **遺留待辦**:關節(#104)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
 #### 17.43 Undo / redo 交易層(編輯器前置)
 

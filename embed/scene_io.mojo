@@ -99,6 +99,16 @@ struct SceneBody(Copyable, Movable):
         )
 
 
+@fieldwise_init
+struct SceneMaterial(Copyable, Movable):
+    """One entry of the surface material table (ROADMAP 17.50): friction and/or contact softness of material `id`.
+    `mu < 0` = no friction set, `hertz <= 0` = no softness set."""
+    var id: Int
+    var mu: Real
+    var hertz: Real
+    var zeta: Real
+
+
 struct SceneDoc(Copyable, Movable):
     var version: Int
     var dt: Float64
@@ -106,6 +116,7 @@ struct SceneDoc(Copyable, Movable):
     var iters: Int
     var substeps: Int
     var bodies: List[SceneBody]
+    var materials: List[SceneMaterial]
 
     def __init__(out self):
         self.version = SCENE_FORMAT_VERSION
@@ -114,6 +125,7 @@ struct SceneDoc(Copyable, Movable):
         self.iters = 1
         self.substeps = 1
         self.bodies = List[SceneBody]()
+        self.materials = List[SceneMaterial]()
 
 
 @fieldwise_init
@@ -206,6 +218,16 @@ def export_scene(world: EmbedWorld) raises -> SceneDoc:
         if world.scene.bset.is_removed(i):
             continue
         doc.bodies.append(export_body(world, i))
+    ref sc = world.scene
+    var n_mat = len(sc.material_mu)
+    if len(sc.material_hz) > n_mat:
+        n_mat = len(sc.material_hz)
+    for m in range(n_mat):
+        var mu = sc.material_mu[m] if m < len(sc.material_mu) else Real(-1)
+        var hz = sc.material_hz[m] if m < len(sc.material_hz) else Real(-1)
+        var ze = sc.material_zeta[m] if m < len(sc.material_zeta) else Real(0)
+        if mu >= 0 or hz > 0:
+            doc.materials.append(SceneMaterial(m, mu, hz if hz > 0 else Real(-1), ze if hz > 0 else Real(0)))
     return doc^
 
 
@@ -254,6 +276,20 @@ def _validate(doc: SceneDoc) raises:
         raise Error("import_scene: gravity must be finite")
     if doc.iters < 1 or doc.substeps < 1:
         raise Error("import_scene: solver iterations and substeps must be >= 1")
+    for k in range(len(doc.materials)):
+        ref m = doc.materials[k]
+        var at = "import_scene: material " + String(k) + ": "
+        if m.id < 0 or m.id > 65535:
+            raise Error(at + "id must be in 0 .. 65535")
+        for j in range(k):
+            if doc.materials[j].id == m.id:
+                raise Error(at + "id " + String(m.id) + " appears twice")
+        if not (m.mu < 0 or (isfinite(m.mu) and m.mu >= 0)):
+            raise Error(at + "friction must be >= 0 (or -1 for unset)")
+        if m.hertz > 0 and not (isfinite(m.hertz) and isfinite(m.zeta) and m.zeta >= 0):
+            raise Error(at + "softness needs finite hertz > 0 and zeta >= 0")
+        if m.mu < 0 and not (m.hertz > 0):
+            raise Error(at + "sets neither friction nor softness")
     for i in range(len(doc.bodies)):
         ref b = doc.bodies[i]
         var at = "import_scene: body " + String(i) + ": "
@@ -357,6 +393,12 @@ def import_scene(mut world: EmbedWorld, doc: SceneDoc) raises:
     world.dt = doc.dt
     for i in range(len(doc.bodies)):
         _ = add_body_record(world, doc.bodies[i])
+    for k in range(len(doc.materials)):
+        ref m = doc.materials[k]
+        if m.mu >= 0:
+            world.set_material_friction(m.id, m.mu)
+        if m.hertz > 0:
+            world.set_material_softness(m.id, m.hertz, m.zeta)
 
 
 # ------------------------------------------------------------------ fields
@@ -430,6 +472,14 @@ def scene_to_fields(doc: SceneDoc) -> List[SceneField]:
     _push(out, "bodies.count", String(len(doc.bodies)))
     for i in range(len(doc.bodies)):
         _push_body(out, i, doc.bodies[i])
+    if len(doc.materials) > 0:  # only written when the table is not empty, so scenes without one keep their rows
+        _push(out, "materials.count", String(len(doc.materials)))
+        for k in range(len(doc.materials)):
+            var p = "material." + String(k) + "."
+            _push(out, p + "id", String(doc.materials[k].id))
+            _push(out, p + "friction", _t(doc.materials[k].mu))
+            _push(out, p + "hertz", _t(doc.materials[k].hertz))
+            _push(out, p + "zeta", _t(doc.materials[k].zeta))
     return out^
 
 
@@ -529,6 +579,13 @@ def scene_from_fields(fields: List[SceneField]) raises -> SceneDoc:
                 rows.has(p + "kinematic") and rows.flag(p + "kinematic"),
             )
         )
+    if rows.has("materials.count"):
+        var nm = rows.int("materials.count")
+        if nm < 0:
+            raise Error("scene_from_fields: materials.count must be >= 0")
+        for k in range(nm):
+            var p = "material." + String(k) + "."
+            doc.materials.append(SceneMaterial(rows.int(p + "id"), rows.real(p + "friction"), rows.real(p + "hertz"), rows.real(p + "zeta")))
     return doc^
 
 
