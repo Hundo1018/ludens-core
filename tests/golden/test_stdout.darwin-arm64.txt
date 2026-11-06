@@ -116,6 +116,8 @@ lattice: 50 / 50  ring: 12
   sphere R 0.4: 28560 triangles, open edges 0  area 2.0086084 ( 2.0106194 ) volume 0.26756194 ( 0.2680826 )
   particle ball ( 1791 particles):  16104 triangles, open edges 0  volume 0.11079152  sphericity A^3 / 36 pi V^2 1.0207149
 [PASS] isosurface - 4 / 4 checks
+--- tests/test_joint_loads.mojo ---
+[PASS] joint_loads - 10 / 10 checks
 --- tests/test_joints_lib.mojo ---
   prismatic along gravity: q = -4.9102144  qd = -9.799982
   prismatic across gravity: q = 0.0

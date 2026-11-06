@@ -284,6 +284,18 @@ struct EmbedWorld(Movable):
         """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0)."""
         self.scene.set_material_softness(material, hertz, zeta)
 
+    def track_joint_loads(mut self, on: Bool):
+        """Measure the load of every joint each step (see `joint_load`). Does not change the simulation."""
+        self.scene.set_track_joint_loads(on)
+
+    def joint_load(self, j: Int) raises -> Tuple[Real, Real]:
+        """(force N, torque N m): the peak constraint load of joint `j` in the last tick; (0, 0) when not tracking."""
+        return self.scene.joint_load(j)
+
+    def released_joints(self) -> List[Int]:
+        """Joints whose break threshold was exceeded in the last tick (they are now inert)."""
+        return self.scene.broken_joints.copy()
+
     def reserve_slot(mut self, h: Int64) raises:
         """One-shot: the next body added gets exactly the identity `h` had (its slot and generation). The slot must be
         free and `h` from an earlier life of it. Undo of a remove uses this; bodies added and removed in between
