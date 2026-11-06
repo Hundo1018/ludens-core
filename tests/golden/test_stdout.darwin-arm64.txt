@@ -267,6 +267,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] sah - 5 / 5 checks
 --- tests/test_sat.mojo ---
 [PASS] sat - 9 / 9 checks
+--- tests/test_scene_io.mojo ---
+[PASS] scene_io - 44 / 44 checks
 --- tests/test_sdf.mojo ---
 [PASS] sdf - 15 / 15 checks
 --- tests/test_sdf3.mojo ---
@@ -316,6 +318,8 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
 [PASS] trig - 11 / 11 checks
 --- tests/test_tween.mojo ---
 [PASS] tween - 359 / 359 checks
+--- tests/test_undo.mojo ---
+[PASS] undo - 52 / 52 checks
 --- tests/test_vdb_zip.mojo ---
 [PASS] vdb_zip - 14 / 14 checks
 --- tests/test_vec.mojo ---
