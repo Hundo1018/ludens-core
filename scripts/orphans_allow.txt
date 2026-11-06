@@ -127,3 +127,4 @@ physics.mac_levelset_particles  # [api] particle level set volume correction, 17
 physics.mac_levelset_particles3  # [api] 3-D particle level set volume correction for hosts (17.60, test_levelset_particles3)
 physics.mac_body  # [api] disk drag coupling to the grid gas, 17.61 (test_body_drag)
 embed.undo  # [api] undo / redo for an editor: the consumer is ludens-shell's editor commands (ROADMAP 17.43, tests/test_undo)
+ecs.entity_undo  # [api] undo / redo of entity deletion for an editor: the consumer is ludens-shell's editor commands (ROADMAP 17.43, tests/test_entity_undo)
