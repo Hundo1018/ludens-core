@@ -2170,7 +2170,7 @@ counted, not listed.
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 36 methods
+- struct `EmbedWorld` — 38 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods

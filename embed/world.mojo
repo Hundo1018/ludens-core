@@ -534,6 +534,27 @@ struct EmbedWorld(Movable):
             self.debt_dropped += 1
         return n
 
+    def touching(self, a: Int64, b: Int64) -> Bool:
+        """True when bodies `a` and `b` are in contact after the latest physics tick: the tick reported a BEGAN or STAY
+        event for the pair, in either order. Read-only (the world hash does not change). A removed body, a == b or a
+        handle that was never valid gives False. The same events `ld_world_subscribe_contacts` delivers (17.12)."""
+        if a == b:
+            return False
+        for e in self.tick_events:
+            if e.kind == Int64(EVENT_ENDED):
+                continue
+            if (e.a == a and e.b == b) or (e.a == b and e.b == a):
+                return True
+        return False
+
+    def touching_count(self) -> Int:
+        """Number of body pairs in contact after the latest physics tick (ENDED events are not counted)."""
+        var n = 0
+        for e in self.tick_events:
+            if e.kind != Int64(EVENT_ENDED):
+                n += 1
+        return n
+
     def physics_tick(mut self):
         """One fixed tick of the scene; collects its contact events."""
         self.scene.step(Real(self.dt), self.gravity, self.cfg)

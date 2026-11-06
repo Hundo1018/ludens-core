@@ -577,6 +577,8 @@ lattice: 50 / 50  ring: 12
   density 2: mass 2.9321532  2 * 4/3 pi a b c 2.9321532
   disc (1, 0.1, 1): y 0.09972428
 [PASS] ellipsoid - 17 / 17 checks
+--- tests/test_embed_touching.mojo ---
+[PASS] embed_touching - 6 / 6 checks
 --- tests/test_epa.mojo ---
 [PASS] epa - 8 / 8 checks
 --- tests/test_erosion.mojo ---

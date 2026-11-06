@@ -83,6 +83,8 @@ lattice: 50 / 50  ring: 12
 [PASS] diag_log - 21 / 21 checks
 --- tests/test_diag_trace.mojo ---
 [PASS] diag_trace - 7 / 7 checks
+--- tests/test_embed_touching.mojo ---
+[PASS] embed_touching - 6 / 6 checks
 --- tests/test_fsm.mojo ---
 [PASS] fsm - 17 / 17 checks
 --- tests/test_ga_core.mojo ---

@@ -3293,6 +3293,7 @@
 > **第三片(2026-11-06)**:表面材質表(17.50 的 `material_mu` / `material_hz` / `material_zeta`):`SceneDoc.materials`、`EmbedWorld.set_material_friction` / `set_material_softness`、列 `materials.count` 與 `material.K.{id,friction,hertz,zeta}`(表為空時不輸出,既有場景列數不變)。`tests/test_scene_materials.mojo` 17 項:場景路徑 == 快照路徑,tick 0 與 300 tick 後逐位相同;表在快照雜湊內;無表 / 有表的列數;列的往返恆等;改一個摩擦值 = 一列差異,套用後等於目標;重複 id、id 超出範圍、什麼都沒設、負阻尼被拒絕且不改世界。變異測試:匯入時不套用柔度,3 項失敗。注意:表只作用於網格 / 高度場三角形與 `surface_friction`,而嵌入邊界尚無法建立網格,所以目前只有查詢能看到它;undo 不涵蓋此表(世界層級,不屬於任何物體)。
 > **遺留待辦**:關節(#104)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
+> **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-shell 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:`EmbedWorld` 的方塊 / 球體物體;ECS 實體、關節、運動學為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
