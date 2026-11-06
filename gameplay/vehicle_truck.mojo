@@ -67,3 +67,23 @@ def truck_config(mass: Real = 8000, wheelbase: Real = 4.4, axle_gap: Real = 1.4,
     cfg.drive.shift_time = 0.5
     cfg.validate()
     return cfg^
+
+
+def semi_trailer_config(mass: Real = 12000, length: Real = 8.0, track: Real = 1.9) raises -> VehicleConfig:
+    """A one-axle semi-trailer: two undriven, unsteered wheels near the rear and a box `length` long. Its front is
+    carried by the tractor through a ball joint (`gameplay.vehicle_kinds.hitch`) at the box's front end, so with the
+    tractor it behaves like a 6x4 with a fifth wheel. The chassis origin is the box centre; the hitch point in the
+    trailer frame is (+length / 2, y, 0)."""
+    if not (mass > 0) or not (length > 2) or not (track > 0):
+        raise Error("semi_trailer_config: mass, track must be > 0 and length > 2")
+    var cfg = truck_config(mass, 4.4, 1.4, track)
+    var half = Vec3(length / 2, 0.6, track / 2 + 0.2, 0)
+    cfg.half = half
+    var ib = Inertia3.box(mass, half[0], half[1], half[2])
+    cfg.inertia = Vec3(ib.ix, ib.iy, ib.iz, 0)
+    cfg.wheels = List[WheelConfig]()
+    for side in range(2):
+        var z = -track / 2 if side == 0 else track / 2
+        cfg.wheels.append(WheelConfig(Vec3(-length / 2 + 1.2, -0.3, z, 0), 0.5, 0.15, 6.0, 1, Real(0.0), False, False, Real(0.5)))
+    cfg.validate()
+    return cfg^

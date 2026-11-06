@@ -1706,7 +1706,7 @@ counted, not listed.
 - `def apply_buoyancy_surface[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], waters: List[WaterVolume], water: W, t: Float32, gravity: SIMD[.float32, 4], dt: Float32, samples: Int = Int(8))`
 - `def float_body[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], id: BodyId, half: SIMD[.float32, 4], water: W, t: Float32, density: Float32, gravity: SIMD[.float32, 4], drag: Float32 = 1, samples: Int = Int(4)) -> Real`
 
-## gameplay (layer 5) — 50 modules, 329 public declarations
+## gameplay (layer 5) — 50 modules, 330 public declarations
 
 ### `gameplay/abilities.mojo`
 - struct `Abilities` — 6 methods
@@ -2035,6 +2035,7 @@ counted, not listed.
 - `def solve_axis(tire: TireModel, on_x: Bool, a: Float32, b: Float32, other_s: Float32, den: Float32, mu_eff: Float32, fz: Float32) -> Real`
 
 ### `gameplay/vehicle_truck.mojo`
+- `def semi_trailer_config(mass: Float32 = Float32("12000"), length: Float32 = 8, track: Float32 = 1.8999999999999999) -> VehicleConfig`
 - `def truck_config(mass: Float32 = Float32("8000"), wheelbase: Float32 = 4.4000000000000004, axle_gap: Float32 = 1.3999999999999999, track: Float32 = 1.8999999999999999) -> VehicleConfig`
 
 ### `gameplay/vehicle_tunnel.mojo`

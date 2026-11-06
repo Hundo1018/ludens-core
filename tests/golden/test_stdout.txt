@@ -2127,6 +2127,8 @@ hitch: trailer moved 3.9998922 m, worst anchor gap 0.00029503176
 seat after the car turned and moved: 0.23395228 0.9 5.441889
 wall on the left: exit ok True  at x 1.6
 [PASS] vehicle_seat - 5 / 5 checks
+--- tests/test_vehicle_semitrailer.mojo ---
+[PASS] vehicle_semitrailer - 5 / 5 checks
 --- tests/test_vehicle_slope.mojo ---
   3 s on 35 deg: dx at mu 0.45 -5.8746033  mu 0.75 5.2446976  mu 0.9 7.3349304
 [PASS] vehicle_slope - 3 / 3 checks
