@@ -1601,6 +1601,8 @@ replay: scripted run equals live True  posts one frame later differ True
   floater vy 0.0  pushed vx 1.0
   runtime channel: began impulse 4.163334
 [PASS] runtime_params - 5 / 5 checks
+--- tests/test_runtime_rules.mojo ---
+[PASS] runtime_rules - 7 / 7 checks
 --- tests/test_runtime_systems.mojo ---
   levels: Track 0  Count 0  Lowest 1
   30 frames of 0.2-3 ticks: fixed ticks run 31 (counted 31 )

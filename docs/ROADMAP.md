@@ -3085,6 +3085,8 @@
 > **相依**:17.11、17.35、17.38、17.39 / 17.40、17.37(效果實例池)、17.77(ECS 表達力)、17.71、17.15(utility AI 讀屬性)、17.49。
 > **邊界**:血條等 UI、VFX / SFX 播放(以事件交宿主)、平衡數值與內容屬設計;背包 / 戰利品 / 任務屬 17.72;網路複製屬 17.16。
 
+> **Runtime 擁有 Rules(2026-11-06,#97 的後半)**:`Runtime.enable_rules(health_attr)`、`add_actor(n_attrs, n_types)`;`Runtime` 新增 `rules` / `actors` / `tags` / `rules_on`,規則預設關閉,開啟後每個執行計時器的 tick 也對 `actors` 跑一次 `Rules.step`(效果是有時間的東西,所以暫停計時器的流程狀態也暫停效果;不新增 `TICK_*` 位元,既有流程遮罩與 golden 不變)。`carry_to` 不攜帶規則(與計時器一樣屬於執行期,由宿主重建)。`tests/test_runtime_rules.mojo` 7 項:預設關閉時規則 tick 為 0;同一個 buff + 週期傷害,執行期 400 frame 與獨立 `Rules` 400 tick,`actor_to_bytes` 在 tick 150 / 301 / 400 逐位元組相同,死亡 tick 相同,buff 準確到期;流程狀態只跑模擬(無計時器)250 frame,規則 tick 與角色位元組不動,恢復後 300 規則 tick 等於獨立角色。變異測試:把 `step` 移出計時器區塊,暫停的兩項失敗。`test_runtime_*`、`test_flow*`、`test_rules*` 各檔不變。**未做**:規則的快照(`actor_to_bytes` 已存在,Runtime 的整體存檔尚不含它);完整框架的元件化(Rules 仍是 `List[Actor]`)。
+
 #### 17.72 流程服務 — Wave C
 > **進度註(2026-10-13)**:`gameplay/flow.mojo`(`FlowStack`:push / pop、頂端狀態以 `TICK_SIM` / `TICK_TIMERS` / `TICK_EVENTS` 遮罩決定誰 tick;`Flags`:
 > INT / BOOL / FX 型別旗標、僅實際變更進 `changed`、按名稱 `to_bytes` / `load`,型別改變 raise)、`gameplay/objectives.mojo`(`ObjectiveLog`:事件型別計數目標、

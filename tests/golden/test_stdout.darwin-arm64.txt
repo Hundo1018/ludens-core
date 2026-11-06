@@ -261,6 +261,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
   evaluators over 20000 seeded ops ( 4002 reads, 1957 modifiers left): agree True
   100 fire damage, 25 % resist, 30 shield: health lost 45  shield left 0
 [PASS] rules - 15 / 15 checks
+--- tests/test_runtime_rules.mojo ---
+[PASS] runtime_rules - 7 / 7 checks
 --- tests/test_sah.mojo ---
   Σ node area  median: 214061.859375  SAH: 122503.546875  ratio: 0.5722810557316267
   avg leaf depth  median: 7.71999979019165  SAH: 8.904999732971191
