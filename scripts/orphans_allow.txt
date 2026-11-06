@@ -69,7 +69,6 @@ gameplay.sequence_player  # [api] plays a sequence into a scene: events to a Cha
 gameplay.hit_pipeline  # [api] animation-event hit windows, damage events, knockback, blasts on characters (17.71)
 gameplay.explosion  # [api] explosions triggered by host gameplay code (17.71)
 ecs.host_components  # [api] run-time registered components for hosts (17.78)
-physics.fem_material  # [api] FEM constitutive models selected by the caller; scene wiring is later 17.58 work (17.58)
 physics.fsi  # [api] LBM-rigid coupler stepped by the host in place of ContactScene6.step (17.59)
 physics.sim_cache  # [api] point caches written / played by the host or tools (17.63)
 physics.thermal_smoke  # [api] heated plate / smoke parts for Coupler (17.61)
@@ -127,3 +126,4 @@ physics.mac_levelset_particles  # [api] particle level set volume correction, 17
 physics.mac_levelset_particles3  # [api] 3-D particle level set volume correction for hosts (17.60, test_levelset_particles3)
 physics.mac_body  # [api] disk drag coupling to the grid gas, 17.61 (test_body_drag)
 embed.undo  # [api] undo / redo for an editor: the consumer is ludens-shell's editor commands (ROADMAP 17.43, tests/test_undo)
+physics.fem_visco  # [api] Maxwell-branch viscoelastic FEM stress, no host wiring yet (17.58, #93, tests/test_fem_visco)

@@ -1765,6 +1765,7 @@
 > **邊界**:肌肉屬 17.57;皮膚 / 脂肪的可見形變輸出屬 17.65;剖開與碎裂的幾何屬 17.5(本條只做元素移除);
 > 流體 – 結構屬 17.59;DCC 內的網格 authoring 屬宿主。
 
+> **進度註(2026-11-06,黏彈,#93 的黏彈部分)**:`physics/fem_visco.mojo`:一個 Maxwell 分支作用在第一 Piola 應力上(`P = (1 - g) P0(F) + H`,Simo 指數更新),`ViscoState` 每元素存 H 與前一步 P0,材料取 `Material` seam 的任一模型。`tests/test_fem_visco.mojo`(integration,7/7):6×2×2 梁拉伸 5 % 後固定,力 / 彈性力在 t = 0.25、0.5、1.5、5 s(g = 0.6,tau = 0.5 s)與解析 `(1 - g) + g exp(-(t - dt/2)/tau)` 相差 < 1e-4(應變跳變落在第一步中點,故有 dt/2 偏移;第一次測試漏掉這個偏移,在 t = 0.25 差 4.7e-4);dt = 1e-3 與 1e-2 各自吻合解析值;g = 0 與 `material_forces` 逐位元相同;懸臂振動後段尖端振幅 g = 0.5 為 0.119、彈性為 0.172(起始 0.18)。**未做**:XPBD-FEM 變體、域壁 mu / skin、隱式積分的黏彈切線、plasticity 與黏彈同時使用。#93 仍開著。
 #### 17.59 流固耦合 — Wave C
 > **進度註(2026-10-13)**:LBM ↔ 移動剛體先行。`fluid/lbm.mojo`:Ladd 1994 移動壁面 bounce-back(反射分布加 6 w_i (c_i · u_w))、`set_wall_velocity`、
 > `add_moving_sphere` / `move_sphere`(重新標記格點;離開的格以鄰格平均密度 + 壁速平衡態補上,被覆蓋的格的動量以衝量交給球,Aidun 1998)、
