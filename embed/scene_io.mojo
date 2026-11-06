@@ -27,6 +27,7 @@ from geometry.quat import Quat
 from geometry.vec import Real, Vec3
 from physics.ccd6 import CCD_AUTO
 from physics.material import COMBINE_AVERAGE, COMBINE_MAX
+from physics.joints6 import JOINT_BALL, JOINT_BROKEN, JOINT_DISTANCE, JOINT_HINGE, JOINT_WELD, Joint6
 from physics.rigid6 import Inertia3
 
 comptime SCENE_FORMAT_VERSION = 1
@@ -117,6 +118,7 @@ struct SceneDoc(Copyable, Movable):
     var substeps: Int
     var bodies: List[SceneBody]
     var materials: List[SceneMaterial]
+    var joints: List[SceneJoint]
 
     def __init__(out self):
         self.version = SCENE_FORMAT_VERSION
@@ -126,6 +128,22 @@ struct SceneDoc(Copyable, Movable):
         self.substeps = 1
         self.bodies = List[SceneBody]()
         self.materials = List[SceneMaterial]()
+        self.joints = List[SceneJoint]()
+
+
+@fieldwise_init
+struct SceneJoint(Copyable, Movable):
+    """A joint between two bodies, named by their position in `SceneDoc.bodies`. `kind` is one of JOINT_BALL /
+    JOINT_DISTANCE / JOINT_HINGE / JOINT_WELD; `rest` is the distance of a distance joint; `axis_a` / `axis_b` are
+    the hinge axes (a weld keeps its reference rotation in `axis_a` and `rest`, as `Joint6.weld` does)."""
+    var kind: Int
+    var a: Int
+    var b: Int
+    var la: Vec3
+    var lb: Vec3
+    var rest: Real
+    var axis_a: Vec3
+    var axis_b: Vec3
 
 
 @fieldwise_init
@@ -202,8 +220,6 @@ def export_scene(world: EmbedWorld) raises -> SceneDoc:
         raise Error("export_scene: the world has a fractured object (not representable in scene v1)")
     if world.water_on:
         raise Error("export_scene: the world has a water tank (not representable in scene v1)")
-    if len(world.scene.joints) > 0:
-        raise Error("export_scene: the world has " + String(len(world.scene.joints)) + " joints (not representable in scene v1)")
     if len(world.scene.softs) > 0:
         raise Error("export_scene: the world has soft bodies (not representable in scene v1)")
     if len(world.scene.rules) > 0:
@@ -218,6 +234,23 @@ def export_scene(world: EmbedWorld) raises -> SceneDoc:
         if world.scene.bset.is_removed(i):
             continue
         doc.bodies.append(export_body(world, i))
+    var doc_index = List[Int]()  # body slot -> position in doc.bodies, -1 for removed slots
+    var pos = 0
+    for i in range(len(world.scene.bset.bodies)):
+        if world.scene.bset.is_removed(i):
+            doc_index.append(-1)
+        else:
+            doc_index.append(pos)
+            pos += 1
+    for c in range(len(world.scene.joints)):
+        ref j = world.scene.joints[c]
+        if j.kind == JOINT_BROKEN:
+            continue  # removed or released: not authored content
+        if j.kind != JOINT_BALL and j.kind != JOINT_DISTANCE and j.kind != JOINT_HINGE and j.kind != JOINT_WELD:
+            raise Error("export_scene: joint " + String(c) + " has kind " + String(j.kind) + " (scene v1 has ball, distance, hinge and weld joints)")
+        if not world.scene.joint_is_plain(c):
+            raise Error("export_scene: joint " + String(c) + " has a limit, motor, spring, drive, break threshold or a zero-angle reference that differs from where it was made (not representable in scene v1)")
+        doc.joints.append(SceneJoint(j.kind, doc_index[j.a], doc_index[j.b], j.la, j.lb, j.rest, j.axis_a, j.axis_b))
     ref sc = world.scene
     var n_mat = len(sc.material_mu)
     if len(sc.material_hz) > n_mat:
@@ -276,6 +309,19 @@ def _validate(doc: SceneDoc) raises:
         raise Error("import_scene: gravity must be finite")
     if doc.iters < 1 or doc.substeps < 1:
         raise Error("import_scene: solver iterations and substeps must be >= 1")
+    for k in range(len(doc.joints)):
+        ref j = doc.joints[k]
+        var at = "import_scene: joint " + String(k) + ": "
+        if j.kind != JOINT_BALL and j.kind != JOINT_DISTANCE and j.kind != JOINT_HINGE and j.kind != JOINT_WELD:
+            raise Error(at + "unknown kind " + String(j.kind))
+        if j.a < 0 or j.a >= len(doc.bodies) or j.b < 0 or j.b >= len(doc.bodies):
+            raise Error(at + "body index out of range")
+        if j.a == j.b:
+            raise Error(at + "the two bodies must differ")
+        if not (_finite3(j.la) and _finite3(j.lb) and _finite3(j.axis_a) and _finite3(j.axis_b) and isfinite(j.rest)):
+            raise Error(at + "anchors, axes and rest length must be finite")
+        if j.kind == JOINT_DISTANCE and j.rest < 0:
+            raise Error(at + "rest length must be >= 0")
     for k in range(len(doc.materials)):
         ref m = doc.materials[k]
         var at = "import_scene: material " + String(k) + ": "
@@ -393,6 +439,10 @@ def import_scene(mut world: EmbedWorld, doc: SceneDoc) raises:
     world.dt = doc.dt
     for i in range(len(doc.bodies)):
         _ = add_body_record(world, doc.bodies[i])
+    for k in range(len(doc.joints)):
+        ref j = doc.joints[k]
+        var zero = Vec3(0, 0, 0, 0)
+        _ = world.scene.add_joint(Joint6(j.kind, j.a, j.b, j.la, j.lb, j.rest, j.axis_a, j.axis_b, zero, zero, 1))
     for k in range(len(doc.materials)):
         ref m = doc.materials[k]
         if m.mu >= 0:
@@ -472,6 +522,26 @@ def scene_to_fields(doc: SceneDoc) -> List[SceneField]:
     _push(out, "bodies.count", String(len(doc.bodies)))
     for i in range(len(doc.bodies)):
         _push_body(out, i, doc.bodies[i])
+    if len(doc.joints) > 0:  # only written when there are joints, so scenes without joints keep their rows
+        _push(out, "joints.count", String(len(doc.joints)))
+        for k in range(len(doc.joints)):
+            var p = "joint." + String(k) + "."
+            ref j = doc.joints[k]
+            var kn = "ball"
+            if j.kind == JOINT_DISTANCE:
+                kn = "distance"
+            elif j.kind == JOINT_HINGE:
+                kn = "hinge"
+            elif j.kind == JOINT_WELD:
+                kn = "weld"
+            _push(out, p + "kind", kn)
+            _push(out, p + "a", String(j.a))
+            _push(out, p + "b", String(j.b))
+            _push_vec(out, p + "la", j.la)
+            _push_vec(out, p + "lb", j.lb)
+            _push(out, p + "rest", _t(j.rest))
+            _push_vec(out, p + "axis_a", j.axis_a)
+            _push_vec(out, p + "axis_b", j.axis_b)
     if len(doc.materials) > 0:  # only written when the table is not empty, so scenes without one keep their rows
         _push(out, "materials.count", String(len(doc.materials)))
         for k in range(len(doc.materials)):
@@ -579,6 +649,23 @@ def scene_from_fields(fields: List[SceneField]) raises -> SceneDoc:
                 rows.has(p + "kinematic") and rows.flag(p + "kinematic"),
             )
         )
+    if rows.has("joints.count"):
+        var nj = rows.int("joints.count")
+        if nj < 0:
+            raise Error("scene_from_fields: joints.count must be >= 0")
+        for k in range(nj):
+            var p = "joint." + String(k) + "."
+            var kt = rows.text(p + "kind")
+            var kind = JOINT_BALL
+            if kt == "distance":
+                kind = JOINT_DISTANCE
+            elif kt == "hinge":
+                kind = JOINT_HINGE
+            elif kt == "weld":
+                kind = JOINT_WELD
+            elif kt != "ball":
+                raise Error("scene_from_fields: `" + p + "kind` must be ball, distance, hinge or weld, got `" + kt + "`")
+            doc.joints.append(SceneJoint(kind, rows.int(p + "a"), rows.int(p + "b"), rows.vec(p + "la"), rows.vec(p + "lb"), rows.real(p + "rest"), rows.vec(p + "axis_a"), rows.vec(p + "axis_b")))
     if rows.has("materials.count"):
         var nm = rows.int("materials.count")
         if nm < 0:
