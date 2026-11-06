@@ -565,6 +565,8 @@ lattice: 50 / 50  ring: 12
   pool: active 52 of 70
   300 signatures over 9 types: with A 150 / 150  A without B 75 / 75
 [PASS] ecs_query - 24 / 24 checks
+--- tests/test_ecs_respawn.mojo ---
+[PASS] ecs_respawn - 6 / 6 checks
 --- tests/test_ellipsoid.mojo ---
   equal radii 0.5 on a box floor: y 0.4997246  sphere r 0.5: y 0.49972457
   radii (1, 0.5, 0.7) lying: y 0.4997246

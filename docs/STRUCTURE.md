@@ -398,15 +398,15 @@ counted, not listed.
 ### `ecs/archetype.mojo`
 - struct `ArchView2` — 7 methods
 - struct `Archetype` — 0 methods
-- struct `ArchetypeBackend` : Defaultable, StorageBackend — 18 methods
+- struct `ArchetypeBackend` : Defaultable, StorageBackend — 19 methods
 - aliases: `MAX_ARCH`, `N`, `Slot`
 
 ### `ecs/bitset_backend.mojo`
-- struct `BitsetBackend` : Defaultable, StorageBackend — 15 methods
+- struct `BitsetBackend` : Defaultable, StorageBackend — 16 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/chunked_backend.mojo`
-- struct `ChunkedBackend` : Defaultable, StorageBackend — 18 methods
+- struct `ChunkedBackend` : Defaultable, StorageBackend — 19 methods
 - aliases: `CHUNK_BYTES`, `CHUNK_ROWS`, `N`, `Slot`
 
 ### `ecs/commands.mojo`
@@ -434,7 +434,7 @@ counted, not listed.
 - aliases: `ID`
 
 ### `ecs/naive_backend.mojo`
-- struct `NaiveBackend` : Defaultable, StorageBackend — 15 methods
+- struct `NaiveBackend` : Defaultable, StorageBackend — 16 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/pool.mojo`
@@ -445,7 +445,7 @@ counted, not listed.
 
 ### `ecs/reactive_backend.mojo`
 - struct `ObsEvent` — 0 methods
-- struct `ReactiveBackend` : Defaultable, StorageBackend — 18 methods
+- struct `ReactiveBackend` : Defaultable, StorageBackend — 19 methods
 - aliases: `EV_ADD`, `EV_REMOVE`, `EV_SET`, `N`, `Slot`
 
 ### `ecs/relations.mojo`
@@ -465,7 +465,7 @@ counted, not listed.
 - `def write_values[T: Copyable](vals: List[T], schema: TypeSchema, mut out: List[UInt8])`
 
 ### `ecs/sparse_backend.mojo`
-- struct `SparseSetBackend` : Defaultable, StorageBackend — 15 methods
+- struct `SparseSetBackend` : Defaultable, StorageBackend — 16 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/sparse_set.mojo`
@@ -496,7 +496,7 @@ counted, not listed.
 - `def propagate_full[B: StorageBackend](mut w: World[B], h: Hierarchy)`
 
 ### `ecs/world.mojo`
-- struct `World` — 26 methods
+- struct `World` — 27 methods
 
 ## fluid (layer 2) — 5 modules, 29 public declarations
 
