@@ -1160,7 +1160,7 @@ counted, not listed.
 
 ### `physics/body_set.mojo`
 - struct `BodyId` : Equatable, Writable — 2 methods
-- struct `BodySet` : Sized — 16 methods
+- struct `BodySet` : Sized — 17 methods
 - aliases: `MOTION_DYNAMIC`, `MOTION_KINEMATIC`, `MOTION_REMOVED`, `MOTION_STATIC`
 
 ### `physics/capture.mojo`
@@ -2053,7 +2053,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 3 modules, 100 public declarations
+## embed (layer 6) — 5 modules, 131 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2123,10 +2123,40 @@ counted, not listed.
 ### `embed/navigation.mojo`
 - struct `EmbedNav` — 2 methods
 
+### `embed/scene_io.mojo`
+- struct `BodyProps` — 1 methods
+- struct `SceneBody` — 1 methods
+- struct `SceneChange` — 0 methods
+- struct `SceneDoc` — 0 methods
+- struct `SceneField` — 0 methods
+- `def add_body_record(mut world: EmbedWorld, s: SceneBody) -> Int64`
+- `def body_equal(a: SceneBody, b: SceneBody) -> Bool`
+- `def body_record(world: EmbedWorld, h: Int64) -> SceneBody`
+- `def export_body(world: EmbedWorld, i: Int) -> SceneBody`
+- `def export_scene(world: EmbedWorld) -> SceneDoc`
+- `def import_scene(mut world: EmbedWorld, doc: SceneDoc)`
+- `def restore_body(mut world: EmbedWorld, h: Int64, s: SceneBody)`
+- `def same_shape(a: SceneBody, b: SceneBody) -> Bool`
+- `def scene_apply(base: List[SceneField], changes: List[SceneChange]) -> List[SceneField]`
+- `def scene_diff(a: List[SceneField], b: List[SceneField]) -> List[SceneChange]`
+- `def scene_from_fields(fields: List[SceneField]) -> SceneDoc`
+- `def scene_to_fields(doc: SceneDoc) -> List[SceneField]`
+- `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody)`
+- aliases: `BODY_BOX`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
+
+### `embed/undo.mojo`
+- struct `BodyRec` — 0 methods
+- struct `SnapshotUndo` — 7 methods
+- struct `SolverFlags` — 0 methods
+- struct `Transaction` — 1 methods
+- struct `UndoLog` — 12 methods
+- `def read_flags(world: EmbedWorld) -> SolverFlags`
+- `def write_flags(mut world: EmbedWorld, f: SolverFlags)`
+
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 31 methods
+- struct `EmbedWorld` — 32 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods

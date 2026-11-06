@@ -63,7 +63,7 @@
 | [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 10 | 0 | 0 | 0 |
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 10 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 1 | 0 | 0 |
-| [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 0 | 0 | 2 |
+| [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
 | [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 3 | 1 | 0 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
 
@@ -86,7 +86,7 @@
 - 12.1 C-ABI 嵌入邊界宣告 **v0.x 凍結**;腳本層先做 **Python 綁定**(17.21),hot reload 之後再接。
   Python 綁定放在核心 repo 的最上層獨立套件,測試以客戶端方式安裝進乾淨環境(不用 `-I build`)。
 - **網路**:傳輸層與線路格式交給宿主;本庫提供 rollback 核心、預測策略 seam 與 byte payload API(17.16)。
-- **場景格式**跟宿主走(glTF / USD),不自訂(17.12,目前不排)。
+- **場景格式**由 ludens-shell 定義(2026-11-02 決定,ludens-shell #9);引擎提供 schema 讀寫、diff / apply 與和決定論快照的 parity(17.12,第一片完成)。
 - **wasm 為跨平台交付形態(2026-11-01)**:方向 C 不變;除原生共享庫與 Python wheel 外,以 **wasm64** 模組作為跨平台通用產物
   (瀏覽器、Node / Deno、WASI、能載入 wasm 的宿主),匯出介面即 12.1 C-ABI。整套 C-ABI 已實測可編成 wasm64 並與原生無 FMA 建置
   逐位相同;浮點政策(wasm 自有 golden 或擴大決定論承諾)待決。見 17.89、`docs/design/17.89-wasm-platform.md`。
@@ -96,7 +96,7 @@
 
 - **不在本 repo**(架構分離,不是「不做」):渲染主體、音訊、輸入裝置、圖形化編輯器本體(視窗、gizmo、
   inspector / outliner 面板、節點圖 UI、資產瀏覽器、undo 歷史 UI、play-in-editor 外殼)。若要做,以獨立層 /
-  repo 建在本庫的 headless API 之上。
+  repo 建在本庫的 headless API 之上。2026-11-02 決定:編輯器放在 ludens-shell(`editor/` 與共用 `ui/`)。
 - **使用者明令排除**:場景描述格式 MJCF / URDF、MJX、MJWarp(Phase 13,格式綁定先於技術);
   RL 與機器人專屬能力(2026-10-09 盤點時排除:Gym 式介面、物理參數域隨機化、感測器雜訊 / 延遲、
   LiDAR / 深度感測器、引擎內 NN 推論、抓取、運動規劃、狀態估計、ROS 2、FMI)。
@@ -115,12 +115,12 @@
 | 編輯器需要的能力 | 核心提供者 | 狀態 |
 |---|---|---|
 | Inspector:按名稱列出 / 讀寫任意型別的欄位 | 17.11 `TypeSchema` / `TypeRegistry` | ✅(非純資料型別未在編譯期擋) |
-| 場景 / prefab / 實例覆寫的**可編輯、可 diff 資產格式** | 17.12 | ⬜ **編輯器的最大缺口**(gating 已解:跟宿主格式;本輪不排) |
+| 場景 / prefab / 實例覆寫的**可編輯、可 diff 資產格式** | 17.12 | 🔶 引擎端第一片完成(方塊 / 球體物體、設定、列級 diff / apply、與快照 parity);關節 / 運動學 / 其他形狀為後續片;檔案格式本體由 ludens-shell 定義(#9) |
 | 視窗疊圖 / gizmo 的繪圖來源(接觸點、AABB、island 顏色) | 17.9 `DrawQueue` | ✅ |
 | 滑鼠點選物件(picking) | 17.13 raycast / shapecast | ✅ |
 | 跨存讀穩定的物件身分(選取、參照不因重載失效) | 17.0g `BodyId` · ECS entity id · 3.3 relationships(階層 / outliner) | ✅ |
 | 編輯即時反映(欄位變更推播給視圖) | 4.4 push-based observers | ✅ |
-| Undo / redo | 17.43(建在 4.4 command buffer(結構變更)+ 17.11 schema 欄位值 diff 上) | 🔶 **零件在,交易 / 反向操作層未做** |
+| Undo / redo | 17.43(`EmbedWorld` 物體:`embed/undo.mojo`;ECS 實體的反向操作建在 4.4 command buffer + 17.11 schema 欄位值 diff 上,未做) | 🔶 第一片完成:方塊 / 球體物體的 `UndoLog` 與 `SnapshotUndo`;ECS 實體、關節、運動學未做 |
 | Play-in-editor:進入播放、停止後還原 | 6.10 快照 / 17.40 存檔 | ✅ |
 | 時間軸拖動 / 回看模擬 | 17.39 `seek` / `first_divergence` | ✅ |
 | Profiler 面板 | 17.10 trace(Chrome trace 匯出)· 17.80(執行期追蹤開關、物理擷取檔與回看) | ✅(runtime 開關與擷取檔 → 17.80 ⬜) |
@@ -130,7 +130,7 @@
 | 曲線 / 路徑的控制點編輯 | 17.36 樣條(控制點資料模型) | ✅ |
 | 資產匯入(glTF / USD) | 17.12 對照組所列 · 17.45 碰撞網格烘焙(焊接 / 修復 / 簡化、mesh → SDF)· 17.63 模擬快取 / 稀疏體積交換 | ⬜(同 17.12;平台方向 C 下為主要場景來源) |
 
-擋住外部編輯器的是 **17.12 場景 / prefab 格式** 與 **17.43 undo 交易層**(兩者目前不排),其次是 17.21 的 live 調校。
+擋住外部編輯器的是 **17.12 場景 / prefab 格式**(2026-11-02 排程,第一片完成)與 **17.43 undo 交易層**(2026-11-02 排程,第一片完成),其次是 17.21 的 live 調校。
 
 ## 優先序
 
@@ -145,7 +145,7 @@
 7. 17.17 GPU articulation / narrowphase
 8. 17.8 大世界座標(先 f32 + rebasing + partition,f64 只參數化)
 
-**不排**:17.12 場景格式、17.43 undo 交易層(編輯器相關)。
+**不排**:(無)。17.12 場景讀寫與 17.43 undo 交易層已於 2026-11-02 排程。
 
 上列 1、2、4、5、6、8 已 ✅(2026-10-12);3(17.85)與 7(17.17)🔶,剩餘併入下方順序。
 
@@ -233,7 +233,7 @@
 46. 17.62 GPU / 可微連續體(需 17.56 / 17.58 / 17.59)
 
 相依互指時的取捨:17.67 先於 17.66(先定外力 / 速度擁有權);17.59 先於 17.60。
-**不排 / ⏸**:17.12、17.43(不排);13.9(⏸,等平台決策)。9.1 / 13.5 / 13.8 / 13.7 的剩餘已移至
+**⏸**:13.9(等平台決策)。17.12、17.43 已於 2026-11-02 排程。9.1 / 13.5 / 13.8 / 13.7 的剩餘已移至
 17.47 / 17.50 / 17.51 / 17.52 與 17.20 / 17.84,不另排。
 
 ---
@@ -3193,7 +3193,7 @@
 | 17.9 | [Debug-draw 指令佇列](ROADMAP_HISTORY.md#179-debug-draw-指令佇列--wave-a工具) | ✅ | A | `diag/draw.mojo` 的 `DrawQueue[dtype]` 是固定容量的 immediate-mode 指令佇列(line / sphere / box / arrow / text / contact-point,帶生命期、溢位 drop + 計數),由 test_diag_draw 與 bench_diag 表 (c) 覆蓋。 |
 | 17.10 | [Profiling / tracing hooks](ROADMAP_HISTORY.md#1710-profiling--tracing-hooks--wave-a工具) | ✅ | A | `diag/trace.mojo` 提供 begin/end 與 with-scoped span(`-D LUDENS_TRACE` 關閉時編譯為無)、計數器與 Chrome trace 匯出,並在 `ContactScene6` 每步標註 5 組階段 span。 |
 | 17.11 | [反射 / 型別註冊表](ROADMAP_HISTORY.md#1711-反射--型別註冊表--wave-b架構解鎖多項) | ✅ | B | `ecs/schema.mojo` 以 Mojo 1.1 `reflect[T]` 在編譯期產生 `TypeSchema`(含巢狀點號路徑)、按欄位名的版本容忍讀寫與 `TypeRegistry` 型別擦除存取,並有 parity 測試、bench_schema 與範例 23_reflection_inspector。 |
-| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | 不排 | C | 規劃一套 schema 化、可 diff、版本化的場景 / prefab 格式(實際走宿主的 glTF / USD 匯入),與現有決定論快照分開並以 parity 連結;尚未開工。 |
+| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | 🔶 | C | schema 化、可 diff 的場景讀寫(檔案格式由 ludens-shell 定義),與決定論快照分開並以 parity 連結;第一片(方塊 / 球體物體)完成,關節等為後續片。 |
 | 17.32 | [執行期分級日誌設施](ROADMAP_HISTORY.md#1732-執行期分級日誌設施--wave-a工具錯誤政策的記錄層) | ✅ | A | `diag/log.mojo` + `diag/level.mojo` 提供分級加分類的 `LogRing` 環形緩衝,用 comptime `LUDENS_LOG_LEVEL` 閘門,溢位時丟最新一筆並計數,`bench_diag` 表 (a) 量到關閉的層級零成本;solver6 的 NaN 隔離會發 WARN 日誌。 |
 | 17.33 | [執行期斷言 / 不變量檢查層](ROADMAP_HISTORY.md#1733-執行期斷言--不變量檢查層--wave-a工具錯誤政策的立即終止層) | ✅ | A | `diag/invariant.mojo` 把引擎的 `debug_assert` 慣例寫成文件,另加熱路徑用的 `invariant_finite`(NaN / Inf 檢查);測試以 `-D ASSERT=all` 執行,由 `tests/test_diag_invariant.mojo` 驗證。 |
 | 17.34 | [每幀 / 暫存集區配置器(frame arena)](ROADMAP_HISTORY.md#1734-每幀--暫存集區配置器--wave-a) | ✅ | A | `diag/arena.mojo` 的 `FrameArena` 是在單一次配置上運作的 bump allocator,提供型別化的 `alloc[T]` 與 `reset()`,溢位時 raise 並計數;已有與 List 的 parity 測試,`bench_diag` 表 (b) 量到每筆約 1.9 ns,List-per-frame 慢 1.5–4 倍;seam 列在 CATEGORY §2.2。 |
@@ -3201,7 +3201,7 @@
 | 17.38 | [遊戲事件匯流排 / 訊息系統](ROADMAP_HISTORY.md#1738-遊戲事件匯流排--訊息系統--wave-a) | ✅ | A | `scheduler/events.mojo` 提供 `EventChannel` seam:`Channel[E]`(pull,正式路徑)對照 `PushChannel[E]`(fan-out),投遞依呼叫序決定、雙緩衝、每個讀者有自己的游標,未讀而丟棄的事件計入 `diag.counters`;測試有 `test_events` / `test_events_gameloop` / `test_events_contacts`,bench 為 `bench_events`。 |
 | 17.39 | [輸入錄製 / 決定論回放(QA・ghost,非網路)](ROADMAP_HISTORY.md#1739-輸入錄製--決定論回放qaghost非網路--wave-b) | ✅ | B | `gameplay/replay.mojo` 提供 `SimState` / `Recorder`(錄製輸入、定期存快照、每 tick 存 FNV-1a 狀態雜湊)以及 `replay_from_start` / `seek` / `first_divergence` / `ghost`;`test_replay` 8/8 驗證 seek 與全程重跑逐位相同;`bench_replay` 在快照間隔 10 時尋位只要 0.10 ms,全程重跑則是 32.6 ms。 |
 | 17.40 | [存檔系統(相對於決定論快照)](ROADMAP_HISTORY.md#1740-存檔系統相對於決定論快照--wave-b) | ✅ | B | `gameplay/save.mojo` 建在 17.11 schema 上,提供 `SaveWriter` / `SaveReader`:具名區段,按欄位名載入,處理新增、刪除、改型的欄位並以 `ReadReport` 回報;`save_bodies` / `load_bodies` 只存動態體的姿態與速度;`test_save` 11/11 驗證存檔涵蓋的欄位與 6.10 快照逐位相同;`bench_save` 的存檔大小為 74 KB,快照為 932 KB。 |
-| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | 不排 | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;目前只有零件,交易與反向操作層未做。 |
+| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | 🔶 | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;目前只有零件,交易與反向操作層未做。 |
 | 17.77 | [ECS 表達力](#1777-ecs-表達力--wave-b) | ✅ | B | N 元查詢與迭代、過濾器、變更偵測、單例 / 資源、有狀態系統與使用者系統註冊、延遲結構變更補齊 |
 | 17.79 | [資源治理](#1779-資源治理--wave-b) | ✅ | B | 記憶體記帳、容量上限與滿載政策、預留與穩態零配置、收縮、執行緒 / GPU 資源政策、資源上限觸發的退讓 |
 | 17.80 | [觀測](#1780-觀測--wave-b工具執行期追蹤開關物理擷取檔與回看) | ✅ | B | (a)runtime 追蹤開關、(b)緩衝政策、(c)多執行緒與 GPU 軌、(d)counter 軌、(e)物理擷取檔、(f)回看 |
@@ -3273,8 +3273,9 @@
 
 #### 17.12 可編輯場景 / prefab / 實例化
 
-> **狀態**:不排(2026-10-09 平台方向 C 拍板後 gating 已解,但屬編輯器相關,本輪不做;原 Wave C)
-> **決定(2026-10-09)**:平台方向 C → 場景格式**跟宿主走**(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;關節、運動學、其他形狀為後續片)
+> **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
+> **決定(2026-11-02)**:編輯器放在 ludens-shell;場景檔案格式由 ludens-shell 定義(ludens-shell #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-shell #12)。
 > **現況**:`physics/serialize.mojo` = 全狀態 f32 bit-pattern 決定論快照(自註「非 asset reference」)。
 > **缺口**:schema 化、可 diff、版本化的場景格式、prefab / blueprint、nested scene 組合、實例覆寫(override)、entity template。
 > **對照組**:UE `.umap` + Blueprint、Unity prefab + YAML scene、Godot `.tscn` + PackedScene、glTF / USD 匯入。
@@ -3283,10 +3284,16 @@
 > **seam?**:是 —— 場景格式讀寫 vs 決定論快照 → parity(同場景兩路徑載入後逐位相同)。
 > **交付**:普通(存讀一個場景)/ 整合(prefab 實例 + 覆寫、warm-start cache 保留)/ 極端(空場景、循環 prefab 參照、缺資源、格式版本升級)。
 > **歷史**:原標「⚠️ gated」—— 檔案格式綁定是「先於技術的架構決策」(同 Phase 13 排除 MJCF/URDF、同 13.9),待平台整合方向確定;2026-10-09 方向拍板 C 後此 gating 解除,改為「跟宿主格式、本輪不排」。
+> **進度註(2026-11-06,第一片,ludens-engine #82)**:`embed/scene_io.mojo`(與 `EmbedWorld` 同包;編輯器與引擎編進同一個模組,以 Mojo 直接呼叫,不經 C-ABI):
+> - `SceneDoc`(設定 + 方塊 / 球體物體,每個物體含 21 個物理屬性:摩擦、反彈、阻尼、重力縮放、速度上限、接觸模型、睡眠、CCD、軸鎖定,以引擎既有的設定函式套用,彙總旗標一併更新)、`export_scene`、`import_scene`;`scene_to_fields` / `scene_from_fields` 把文件轉成 (路徑, 規範文字) 列,供宿主的檔案格式讀寫;`scene_diff` / `scene_apply` 是 prefab 覆寫的列級差異與套用(`before` 與底稿不符則拒絕)。
+> - 不支援的內容明確拒絕並指名:關節、軟體、規則、運動學、其他形狀、自訂慣量張量、破碎物、水槽、每物體重力區、凍結物體、下一步待施的力。
+> - `tests/test_scene_io.mojo` 44 項。seam:場景路徑與快照路徑建出的世界,tick 0 與 300 tick 後雜湊逐位相同。1/3、2/7、1/9 與一般旋轉經 世界 → 列 → 世界 不失真。diff 只列出改動的 3 列與新增物體的 44 列,套用回去等於目標。壞文件(版本、尺寸、質量、非單位四元數、缺列、格式錯)被拒絕且不改世界。1000 物體往返逐位相同。使用者資料的 2^64 級數值保留(`Int` 解析在 2^63 失敗,改逐位解析)。屬性以引擎的設定函式建出的世界,往返後 tick 0 與 300 tick 後雜湊逐位相同(模擬跑 300 tick 才抓得到彙總旗標漏設);對照組:屬性確實改變模擬。變異測試:拿掉匯入時的旋轉寫入,5 項失敗;拿掉全部屬性套用或只拿掉阻尼的設定,各 2 項失敗;還原後 44/44。
+> - 量測(一般執行,方塊,Real = Float32,單次、4 核容器):1e3 / 1e4 物體,匯出 0.35 / 2.1 ms,匯入 0.46 / 5.2 ms,轉成列 6.7 / 59 ms,由列讀回 16 / 285 ms,無變更的 diff 18 / 382 ms;對照快照存 / 讀 0.28 / 2.6 ms 與 0.93 / 10 ms;列數 44 008 / 440 008(每物體 44 列)。文字路徑比快照慢約兩個數量級;場景存檔頻率低,可接受。diff 目前以兩張字典建構,可改為依路徑順序合併。
+> **遺留待辦**:關節 / 材質表 / 運動學 / 膠囊 / 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
-> **狀態**:不排(2026-10-09 修訂把編輯器相關的 17.12 / 17.43 列為不排;原標 Wave B。零件已在,交易 / 反向操作層未做)
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:`EmbedWorld` 的方塊 / 球體物體;ECS 實體、關節、運動學為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
 > **緣起**:2026-09-30 編輯器邊界分類找出的缺口 —— 外部編輯器依賴的 15 項核心能力中,除 17.12(gated)外唯一未編號者。編輯器邊界分類表把 Undo / redo 標為 🔶「零件在,交易 / 反向操作層未做」,並指出真正擋住外部編輯器的是 17.12 場景 / prefab 格式與 17.43 undo 交易層。
 > **現況**:零件已在但未組合:
 > - `ecs/commands.mojo` `CommandBuffer`(4.4)只記**正向**結構變更(實際只有 despawn / relate / unrelate,`ecs/commands.mojo:43-49`;延遲 add 在 `SetBuffer.set`,延遲 remove 不存在 —— 2026-10-10 校正),`apply` 後不留反向資訊。
@@ -3308,6 +3315,14 @@
 > - 極端:空交易、巢狀 abort、undo 超過深度上限、redo 被新變更截斷、復原已被其他交易刪除的實體參照、1e5 實體場景單欄位編輯的差分 vs 快照成本。
 > **邊界**:本條只做 headless 核心 API;undo 歷史的 UI 屬編輯器本體(不在本 repo)。
 > **決定**:2026-10-09 修訂(Wave C 暫停點,平台方向 = C 嵌入式模擬函式庫)列為不排。
+> **進度註(2026-11-06,第一片,ludens-engine #83)**:`embed/undo.mojo`、`embed/scene_io.mojo` 的單物體紀錄、`BodySet` 的槽位保留。
+> - 作法:交易記下每個被碰到的物體在編輯前後的場景紀錄(`SceneBody`),所以移動、速度、屬性、碰撞層、使用者資料、新增、刪除用同一套機制,不必為每種操作寫反向函式。`UndoLog`:`begin` / `touch` / `created` / `commit` / `abort` / `undo` / `redo`;巢狀只算最外層;同 `merge_key` 的連續交易合併(拖曳是一步,拖回起點則整步消失);新提交截斷 redo;超過 `max_steps` 丟最舊。
+> - **身分還原**:刪除後復原,物體回到同一個 `BodyId`(槽位與世代)。`BodySet` 新增一次性的槽位保留(`reserve_slot`)與每槽「用過的最高世代」(`gen_hwm`):復原時世代倒回舊值,但之後的刪除從高水位往上加,舊句柄不會對上日後的物體(沒有高水位時,測試的別名檢查失敗)。
+> - **旗標**:`any_props` / `any_contact_model` / `any_report` / `any_bullet` 會被序列化(旗標為真時快照多一段)。交易記下編輯前後的旗標,undo / redo 倒回,所以只含屬性編輯的腳本復原後快照雜湊與原始相同。
+> - `SnapshotUndo`:同契約的另一個實作,每步兩份 `save()`;不還原宿主材質 id(`save` 不含)。
+> - `tests/test_undo.mojo` 52 項。10 步腳本(移動、速度、碰撞層、使用者資料、摩擦、新增、刪除、阻尼、接觸回報、CCD)每個 undo / redo 後,`UndoLog` 與 `SnapshotUndo` 的場景列都等於當時記錄的列,存活句柄相同;不含新增 / 刪除的腳本全部復原後,快照雜湊等於原始,再跑 300 tick 與未編輯的世界逐位相同;槽位被別的物體佔用後依序復原仍回到原句柄。變異測試:拿掉 undo 的旗標還原,2 項失敗;拿掉世代高水位,2 項失敗。
+> - 量測(一般執行,方塊,單一物體移動,單次):`UndoLog` 提交 / 復原 1e3:41 / 20 µs,1e4:44 / 138 µs,1e5:275 µs / 1.05 ms,每步 512 bytes;`SnapshotUndo` 提交 / 復原 1e3:0.67 / 1.0 ms,1e4:6.4 / 9.8 ms,1e5:142 / 113 ms,每步 0.36 / 3.6 / 36 MB。1e5 時復原的 1 ms 大部分是為了重算「有人回報 / CCD」旗標而掃描全部物體。
+> **遺留待辦**:ECS 實體的反向操作(4.4 command buffer、17.11 schema 欄位差分,與 observers 推播相容);關節、運動學、其他形狀、地形編輯的反向操作;整批變更(全場景變形)時快照較省的情形尚未量;bench 列未進 `BENCHMARK_REPORT.md`。
 
 #### 17.77 ECS 表達力 — Wave B
 
@@ -4397,7 +4412,7 @@
 | 17.9 | [Debug-draw 指令佇列](ROADMAP_HISTORY.md#179-debug-draw-指令佇列--wave-a工具) | ECS、排程、執行期與診斷 | ✅ |
 | 17.10 | [Profiling / tracing hooks](ROADMAP_HISTORY.md#1710-profiling--tracing-hooks--wave-a工具) | ECS、排程、執行期與診斷 | ✅ |
 | 17.11 | [反射 / 型別註冊表](ROADMAP_HISTORY.md#1711-反射--型別註冊表--wave-b架構解鎖多項) | ECS、排程、執行期與診斷 | ✅ |
-| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | ECS、排程、執行期與診斷 | 不排 |
+| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | ECS、排程、執行期與診斷 | 🔶 |
 | 17.13 | [世界查詢完整度](ROADMAP_HISTORY.md#1713-世界查詢完整度--wave-a) | 碰撞形狀、寬窄相與世界查詢 | ✅ |
 | 17.14 | [導航](#1714-導航) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.15 | [AI 框架](#1715-ai-框架) | gameplay 服務、AI、導航與網路 | ✅ |
@@ -4428,7 +4443,7 @@
 | 17.40 | [存檔系統(相對於決定論快照)](ROADMAP_HISTORY.md#1740-存檔系統相對於決定論快照--wave-b) | ECS、排程、執行期與診斷 | ✅ |
 | 17.41 | [繩索 / 纜線約束](ROADMAP_HISTORY.md#1741-繩索--纜線約束--wave-b) | 軟體、布料、連續體與流體 | ✅ |
 | 17.42 | [LBM 風洞收尾(Phase 14 遺留併入)](ROADMAP_HISTORY.md#1742-lbm-風洞收尾phase-14-遺留併入--wave-b) | 軟體、布料、連續體與流體 | ✅ |
-| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | ECS、排程、執行期與診斷 | 不排 |
+| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | ECS、排程、執行期與診斷 | 🔶 |
 | 17.44 | [複合形狀](#1744-複合形狀--wave-b) | 剛體動力學、接觸與關節 | ✅ |
 | 17.45 | [網格碰撞品質](#1745-網格碰撞品質--wave-a資產前處理) | 碰撞形狀、寬窄相與世界查詢 | ✅ |
 | 17.46 | [CCD 形狀覆蓋](#1746-ccd-形狀覆蓋--wave-b) | 碰撞形狀、寬窄相與世界查詢 | ✅ |

@@ -259,6 +259,21 @@ struct EmbedWorld(Movable):
         var id = self.scene.add_sphere(QuatBody6.at_rest(pos, Inertia3.sphere(m, r)), r, is_static)
         return pack_body(id)
 
+    def reserve_slot(mut self, h: Int64) raises:
+        """One-shot: the next body added gets exactly the identity `h` had (its slot and generation). The slot must be
+        free and `h` from an earlier life of it. Undo of a remove uses this; bodies added and removed in between
+        (and undone before it) have moved the slot's generation on, which is why `BodySet.gen_hwm` keeps handing out
+        fresh ones afterwards."""
+        var id = unpack_body(h)
+        if id.slot < 0 or id.slot >= len(self.scene.bset.generation):
+            raise Error("reserve_slot: no such slot")
+        if not self.scene.bset.is_removed(id.slot) or not (id.gen < self.scene.bset.generation[id.slot]):
+            raise Error("reserve_slot: the slot is occupied, or the handle is not from an earlier life of it")
+        if self.scene.bset.free_index(id.slot) < 0:
+            raise Error("reserve_slot: the slot is not free")
+        self.scene.bset.reuse_slot = id.slot
+        self.scene.bset.reuse_gen = id.gen
+
     def is_alive(self, h: Int64) -> Bool:
         if h < 0:
             return False

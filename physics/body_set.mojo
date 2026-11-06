@@ -165,6 +165,13 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
     # mass ratio, so the soft-contact sag (M g / (m_eff w^2)) stays load-independent
     var load_stiffness: Bool
     var free: List[Int]
+    # ROADMAP 17.43: a one-shot request that the next `push` take exactly this free slot and give it this
+    # generation (undo of a remove restores the body's old BodyId). -1 = none.
+    var reuse_slot: Int
+    var reuse_gen: UInt32
+    # The highest generation a slot has ever had. `remove` always moves a slot past it, so rewinding a slot's
+    # generation for an undo can never hand a later body a generation an older handle already holds.
+    var gen_hwm: List[UInt32]
 
     def __init__(out self):
         self.bodies = List[Self.B]()
@@ -210,6 +217,9 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
         self.any_contact_model = False
         self.load_stiffness = False
         self.free = List[Int]()
+        self.reuse_slot = -1
+        self.reuse_gen = 0
+        self.gen_hwm = List[UInt32]()
 
     def __len__(self) -> Int:
         return len(self.bodies)
@@ -228,12 +238,33 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
         _ = self.free.pop()
         return slot
 
+    def free_index(self, slot: Int) -> Int:
+        """Position of `slot` in the free list, or -1."""
+        for i in range(len(self.free)):
+            if self.free[i] == slot:
+                return i
+        return -1
+
+    def _take_slot(mut self, slot: Int) -> Int:
+        var i = self.free_index(slot)
+        var last = len(self.free) - 1
+        self.free[i] = self.free[last]
+        _ = self.free.pop()
+        return slot
+
     def push(mut self, var b: Self.B, motion: Int) -> BodyId:
         """The ONE append site: every per-body list grows here, in lockstep,
         so a per-body attribute added later cannot be forgotten by a call
         site the way `physics/serialize.mojo` used to be able to (F5)."""
         if len(self.free) > 0:
-            var slot = self._take_free_slot()
+            var slot: Int
+            var regen = False
+            if self.reuse_slot >= 0 and self.free_index(self.reuse_slot) >= 0:
+                slot = self._take_slot(self.reuse_slot)
+                regen = True
+            else:
+                slot = self._take_free_slot()
+            self.reuse_slot = -1
             self.bodies[slot] = b^
             self.motion[slot] = motion
             self.sleeping[slot] = False
@@ -265,6 +296,8 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
             self.contact_hertz[slot] = 0
             self.contact_zeta[slot] = 0
             self.adhesion[slot] = 0
+            if regen:
+                self.generation[slot] = self.reuse_gen
             return BodyId(slot, self.generation[slot])
         var slot = len(self.bodies)
         self.bodies.append(b^)
@@ -299,6 +332,7 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
         self.contact_zeta.append(0)
         self.adhesion.append(0)
         self.generation.append(0)
+        self.gen_hwm.append(0)
         return BodyId(slot, 0)
 
     def remove(mut self, id: BodyId):
@@ -315,7 +349,12 @@ struct BodySet[B: Body6](Movable, Deinitable, Sized):
         self.sleeping[slot] = False
         self.sleep_timer[slot] = 0
         self.island[slot] = -1
-        self.generation[slot] += 1
+        var g = self.generation[slot]
+        if self.gen_hwm[slot] > g:
+            g = self.gen_hwm[slot]
+        g += 1
+        self.generation[slot] = g
+        self.gen_hwm[slot] = g
         self.free.append(slot)
 
     def is_valid(self, id: BodyId) -> Bool:

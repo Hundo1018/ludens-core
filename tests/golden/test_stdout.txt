@@ -1621,6 +1621,8 @@ replay: scripted run equals live True  posts one frame later differ True
   tick 60: save checkpoint 1008 bytes, full checkpoint (scene snapshot) 2729 bytes
   coins at tick 60 11  at tick 120 21
 [PASS] save_checkpoint - 6 / 6 checks
+--- tests/test_scene_io.mojo ---
+[PASS] scene_io - 44 / 44 checks
 --- tests/test_scheduler_parity.mojo ---
 [PASS] scheduler_parity - 147 / 147 checks
 --- tests/test_schema.mojo ---
@@ -2070,6 +2072,8 @@ observer at x = 100: proxies 13
 [PASS] trimesh - 18 / 18 checks
 --- tests/test_tween.mojo ---
 [PASS] tween - 359 / 359 checks
+--- tests/test_undo.mojo ---
+[PASS] undo - 52 / 52 checks
 --- tests/test_unit_scale.mojo ---
   s = 2^-7: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
   s = 2^-3: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
