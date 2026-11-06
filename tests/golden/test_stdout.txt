@@ -1549,6 +1549,8 @@ rigid in air, 0.3 s: v 0.13973546 0.18008771 6.20904e-09  w_z 3.7921658  max imb
   rigid-link chain sag 1.0416671
   hanging crate y 2.9997272  rope load 19.6
 [PASS] rope - 12 / 12 checks
+--- tests/test_rope_twist.mojo ---
+[PASS] rope_twist - 6 / 6 checks
 --- tests/test_rules.mojo ---
   +20 % buff: speed 6000 -> back to base at tick 300
   DoT 10 / 30 ticks for 300: health 100  burning while active True  after 0

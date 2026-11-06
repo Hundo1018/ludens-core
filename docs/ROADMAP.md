@@ -4276,6 +4276,7 @@
 
 ---
 
+> **進度註(2026-11-06,Rope 扭轉,#101 的第一項)**:`physics/rope_twist.mojo` 的 `RopeTwist`:每個繩粒子一個扭轉角,段間為扭轉彈簧 k = GJ / dl,節點極慣量 I,可選阻尼;根端驅動(`set_root`),尖端自由或固定。`tests/test_rope_twist.mojo`(unit,6/6):21 節、GJ = 2、phi = 1 rad;固定尖端穩態為線性剖面(最大誤差 < 1e-3)、根扭矩 = GJ phi / L(相對 < 1e-3);自由尖端全部收斂到 phi、扭矩 → 0;根端階躍的波前到第 80 節的時間與 m sqrt(I / k) 相差 < 10 %;無阻尼能量偏差在 dt = 0.01 max_dt 為 7.8e-3、0.005 max_dt 為 3.9e-3(與 dt 成正比,不漂移)。第一次用 0.2 max_dt 測得 0.18,是 symplectic Euler 的一階振盪,不是漏能。**未做**:扭轉與彎曲的耦合(plectoneme 需要帶框架的 `CosseratRod` / `StrandSet.twist`)、frame-reading 接觸 / 空氣、Greenhill B / C、`rod_from_strand` parity。#101 仍開著。
 #### 17.87 Hook 與文件生成 — Wave A(工程)
 > **狀態**:✅ 完成(2026-10-28)。設計筆記 `docs/design/17.87-hooks.md`。
 > **起因**:專案沒有任何 hook(`.claude/` 為空、`.git/hooks/` 只有範本),CI 的文件與治理檢查要到 PR 才失敗;

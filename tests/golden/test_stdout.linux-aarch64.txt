@@ -254,6 +254,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] polytope - 52 / 52 checks
 --- tests/test_quad_tree.mojo ---
 [PASS] quad_tree - 7 / 7 checks
+--- tests/test_rope_twist.mojo ---
+[PASS] rope_twist - 6 / 6 checks
 --- tests/test_rules.mojo ---
   +20 % buff: speed 6000 -> back to base at tick 300
   DoT 10 / 30 ticks for 300: health 100  burning while active True  after 0
