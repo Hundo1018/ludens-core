@@ -14,7 +14,7 @@ OUT=$(mktemp -d)
 trap 'rm -rf -- "$OUT"' EXIT
 fail=0
 n=0
-for f in tests/test_gpu_*.mojo tests/test_lbm_gpu.mojo benchmarks/bench_gpu_*.mojo benchmarks/bench_lbm_gpu.mojo; do
+for f in tests/test_gpu_*.mojo tests/test_lbm_gpu.mojo tests/test_vbd_cloth.mojo benchmarks/bench_gpu_*.mojo benchmarks/bench_lbm_gpu.mojo benchmarks/bench_vbd_cloth.mojo; do
     [ -e "$f" ] || continue
     n=$((n + 1))
     if mojo build --target-accelerator "$ACCEL" -D ASSERT=all -I build -o "$OUT/$(basename "$f" .mojo)" "$f" > "$OUT/log" 2>&1; then

@@ -267,6 +267,12 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] sah - 5 / 5 checks
 --- tests/test_sat.mojo ---
 [PASS] sat - 9 / 9 checks
+--- tests/test_scene_io.mojo ---
+[PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_kinematic.mojo ---
+[PASS] scene_kinematic - 21 / 21 checks
+--- tests/test_scene_materials.mojo ---
+[PASS] scene_materials - 17 / 17 checks
 --- tests/test_sdf.mojo ---
 [PASS] sdf - 15 / 15 checks
 --- tests/test_sdf3.mojo ---
@@ -307,6 +313,8 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
   probe: island spans 40  lanes >= 1 True
   probe: [PASS] trace_on_probe - 8 / 8 checks
 [PASS] trace_runtime - 1 / 1 checks
+--- tests/test_transfer.mojo ---
+[PASS] transfer - 29 / 29 checks
 --- tests/test_tree.mojo ---
   Y-tree ABA vs dense worst rel err: 1.481562583314746e-07
   hanging Y max |qdd|: 0.0
@@ -316,6 +324,8 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
 [PASS] trig - 11 / 11 checks
 --- tests/test_tween.mojo ---
 [PASS] tween - 359 / 359 checks
+--- tests/test_undo.mojo ---
+[PASS] undo - 52 / 52 checks
 --- tests/test_vdb_zip.mojo ---
 [PASS] vdb_zip - 14 / 14 checks
 --- tests/test_vec.mojo ---
@@ -834,7 +844,7 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
 [PASS] camera_seq - 14 / 14 checks
 --- tests/test_capi.mojo ---
   gen_bindings: up to date (62 functions);  rust host hash 6b01fd3e329effc5  c host hash 6b01fd3e329effc5
-[PASS] capi - 92 / 92 checks
+[PASS] capi - 101 / 101 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61832 bytes ( 506 per frame incl. keyframes )
   draw_frame(100): 18 commands = 5 body points + 13 contact arrows

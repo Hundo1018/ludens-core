@@ -49,6 +49,22 @@ class FormatError(LudensError, ValueError):
     code = C.LD_ERR_FORMAT
 
 
+class TransferError(LudensError, ValueError):
+    """`World.transfer_load` refused a blob (ABI 0.7). `code` is the specific `LD_ERR_XFER_*` status; the world is
+    unchanged. `reason` names the failed check."""
+
+    reasons = {
+        C.LD_ERR_XFER_TRUNCATED: "truncated", C.LD_ERR_XFER_MAGIC: "not a transfer blob",
+        C.LD_ERR_XFER_VERSION: "format version differs", C.LD_ERR_XFER_SCALAR: "scalar width differs",
+        C.LD_ERR_XFER_SETTINGS: "world settings differ", C.LD_ERR_XFER_REGISTRATION: "registered names differ",
+        C.LD_ERR_XFER_CORRUPT: "checksum mismatch",
+    }
+
+    @property
+    def reason(self):
+        return self.reasons.get(self.code, "unknown")
+
+
 class CallbackError(LudensError):
     code = C.LD_ERR_CALLBACK
 
@@ -63,6 +79,7 @@ class ThreadError(LudensError):
 
 
 _BY_CODE = {e.code: e for e in (HandleError, ArgumentError, StaleBodyError, BufferTooSmallError, FormatError, CallbackError, StateError, ThreadError)}
+_BY_CODE.update({rc: TransferError for rc in TransferError.reasons})
 
 
 def abi_version():
@@ -211,6 +228,8 @@ class World:
         if self._h is None:
             raise HandleError("world is closed")
         exc = _BY_CODE.get(rc, LudensError)(self._message())
+        if isinstance(exc, TransferError):
+            exc.code = rc
         if rc == C.LD_ERR_CALLBACK and self._pending is not None:
             cause, self._pending = self._pending, None
             raise cause from exc
@@ -455,6 +474,28 @@ class World:
     def load(self, blob):
         data = (c_uint8 * len(blob)).from_buffer_copy(blob)
         self._check(C.lib.ld_world_load(self._h, data, len(blob)))
+
+    @staticmethod
+    def _names(registered):
+        names = [str(n) for n in (registered or [])]
+        if any("\n" in n or "\0" in n for n in names):
+            raise ArgumentError("registered names must not contain newlines or NULs")
+        return "\n".join(names).encode()
+
+    def transfer_save(self, registered=()):
+        """A blob to hand this world to a new module instance (ABI 0.7). `registered` names what the host has
+        registered (systems, subscriptions); the receiving side must pass the same set."""
+        names = self._names(registered)
+        n = self._check(C.lib.ld_world_transfer_size(self._h, names))
+        buf = (c_uint8 * n)()
+        self._check(C.lib.ld_world_transfer_save(self._h, names, buf, n))
+        return bytes(buf)
+
+    def transfer_load(self, blob, registered=()):
+        """Load a `transfer_save` blob. Raises `TransferError` (`.reason`) and leaves the world unchanged if the
+        version, scalar width, settings, registered names or checksum do not match."""
+        data = (c_uint8 * len(blob)).from_buffer_copy(blob)
+        self._check(C.lib.ld_world_transfer_load(self._h, self._names(registered), data, len(blob)))
 
     def hash(self):
         out = c_uint64()

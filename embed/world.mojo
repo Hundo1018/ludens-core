@@ -39,7 +39,7 @@ from collision.world_query import QueryFilter
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
-comptime ABI_MINOR = 6
+comptime ABI_MINOR = 7
 
 # Status codes (negative = error). Frozen for v0.x: values never change.
 comptime LD_OK = 0
@@ -258,6 +258,46 @@ struct EmbedWorld(Movable):
         var m = mass if not is_static else Real(1)
         var id = self.scene.add_sphere(QuatBody6.at_rest(pos, Inertia3.sphere(m, r)), r, is_static)
         return pack_body(id)
+
+    def add_capsule(mut self, pos: Vec3, r: Real, half_len: Real, mass: Real, is_static: Bool) raises -> Int64:
+        """A capsule whose axis is the body's local y; `half_len` is half the length of the cylinder part."""
+        self._check_new(pos, mass, is_static)
+        if not (r > 0) or not isfinite(r) or not (half_len > 0) or not isfinite(half_len):
+            raise Error("add_capsule: radius and half length must be finite and > 0")
+        var m = mass if not is_static else Real(1)
+        var id = self.scene.add_capsule(QuatBody6.at_rest(pos, Inertia3.capsule(m, r, half_len)), r, half_len, is_static)
+        return pack_body(id)
+
+    def set_kinematic(mut self, h: Int64) raises:
+        """Make a live body kinematic (ROADMAP 17.24): moved by its velocity, unaffected by forces."""
+        var id = unpack_body(h)
+        if not self.scene.bset.is_valid(id):
+            raise Error("set_kinematic: the handle is not a live body")
+        self.scene.set_kinematic(id)
+
+    def set_material_friction(mut self, material: Int, mu: Real) raises:
+        """Friction of surface material `material` (ids 0..65535), used for mesh / heightfield triangles and
+        `surface_friction`. The table is part of the snapshot."""
+        self.scene.set_material_friction(material, mu)
+
+    def set_material_softness(mut self, material: Int, hertz: Real, zeta: Real) raises:
+        """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0)."""
+        self.scene.set_material_softness(material, hertz, zeta)
+
+    def reserve_slot(mut self, h: Int64) raises:
+        """One-shot: the next body added gets exactly the identity `h` had (its slot and generation). The slot must be
+        free and `h` from an earlier life of it. Undo of a remove uses this; bodies added and removed in between
+        (and undone before it) have moved the slot's generation on, which is why `BodySet.gen_hwm` keeps handing out
+        fresh ones afterwards."""
+        var id = unpack_body(h)
+        if id.slot < 0 or id.slot >= len(self.scene.bset.generation):
+            raise Error("reserve_slot: no such slot")
+        if not self.scene.bset.is_removed(id.slot) or not (id.gen < self.scene.bset.generation[id.slot]):
+            raise Error("reserve_slot: the slot is occupied, or the handle is not from an earlier life of it")
+        if self.scene.bset.free_index(id.slot) < 0:
+            raise Error("reserve_slot: the slot is not free")
+        self.scene.bset.reuse_slot = id.slot
+        self.scene.bset.reuse_gen = id.gen
 
     def is_alive(self, h: Int64) -> Bool:
         if h < 0:

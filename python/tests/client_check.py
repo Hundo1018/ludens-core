@@ -43,7 +43,7 @@ def raises(exc_type, fn):
 # ---------------------------------------------------------------- isolation
 check(not os.path.realpath(ludens.__file__).startswith(FORBIDDEN), "ludens imported from the venv, not the repo: " + ludens.__file__)
 check(os.path.dirname(ludens.library_path) == os.path.dirname(ludens.__file__), "libludens.so loaded from the installed package")
-check(ludens.abi_version() == (0, 6), "abi_version == (0, 6)")
+check(ludens.abi_version() == (0, 7), "abi_version == (0, 7)")
 
 
 # ------------------------------------------------- parity scenario (test_capi)
@@ -130,6 +130,20 @@ with ludens.World(1.0 / 60.0, (0, -9.8, 0)) as w:
     w.step_ticks(60)
     check(w.hash() == ha, "save, run 60, load, run 60: same hash")
     check(isinstance(raises(ludens.FormatError, lambda: w.load(b"garbage")), ludens.FormatError), "load(garbage) -> FormatError")
+
+    # transfer (ABI 0.7)
+    tb = w.transfer_save(["zone", "sensor"])
+    w.step_ticks(60)
+    hc = w.hash()
+    w.transfer_load(tb, ["sensor", "zone"])
+    w.step_ticks(60)
+    check(w.hash() == hc, "transfer_save, run 60, transfer_load (names in another order), run 60: same hash")
+    e = raises(ludens.TransferError, lambda: w.transfer_load(tb, ["zone"]))
+    check(isinstance(e, ludens.TransferError) and e.code == -106 and e.reason == "registered names differ", "missing name -> TransferError(registered names differ)")
+    e = raises(ludens.TransferError, lambda: w.transfer_load(tb[:-1], ["zone", "sensor"]))
+    check(isinstance(e, ludens.TransferError) and e.reason == "truncated", "truncated blob -> TransferError(truncated)")
+    check(isinstance(raises(ludens.ArgumentError, lambda: w.transfer_save(["a\nb"])), ludens.ArgumentError), "a name with a newline -> ArgumentError")
+    w.transfer_load(tb, ["zone", "sensor"])  # back to the state before the replay above
 
     # errors
     victim = w.add_sphere((5, 3, 5), 0.2)

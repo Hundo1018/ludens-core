@@ -22,7 +22,7 @@ from ctypes import (
 )
 
 ABI_MAJOR = 0
-ABI_MINOR = 6
+ABI_MINOR = 7
 
 LD_OK = 0
 LD_ERR_HANDLE = -1
@@ -33,6 +33,13 @@ LD_ERR_FORMAT = -5
 LD_ERR_CALLBACK = -6
 LD_ERR_STATE = -7
 LD_ERR_THREAD = -8
+LD_ERR_XFER_TRUNCATED = -101
+LD_ERR_XFER_MAGIC = -102
+LD_ERR_XFER_VERSION = -103
+LD_ERR_XFER_SCALAR = -104
+LD_ERR_XFER_SETTINGS = -105
+LD_ERR_XFER_REGISTRATION = -106
+LD_ERR_XFER_CORRUPT = -107
 
 LD_PHASE_PRE = 0
 LD_PHASE_POST = 1
@@ -129,6 +136,9 @@ PROTOTYPES = {
     "ld_world_save": (c_int64, [_W, POINTER(c_uint8), c_int64]),
     "ld_world_load": (c_int32, [_W, POINTER(c_uint8), c_int64]),
     "ld_world_hash": (c_int32, [_W, POINTER(c_uint64)]),
+    "ld_world_transfer_size": (c_int64, [_W, c_char_p]),
+    "ld_world_transfer_save": (c_int64, [_W, c_char_p, POINTER(c_uint8), c_int64]),
+    "ld_world_transfer_load": (c_int32, [_W, c_char_p, POINTER(c_uint8), c_int64]),
     "ld_nav_bake": (c_int32, [POINTER(c_float), c_int64, POINTER(c_int32), c_int64, POINTER(c_float), POINTER(c_void_p)]),
     "ld_nav_destroy": (c_int32, [_W]),
     "ld_nav_poly_count": (c_int64, [_W]),

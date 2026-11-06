@@ -46,8 +46,8 @@
 | 17.83 | 基準線檔、夜間牆鐘閘門 | env-blocked | 固定主機 |
 | 17.86 | Rope 扭轉;frame-reading 接觸 / 空氣;Greenhill B / C;`rod_from_strand` parity | deferred | 繩索 / 毛髮消費者 |
 | 13.9 | 批次多世界步進 | ⏸ | 平台決策(見 §3:wasm 方向可能解開) |
-| 17.12 | 場景 / prefab 格式 | 不排 | 編輯器相關 |
-| 17.43 | Undo / redo 交易層 | 不排 | 編輯器相關 |
+| 17.12 | 場景 / prefab 格式 | 🔶 | 2026-11-02 排程;第一片完成(2026-11-06),檔案格式由 ludens-shell 定義 |
+| 17.43 | Undo / redo 交易層 | 🔶 | 2026-11-02 排程;第一片完成(2026-11-06):`EmbedWorld` 物體 |
 
 ## 2. GPU 層(第 7 層)規劃
 
