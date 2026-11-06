@@ -1132,7 +1132,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 89 modules, 503 public declarations
+## physics (layer 4) — 90 modules, 504 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1225,6 +1225,9 @@ counted, not listed.
 - `def pairs_parallel[BP: BroadPhase](mut bp: BP, mut boxes: List[AABB[BP.dim]], mut statics: List[Bool], mut out: List[Pair], workers: Int, dispatch: Dispatch, mut skip: List[Bool])`
 - `def prep_parallel[B: Body6](mut bset: BodySet[B], mut colliders: ColliderSet, mut cache: List[ContactConstraint], mut cidx: Dict[Int, Int], mut raws: List[RawContact], warm: Bool, workers: Int, dispatch: Dispatch, match_scale: Float32 = Float32("1")) -> List[ContactConstraint]`
 - aliases: `BP_PAR_MIN`, `NARROW_PAR_MIN`
+
+### `physics/combustion.mojo`
+- struct `FireGrid` — 7 methods
 
 ### `physics/constraints.mojo`
 - struct `ConRow` — 0 methods
