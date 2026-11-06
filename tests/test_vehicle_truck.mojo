@@ -7,7 +7,9 @@
      two rear axles (4 wheels) receive drive torque, the front axle none.
   3. Steering: a constant steer input turns the truck; the turn radius is within 30 % of the bicycle model
      L / tan(delta) with L the front-to-mid-rear distance (measured value reported).
-  4. A bad preset (wheelbase shorter than the axle gap) raises.
+  4. Inter-axle diff: with axle 2 spinning 8 rad/s faster, open splits equally; limited slip / locked move torque to axle 1
+     with the total unchanged.
+  5. A bad preset (wheelbase shorter than the axle gap) raises.
 """
 
 from std.math import atan, tan, sqrt
@@ -19,6 +21,7 @@ from physics.solver6 import ContactScene6
 from gameplay.vehicle import Vehicle, VehicleInput, spawn_chassis
 from gameplay.vehicle_wheel import RayWheel
 from gameplay.vehicle_truck import truck_config
+from gameplay.vehicle_drive import DIFF_OPEN, DIFF_LSD, DIFF_LOCKED
 
 comptime DT: Real = 1.0 / 60.0
 comptime G = Vec3(0, -9.8, 0, 0)
@@ -111,6 +114,38 @@ def main() raises:
     var delta = 0.5 * cfg.max_steer
     var expect = wheelbase_eff / tan(delta)
     s.check(radius > 0.7 * expect and radius < 1.3 * expect, "steady turn radius " + String(radius) + " m, bicycle model " + String(expect) + " m (L = " + String(wheelbase_eff) + " m)")
+
+    # inter-axle differential: axle 2 is spun 8 rad/s faster than axle 1 (a wheel on ice); open splits equally,
+    # a limited slip moves torque to the slower axle 1 without changing the total
+    var sums = List[Real]()
+    var a1s = List[Real]()
+    var a2s = List[Real]()
+    for kind in [DIFF_OPEN, DIFF_LSD, DIFF_LOCKED]:
+        var sc3 = road()
+        var id3 = spawn_chassis(sc3, cfg, Vec3(0, 1.1, 0, 0))
+        var v3 = Vehicle[RayWheel].attach(sc3, id3, cfg.copy(), RayWheel())
+        run(v3, sc3, VehicleInput.idle(), 120)
+        v3.cfg.drive.axle_diff_kind = kind
+        var base = Real(0)
+        for w in range(len(v3.wheels)):
+            if cfg.wheels[w].axle == 1:
+                base = v3.wheels[w].omega
+        for w in range(len(v3.wheels)):
+            if cfg.wheels[w].axle == 2:
+                v3.wheels[w].omega = base + 8.0
+        v3.update(sc3, VehicleInput(1, 0, 0, 0), DT)
+        var t1 = Real(0)
+        var t2 = Real(0)
+        for w in range(len(v3.wheels)):
+            if cfg.wheels[w].axle == 1:
+                t1 += v3.wheels[w].drive_torque
+            elif cfg.wheels[w].axle == 2:
+                t2 += v3.wheels[w].drive_torque
+        a1s.append(t1)
+        a2s.append(t2)
+        sums.append(t1 + t2)
+    s.check(abs(a1s[0] - a2s[0]) < 0.01 * sums[0] and a1s[1] > a2s[1] and a1s[2] >= a1s[1], "axle diff: open " + String(a1s[0]) + " / " + String(a2s[0]) + ", limited slip " + String(a1s[1]) + " / " + String(a2s[1]) + ", locked " + String(a1s[2]) + " / " + String(a2s[2]) + " N m (axle 1 / axle 2)")
+    s.check(abs(sums[1] - sums[0]) < 0.01 * sums[0] and abs(sums[2] - sums[0]) < 0.01 * sums[0], "the axle diff moves torque without making any: totals " + String(sums[0]) + ", " + String(sums[1]) + ", " + String(sums[2]) + " N m")
 
     var raised = False
     try:

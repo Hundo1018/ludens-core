@@ -116,6 +116,10 @@ struct DriveConfig(Copyable, Movable):
     var diff_preload: Real
     var diff_lock: Real  # Nm per rad/s of wheel speed difference
     var diff_max: Real  # cap on the torque moved by a limited-slip
+    var axle_diff_kind: Int  # between two driven axles (DIFF_OPEN = the fixed split of `front_bias` / equal)
+    var axle_diff_preload: Real  # Nm moved to the slower axle at equal speed
+    var axle_diff_lock: Real  # Nm per rad/s of axle speed difference
+    var axle_diff_max: Real
 
     def __init__(out self):
         self.torque = TorqueCurve.sedan()
@@ -135,6 +139,10 @@ struct DriveConfig(Copyable, Movable):
         self.diff_preload = 50
         self.diff_lock = 60
         self.diff_max = 1500
+        self.axle_diff_kind = DIFF_OPEN
+        self.axle_diff_preload = 200
+        self.axle_diff_lock = 400
+        self.axle_diff_max = 6000
 
     def __init__(out self, *, copy: Self):
         self.torque = copy.torque.copy()
@@ -154,6 +162,10 @@ struct DriveConfig(Copyable, Movable):
         self.diff_preload = copy.diff_preload
         self.diff_lock = copy.diff_lock
         self.diff_max = copy.diff_max
+        self.axle_diff_kind = copy.axle_diff_kind
+        self.axle_diff_preload = copy.axle_diff_preload
+        self.axle_diff_lock = copy.axle_diff_lock
+        self.axle_diff_max = copy.axle_diff_max
 
     def gear_ratio(self, gear: Int) -> Real:
         """Overall engine-to-wheel ratio of `gear` (1..n forward, -1 reverse,
