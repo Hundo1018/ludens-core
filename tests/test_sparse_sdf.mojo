@@ -2,7 +2,8 @@
 """Sparse signed distance grid (ROADMAP 17.52 follow-up).
 
 - near the surface (true distance within band - 2 cells) the sparse grid and the dense grid give the same distance
-  and gradient, bit for bit, at thousands of random points;
+  and gradient at thousands of random points (distance within float rounding: bit for bit on x86-64, a few last-bit
+  differences where aarch64 contracts to FMA);
 - far away the sign is right (unstored bricks read sign * band);
 - memory: a sphere on a 64^3 lattice stores a small fraction of the bricks; the ratio is checked, not just printed;
 - `from_field` (never builds the dense lattice) and `from_dense` store the same bricks and values;
@@ -53,6 +54,7 @@ def main() raises:
     var near_n = 0
     var mismatch = 0
     var gmismatch = 0
+    var maxerr = Real(0)
     var far_n = 0
     var far_bad = 0
     for _ in range(9000):
@@ -61,7 +63,10 @@ def main() raises:
         var da = dd if dd >= 0 else -dd
         if da <= band - 2 * cell:
             near_n += 1
-            if sparse.distance(p) != dd or direct.distance(p) != dd:
+            var e1 = abs(sparse.distance(p) - dd)
+            var e2 = abs(direct.distance(p) - dd)
+            maxerr = max(maxerr, max(e1, e2))
+            if e1 != 0 or e2 != 0:
                 mismatch += 1
             var gd = dense.gradient(p)
             var gs = sparse.gradient(p)
@@ -73,7 +78,10 @@ def main() raises:
             if (vs < 0) != (dd < 0):
                 far_bad += 1
     s.check(near_n > 500, "enough random points fall in the exact zone (" + String(near_n) + ")")
-    s.eqi(mismatch, 0, "distance equals the dense grid's, bit for bit, in the exact zone")
+    # the two trilinear formulas are identical; where the compiler contracts to FMA (aarch64) it fuses them differently,
+    # so a few thousandths of the samples differ in the last bits (135 of 4k on ubuntu-24.04-arm). Exact zero is the
+    # x86-64 property; the portable claim is "within float rounding", far below the band-sized error a missing brick gives.
+    s.check(maxerr < 1e-5, "distance equals the dense grid's within float rounding in the exact zone (max error " + String(maxerr) + ", " + String(mismatch) + " samples differ in the last bits; 0 without FMA contraction)")
     s.eqi(gmismatch, 0, "gradient equals the dense grid's, bit for bit, in the exact zone")
     s.check(far_n > 500 and far_bad == 0, "far away: right sign (" + String(far_n) + " points)")
 
@@ -135,10 +143,10 @@ def main() raises:
                 if has_band:
                     cells_checked += 1
                     var pc = small.node(i, j, k) + Vec3(0.05, 0.05, 0.05, 0)
-                    if tiny.distance(pc) != small.distance(pc):
+                    if abs(tiny.distance(pc) - small.distance(pc)) > 1e-5:
                         cell_bad += 1
     s.check(cells_checked > 20, "the ring test looks at cells that touch the band (" + String(cells_checked) + ")")
-    s.eqi(cell_bad, 0, "a cell with a band node in the next brick reads exactly (the one-node ring)")
+    s.eqi(cell_bad, 0, "a cell with a band node in the next brick reads the dense value within float rounding (the one-node ring)")
     var none = SparseSdfGrid.from_dense(dense, Real(0.0001))
     s.check(none.stored_bricks() < sparse.stored_bricks(), "a tiny band stores fewer bricks")
     var all = SparseSdfGrid.from_dense(dense, Real(1000))
