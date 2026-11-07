@@ -89,6 +89,25 @@ def scenario[B: StorageBackend]() raises -> List[Int]:
     return o^
 
 
+def cap_check[B: StorageBackend]() raises -> List[Int]:
+    """Depth cap: with max_steps 2, four deletes keep two undoable steps and release the two dropped graveyard entities."""
+    var o = List[Int]()
+    var w = World[B]()
+    var eu = EntityUndo[B, Pos, Link, Tag](2)
+    var es = List[Entity]()
+    for i in range(4):
+        es.append(w.spawn1(Pos(i, i)))
+    for i in range(4):
+        eu.delete(w, es[i])
+    o.append(len(eu.past))  # 0: 2 steps kept
+    o.append(eu.grave.entity_count())  # 1: 2 graveyard entities (the two dropped ones were released)
+    o.append(b2i(eu.undo(w)))  # 2
+    o.append(b2i(eu.undo(w)))  # 3
+    o.append(b2i(not eu.undo(w)))  # 4: nothing older than the cap
+    o.append(b2i(w.is_alive(es[2]) and w.is_alive(es[3]) and not w.is_alive(es[0]) and not w.is_alive(es[1])))  # 5
+    return o^
+
+
 def compare(mut s: Suite, name: String, got: List[Int], want: List[Int]):
     var same = len(got) == len(want)
     var bad = -1
@@ -107,6 +126,13 @@ def main() raises:
     for v in [1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1]:
         want.append(v)
     compare(s, "sparse set (reference vs the expected values)", reference, want)
+    var cap_ref = cap_check[SparseSetBackend[Pos, Link, Tag]]()
+    var cap_want = List[Int]()
+    for v in [2, 2, 1, 1, 1, 1]:
+        cap_want.append(v)
+    compare(s, "depth cap: sparse set (2 steps kept, 2 graveyard entities, oldest released)", cap_ref, cap_want)
+    compare(s, "depth cap: archetype", cap_check[ArchetypeBackend[Pos, Link, Tag]](), cap_ref)
+    compare(s, "depth cap: chunked", cap_check[ChunkedBackend[Pos, Link, Tag]](), cap_ref)
     compare(s, "archetype", scenario[ArchetypeBackend[Pos, Link, Tag]](), reference)
     compare(s, "bitset", scenario[BitsetBackend[Pos, Link, Tag]](), reference)
     compare(s, "reactive", scenario[ReactiveBackend[Pos, Link, Tag]](), reference)

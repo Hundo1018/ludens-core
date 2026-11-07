@@ -30,11 +30,13 @@ struct EntityUndo[B: StorageBackend, *Cs: ComponentType](Movable):
     var grave: World[Self.B]
     var past: List[DelStep]
     var future: List[DelStep]
+    var max_steps: Int  # the oldest step is dropped past this depth (its graveyard entity is released)
 
-    def __init__(out self):
+    def __init__(out self, max_steps: Int = 1000):
         self.grave = World[Self.B]()
         self.past = List[DelStep]()
         self.future = List[DelStep]()
+        self.max_steps = max_steps
 
     def _move_out(mut self, mut w: World[Self.B], e: Entity) -> Entity:
         """Copy e's components to a new graveyard entity and despawn e from `w`."""
@@ -61,6 +63,13 @@ struct EntityUndo[B: StorageBackend, *Cs: ComponentType](Movable):
             raise Error("EntityUndo.delete: the entity is not alive")
         var g = self._move_out(w, e)
         self.past.append(DelStep(e, g))
+        while len(self.past) > self.max_steps:
+            var old = self.past[0].copy()
+            self.grave.despawn(old.grave)
+            var kept = List[DelStep]()
+            for k in range(1, len(self.past)):
+                kept.append(self.past[k].copy())
+            self.past = kept^
         self.future = List[DelStep]()
 
     def undo(mut self, mut w: World[Self.B]) -> Bool:

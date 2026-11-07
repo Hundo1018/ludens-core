@@ -580,7 +580,7 @@ lattice: 50 / 50  ring: 12
   disc (1, 0.1, 1): y 0.09972428
 [PASS] ellipsoid - 17 / 17 checks
 --- tests/test_entity_undo.mojo ---
-[PASS] entity_undo - 6 / 6 checks
+[PASS] entity_undo - 9 / 9 checks
 --- tests/test_epa.mojo ---
 [PASS] epa - 8 / 8 checks
 --- tests/test_erosion.mojo ---
