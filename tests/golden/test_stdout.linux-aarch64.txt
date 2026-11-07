@@ -271,6 +271,8 @@ mean pressure in the bottom two rows 2833.9343 Pa  (hydrostatic, both layers abo
 [PASS] sat - 9 / 9 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_joints.mojo ---
+[PASS] scene_joints - 23 / 23 checks
 --- tests/test_scene_kinematic.mojo ---
 [PASS] scene_kinematic - 21 / 21 checks
 --- tests/test_scene_materials.mojo ---
@@ -845,7 +847,7 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
   brain: halfway x 5.0  fov 0.75   end x 10.0
 [PASS] camera_seq - 14 / 14 checks
 --- tests/test_capi.mojo ---
-  gen_bindings: up to date (62 functions);  rust host hash 6b01fd3e329effc5  c host hash 6b01fd3e329effc5
+  gen_bindings: up to date (65 functions);  rust host hash 6b01fd3e329effc5  c host hash 6b01fd3e329effc5
 [PASS] capi - 101 / 101 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61832 bytes ( 506 per frame incl. keyframes )
