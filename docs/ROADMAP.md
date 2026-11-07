@@ -455,6 +455,8 @@
 > **歷史**:
 > - 量測(2026-09-29,`bench_gpu_contact`,F22 修正前):寬相開啟後,N=4096 箱每幀 CPU 收集 + 簿記(不含求解)達 82 ms,N 每 ×4 成長約 ×12 —— `refresh_islands` 與 `update_sleep` 的 island 喚醒 / 入睡迴圈為 O(n²),warm-start 對快取的線性比對為 O(pairs × cache)(審計 F22)。這是 GPU 與 CPU 路徑共同的瓶頸,因此排為本項第一個工作(已由上面的 F22 第一批處理)。
 
+> **關節負載回報(2026-11-06,#92 的「關節力矩進事件」子句)**:`EmbedWorld.track_joint_loads(on)`、`joint_load(j) -> (力 N, 力矩 N·m)`(上一個 tick 的峰值)、`released_joints()`(該 tick 超過斷裂閾值而釋放的關節);求解器 `ContactScene6.set_track_joint_loads` / `joint_load`,不需要設閾值就取樣每個子步的關節負載,不改變模擬(開關前後世界雜湊相同,`tests/test_joint_loads.mojo`)。量測對照解析解:2 kg 掛在球關節下,力 = m g = 19.62 N(誤差 3% 內);焊接關節在距錨點 1 m 處懸掛 2 kg,力 19.62 N、力矩 19.62 N·m(誤差 5% 內)。取樣開啟時與 `any_break` 一樣走序列路徑(平行 / 分層閘門同樣判斷)。未做:C-ABI 欄位(`ld_world_get_events_ex` 尚無關節事件),要追加進凍結清單時再做。
+
 #### 17.44 複合形狀 — Wave B
 
 > **狀態**:✅ 完成(2026-10-14:一 body 多凸子形狀、質量性質聚合 + 主軸、配對 / 網格 / SDF 分派、查詢、軟體粒子、快照、槽位、圓形子形狀滾動錨點、`FractureSet` 凹零件走複合;CCD 見 17.46;GPU 屬 17.17)。
@@ -987,6 +989,8 @@
 > - **測試** `test_cylinder` 7/7:滾動 2.2345238(解析 2.2345319,8 段 2.234532);r 0.3、hl 0.7 站立 y = 0.6999、軸 y = 1.0;躺下 y = 0.2995;
 >   慣量公式;64 段請求得 16 段;三角柱站立。
 > - **橢球**:以 hull 細分超過 30 面上限,接觸幾何會被截斷,故本輪不提供 `add_ellipsoid`(只給慣量),待 support-mapping 接觸入口。
+
+> **稀疏 SDF(2026-11-06,後續片)**:`geometry/sparse_sdf.mojo` `SparseSdfGrid`——8×8×8 節點的磚,只存有節點落在 `band` 內(含外圈一個節點)的磚,其餘磚讀為 `sign * band`(每磚一個符號)。實作 `DistanceField3`(`sphere_trace` 直接可用)。`from_dense`(由密集格建)與 `from_field`(不配置密集格,以磚中心距離略過遠處的磚,假設場是 1-Lipschitz)、`to_dense`。取樣公式與 `SdfGrid` 相同,所以真實距離在 `band - 2 cell` 內的點,距離與梯度與密集格逐位相同(`tests/test_sparse_sdf.mojo` 19 項,6000+ 隨機點);遠處符號正確。變異測試:拿掉外圈,57 個格子讀錯,測試失敗。量測(`experiments/exp_sparse_sdf.mojo`,球半徑 0.3 倍盒寬,band = 4 格,單次):res 64 / 128 / 192 的密集格 1.0 / 8.0 / 27.0 MiB,稀疏 0.55 / 1.9 / 4.3 MiB(儲存 280 of 512 / 928 of 4096 / 2080 of 13824 磚);`from_field` 建置 1.5 / 1.2 / 3.6 ms 對密集 1.7 / 7.3 / 34 ms;100 萬次 `distance` 每次約 41 ns,密集約 18 ns(磚表多一層查找,約 2.3 倍)。**未做**:`SHAPE_SDF` 碰撞體仍收密集 `SdfGrid`(要用請先 `to_dense`),快照(`physics/serialize`)不存稀疏格;`sdf_contact` 目前只收 `Sdf3`。
 
 #### 17.53 查詢擴充 — Wave A(承接 17.13 的待辦)
 > **狀態**:✅ 完成(CPU;2026-10-14:凸形掃掠 / 重疊、距離與最近點對、all-hits / any-hit、命中三角形與重心座標、單面選項、mesh BVH / heightfield DDA 射線遍歷、持久預篩 `QueryIndex`、批次派發、角色盒形選項、命中 / 載具輪表面材質、批次平行加速(LBVH + 共用 index)、CGA 假說(否定)✅;GPU 批次對真實形狀屬第 7 層)。
@@ -3086,6 +3090,8 @@
 > **相依**:17.11、17.35、17.38、17.39 / 17.40、17.37(效果實例池)、17.77(ECS 表達力)、17.71、17.15(utility AI 讀屬性)、17.49。
 > **邊界**:血條等 UI、VFX / SFX 播放(以事件交宿主)、平衡數值與內容屬設計;背包 / 戰利品 / 任務屬 17.72;網路複製屬 17.16。
 
+> **Runtime 擁有 Rules(2026-11-06,#97 的後半)**:`Runtime.enable_rules(health_attr)`、`add_actor(n_attrs, n_types)`;`Runtime` 新增 `rules` / `actors` / `tags` / `rules_on`,規則預設關閉,開啟後每個執行計時器的 tick 也對 `actors` 跑一次 `Rules.step`(效果是有時間的東西,所以暫停計時器的流程狀態也暫停效果;不新增 `TICK_*` 位元,既有流程遮罩與 golden 不變)。`carry_to` 不攜帶規則(與計時器一樣屬於執行期,由宿主重建)。`tests/test_runtime_rules.mojo` 7 項:預設關閉時規則 tick 為 0;同一個 buff + 週期傷害,執行期 400 frame 與獨立 `Rules` 400 tick,`actor_to_bytes` 在 tick 150 / 301 / 400 逐位元組相同,死亡 tick 相同,buff 準確到期;流程狀態只跑模擬(無計時器)250 frame,規則 tick 與角色位元組不動,恢復後 300 規則 tick 等於獨立角色。變異測試:把 `step` 移出計時器區塊,暫停的兩項失敗。`test_runtime_*`、`test_flow*`、`test_rules*` 各檔不變。**未做**:規則的快照(`actor_to_bytes` 已存在,Runtime 的整體存檔尚不含它);完整框架的元件化(Rules 仍是 `List[Actor]`)。
+
 #### 17.72 流程服務 — Wave C
 > **進度註(2026-10-13)**:`gameplay/flow.mojo`(`FlowStack`:push / pop、頂端狀態以 `TICK_SIM` / `TICK_TIMERS` / `TICK_EVENTS` 遮罩決定誰 tick;`Flags`:
 > INT / BOOL / FX 型別旗標、僅實際變更進 `changed`、按名稱 `to_bytes` / `load`,型別改變 raise)、`gameplay/objectives.mojo`(`ObjectiveLog`:事件型別計數目標、
@@ -3274,7 +3280,7 @@
 
 #### 17.12 可編輯場景 / prefab / 實例化
 
-> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;關節、凸殼、網格為後續片)
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;第四片:關節;凸殼、網格為後續片)
 > **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
 > **決定(2026-11-02)**:編輯器放在 ludens-shell;場景檔案格式由 ludens-shell 定義(ludens-shell #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-shell #12)。
 > **現況**:`physics/serialize.mojo` = 全狀態 f32 bit-pattern 決定論快照(自註「非 asset reference」)。
@@ -3292,7 +3298,8 @@
 > - 量測(一般執行,方塊,Real = Float32,單次、4 核容器):1e3 / 1e4 物體,匯出 0.35 / 2.1 ms,匯入 0.46 / 5.2 ms,轉成列 6.7 / 59 ms,由列讀回 16 / 285 ms,無變更的 diff 18 / 382 ms;對照快照存 / 讀 0.28 / 2.6 ms 與 0.93 / 10 ms;列數 44 008 / 440 008(每物體 44 列)。文字路徑比快照慢約兩個數量級;場景存檔頻率低,可接受。diff 目前以兩張字典建構,可改為依路徑順序合併。
 > **第二片(2026-11-06)**:膠囊(`BODY_CAPSULE`,`size` = 半徑、圓柱半長)與運動學物體(`SceneBody.kinematic`,列 `body.N.kinematic` 只在為真時輸出,所以沒有運動學物體的場景列數不變)。`EmbedWorld` 新增 `add_capsule` 與 `set_kinematic`(此前嵌入邊界沒有這兩個入口)。`tests/test_scene_kinematic.mojo` 21 項:場景路徑 == 原世界 == 快照路徑,tick 0 與 300 tick 後逐位相同(運動學方塊以 1 m/s 持續移動);列數 8 + 44 × 4 + 1;靜態 + 運動學、半長 0 的膠囊被拒絕且不改世界;刪除膠囊與運動學方塊後 undo,列相同、句柄相同;把物體改成運動學後 undo 再 redo。變異測試:匯入時不呼叫 `set_kinematic`,6 項失敗。`test_scene_io` 44/44、`test_undo` 52/52 不變。
 > **第三片(2026-11-06)**:表面材質表(17.50 的 `material_mu` / `material_hz` / `material_zeta`):`SceneDoc.materials`、`EmbedWorld.set_material_friction` / `set_material_softness`、列 `materials.count` 與 `material.K.{id,friction,hertz,zeta}`(表為空時不輸出,既有場景列數不變)。`tests/test_scene_materials.mojo` 17 項:場景路徑 == 快照路徑,tick 0 與 300 tick 後逐位相同;表在快照雜湊內;無表 / 有表的列數;列的往返恆等;改一個摩擦值 = 一列差異,套用後等於目標;重複 id、id 超出範圍、什麼都沒設、負阻尼被拒絕且不改世界。變異測試:匯入時不套用柔度,3 項失敗。注意:表只作用於網格 / 高度場三角形與 `surface_friction`,而嵌入邊界尚無法建立網格,所以目前只有查詢能看到它;undo 不涵蓋此表(世界層級,不屬於任何物體)。
-> **遺留待辦**:關節(#104)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
+> **第四片(2026-11-06,#104 前半)**:球 / 距離 / 鉸鏈 / 焊接關節。`EmbedWorld.add_ball_joint` / `add_distance_joint` / `add_hinge_joint` / `add_weld_joint` / `remove_joint` / `joint_count`(嵌入邊界此前沒有任何關節入口);引擎 `ContactScene6.remove_joint`(關節槽位保留、種類改為 `JOINT_BROKEN`,索引不位移,被它參照的物體之後可以移除;`remove_body` 現在忽略已移除或已釋放的關節)與 `joint_is_plain`。`SceneDoc.joints`(以物體在場景中的位置命名兩端)與列 `joints.count`、`joint.K.*`(無關節時不輸出)。匯出以名稱拒絕:限位 / 馬達 / 彈簧 / 驅動 / 斷裂閾值,以及零角參考與建立時位置不符的關節(物體在建立關節後轉動過,例如模擬跑過之後的鉸鏈)。`tests/test_scene_joints.mojo` 23 項:場景路徑 == 快照路徑 == 原世界,tick 0 與 300 tick 後逐位相同(對照:同樣物體沒有關節,結果不同);列往返恆等;三種拒絕;`remove_joint` 與移除物體;壞文件不改世界。變異測試:匯入時不建關節,4 項失敗。**限制**:含鉸鏈的世界模擬過之後不能匯出(零角參考是建立時的姿態);編輯器的「試玩後還原」本來就回到快照,不受影響。後半(物體刪除與 undo 帶回關節)為 #104 的下一片。
+> **遺留待辦**:undo 帶關節(#104 後半)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
 #### 17.43 Undo / redo 交易層(編輯器前置)
 

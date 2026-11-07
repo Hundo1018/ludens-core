@@ -243,6 +243,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
     var peak_force: List[Real]  # per-substep load peaks of the current step
     var peak_torque: List[Real]
     var any_break: Bool  # some joint has a finite threshold: sample loads
+    var track_loads: Bool  # host asked for per-joint loads (`joint_load`): sample them without any threshold
+    var load_force: List[Real]  # each joint's peak force of the last step
+    var load_torque: List[Real]
     var rules: List[ContactRule]  # ROADMAP 17.26: per-contact modification
     var softs: List[SoftBody]
     var colliders: ColliderSet  # shape kinds, hull/mesh tables, filters (F1)
@@ -337,6 +340,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         self.peak_force = List[Real]()
         self.peak_torque = List[Real]()
         self.any_break = False
+        self.track_loads = False
+        self.load_force = List[Real]()
+        self.load_torque = List[Real]()
         self.rules = List[ContactRule]()
         self.softs = List[SoftBody]()
         self.colliders = ColliderSet()
@@ -472,6 +478,38 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         if jt.kind == JOINT_WELD:
             ex.collide = False
         return ex
+
+    def remove_joint(mut self, c: Int) raises:
+        """Take joint `c` out of the simulation. The slot stays (joint indices do not shift, so drives, break
+        thresholds and held indices stay valid) and becomes a `JOINT_BROKEN` one, which nothing solves, and a
+        body it referenced can then be removed. Removing a joint twice is an error."""
+        if c < 0 or c >= len(self.joints):
+            raise Error("ContactScene6.remove_joint: joint index out of range")
+        if self.joints[c].kind == JOINT_BROKEN:
+            raise Error("ContactScene6.remove_joint: the joint is already removed or broken")
+        self.joints[c].kind = JOINT_BROKEN
+        self.joints[c].acc = Vec3(0, 0, 0, 0)
+        self.joints[c].acc_ang = Vec3(0, 0, 0, 0)
+        self._ensure_ext()
+
+    def joint_is_plain(self, c: Int) -> Bool:
+        """True when joint `c` has the state `add_joint` gives a new joint at the bodies' current poses: no limit,
+        motor, spring, cone or D6, the zero-angle references where creation would put them, no break thresholds.
+        A scene can describe such a joint by its kind, bodies and anchors alone."""
+        if c < 0 or c >= len(self.joints) or c >= len(self.jext):
+            return False
+        if self.break_force[c] < Real.MAX or self.break_torque[c] < Real.MAX:
+            return False
+        for d in range(len(self.drives)):
+            if self.drives[d].a == self.joints[c].a and self.drives[d].b == self.joints[c].b:
+                return False
+        ref e = self.jext[c]
+        var f = self._new_ext(self.joints[c])
+        return (
+            not e.active() and e.collide == f.collide and e.ref_a == f.ref_a and e.ref_b == f.ref_b
+            and e.ref_rel.x == f.ref_rel.x and e.ref_rel.y == f.ref_rel.y and e.ref_rel.z == f.ref_rel.z and e.ref_rel.w == f.ref_rel.w
+            and e.lim_on == f.lim_on
+        )
 
     def _ensure_ext(mut self):
         """Keep `jext` as long as `joints` (joints added by any path) and
@@ -799,7 +837,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     " drive; remove the drive first"
                 )
         for c in range(len(self.joints)):
-            if self.joints[c].a == i or self.joints[c].b == i:
+            if self.joints[c].kind != JOINT_BROKEN and (self.joints[c].a == i or self.joints[c].b == i):
                 raise Error(
                     "ContactScene6.remove_body: body is referenced by a"
                     " joint; remove the joint first"
@@ -2568,8 +2606,32 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             pairs = pairs3^
         return True
 
+    def set_track_joint_loads(mut self, on: Bool):
+        """Sample every joint's load each substep so `joint_load` can report it (a threshold does the same for the
+        joints that have one). Host state like the solver settings: not part of the snapshot."""
+        self.track_loads = on
+        if not on:
+            self.load_force = List[Real]()
+            self.load_torque = List[Real]()
+
+    def joint_load(self, c: Int) raises -> Tuple[Real, Real]:
+        """The peak constraint force (N) and torque (N m) joint `c` carried in the last step; (0, 0) before the
+        first step or when tracking is off. In a steady state a hanging mass m reads m g."""
+        if c < 0 or c >= len(self.joints):
+            raise Error("ContactScene6.joint_load: joint index out of range")
+        if c >= len(self.load_force):
+            return (Real(0), Real(0))
+        return (self.load_force[c], self.load_torque[c])
+
     def _release_overloaded(mut self):
         self.broken_joints = List[Int]()
+        if self.track_loads:
+            self.load_force = self.peak_force.copy()
+            self.load_torque = self.peak_torque.copy()
+            if not self.any_break:
+                for c in range(len(self.peak_force)):
+                    self.peak_force[c] = 0
+                    self.peak_torque[c] = 0
         if self.any_break:
             # 17.19 A2: a peak carries the scaled excess; subtract its magnitude
             for c in range(min(len(self.jexcess_up), len(self.peak_force))):
@@ -2992,7 +3054,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         if colored:
             colored = self._color_pairs(pairs, clo, chi)
         var tiered = len(self.tier_period) > 0
-        if tiered and (colored or len(self.softs) > 0 or ccd or len(self.drives) > 0 or self.any_break):
+        if tiered and (colored or len(self.softs) > 0 or ccd or len(self.drives) > 0 or self.any_break or self.track_loads):
             self.counters.incr(TIER_FALLBACK)
             tiered = False
         if tiered:
@@ -3013,13 +3075,13 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             self.cache = pairs2^
             self.step_index += 1
             return
-        if parallel and (colored or len(self.softs) > 0 or len(self.drives) > 0 or self.any_break):
+        if parallel and (colored or len(self.softs) > 0 or len(self.drives) > 0 or self.any_break or self.track_loads):
             # F23: the island-parallel path assumes no soft bodies, no ccd
             # and no colored solving; falling back is correct but used to be
             # silent -- count it so a caller relying on the parallel path
             # can notice it never actually ran in parallel.
             self.counters.incr(PARALLEL_FALLBACK_SERIAL)
-        if parallel and not colored and len(self.softs) == 0 and len(self.drives) == 0 and not self.any_break:
+        if parallel and not colored and len(self.softs) == 0 and len(self.drives) == 0 and not self.any_break and not self.track_loads:
             # partition: pairs reordered so each island is a contiguous range
             var labels = List[Int]()
             var first = List[Int]()
@@ -3130,7 +3192,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 soft_sweep(
                 self.bset, pairs, 0, len(pairs), h, bias_rate, 1, 0, False, 2, mu
                 )
-            if self.any_break:
+            if self.any_break or self.track_loads:
                 sample_loads(self.joints, h, self.peak_force, self.peak_torque)
                 if self.any_ext:
                     sample_ext_loads(self.bset, self.joints, self.jext, h, self.peak_force, self.peak_torque)

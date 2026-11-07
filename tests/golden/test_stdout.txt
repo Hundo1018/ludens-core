@@ -954,6 +954,8 @@ sphere SDF: open edges 0  volume 2.1380851  ( 2.1446605 )
   block and tackle 1 kg vs 2 kg (ratio 2), 2 s: drift 0.00027644634  tension 9.8  (m_a g = 9.8)
   slack pulley: thrown up at 4 m/s, peak 2.8078346  (free flight 2.8163266 )
 [PASS] joint_kinds - 10 / 10 checks
+--- tests/test_joint_loads.mojo ---
+[PASS] joint_loads - 10 / 10 checks
 --- tests/test_joint_parity.mojo ---
   free swing 0.3 rad, 4 s: max |q_max - q_red| 0.009929165  periods 1.6500001 1.6500001  (analytic 1.6408293 )
   2 N m with damping, 20 s: maximal 0.4243162  reduced 0.4204412  (analytic 0.42044118 )
@@ -1603,6 +1605,8 @@ replay: scripted run equals live True  posts one frame later differ True
   floater vy 0.0  pushed vx 1.0
   runtime channel: began impulse 4.163334
 [PASS] runtime_params - 5 / 5 checks
+--- tests/test_runtime_rules.mojo ---
+[PASS] runtime_rules - 7 / 7 checks
 --- tests/test_runtime_systems.mojo ---
   levels: Track 0  Count 0  Lowest 1
   30 frames of 0.2-3 ticks: fixed ticks run 31 (counted 31 )
@@ -1625,6 +1629,8 @@ replay: scripted run equals live True  posts one frame later differ True
 [PASS] save_checkpoint - 6 / 6 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_joints.mojo ---
+[PASS] scene_joints - 23 / 23 checks
 --- tests/test_scene_kinematic.mojo ---
 [PASS] scene_kinematic - 21 / 21 checks
 --- tests/test_scene_materials.mojo ---
@@ -1865,6 +1871,8 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 [PASS] solvers - 11 / 11 checks
 --- tests/test_sparse_large.mojo ---
 [PASS] sparse_large - 6 / 6 checks
+--- tests/test_sparse_sdf.mojo ---
+[PASS] sparse_sdf - 19 / 19 checks
 --- tests/test_sparse_set.mojo ---
 [PASS] sparse_set - 14 / 14 checks
 --- tests/test_sparse_volume.mojo ---

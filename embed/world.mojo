@@ -22,10 +22,11 @@ that blob, so two hosts that agree on `hash` agree on every body bit.
 """
 
 from std.math import isfinite
-from geometry.vec import Real, Vec3
+from geometry.vec import Real, Vec3, length
 from geometry.quat import Quat
 from physics.body_set import BodyId
 from physics.rigid6 import Inertia3, Pose6, QuatBody6
+from physics.joints6 import Joint6
 from physics.solver6 import ContactScene6
 from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
@@ -283,6 +284,56 @@ struct EmbedWorld(Movable):
     def set_material_softness(mut self, material: Int, hertz: Real, zeta: Real) raises:
         """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0)."""
         self.scene.set_material_softness(material, hertz, zeta)
+
+    def track_joint_loads(mut self, on: Bool):
+        """Measure the load of every joint each step (see `joint_load`). Does not change the simulation."""
+        self.scene.set_track_joint_loads(on)
+
+    def joint_load(self, j: Int) raises -> Tuple[Real, Real]:
+        """(force N, torque N m): the peak constraint load of joint `j` in the last tick; (0, 0) when not tracking."""
+        return self.scene.joint_load(j)
+
+    def released_joints(self) -> List[Int]:
+        """Joints whose break threshold was exceeded in the last tick (they are now inert)."""
+        return self.scene.broken_joints.copy()
+
+    def _joint_bodies(self, a: Int64, b: Int64) raises -> Tuple[Int, Int]:
+        var ia = self._id(a).index()
+        var ib = self._id(b).index()
+        if ia == ib:
+            raise Error("joint: the two bodies must differ")
+        return (ia, ib)
+
+    def add_ball_joint(mut self, a: Int64, b: Int64, la: Vec3, lb: Vec3) raises -> Int:
+        """Anchors `la` (body a's frame) and `lb` (body b's frame) are held together. Returns the joint index."""
+        var ab = self._joint_bodies(a, b)
+        return self.scene.add_joint(Joint6.ball(ab[0], ab[1], la, lb))
+
+    def add_distance_joint(mut self, a: Int64, b: Int64, la: Vec3, lb: Vec3, rest: Real) raises -> Int:
+        if not (rest >= 0) or not isfinite(rest):
+            raise Error("add_distance_joint: rest length must be finite and >= 0")
+        var ab = self._joint_bodies(a, b)
+        return self.scene.add_joint(Joint6.distance(ab[0], ab[1], la, lb, rest))
+
+    def add_hinge_joint(mut self, a: Int64, b: Int64, la: Vec3, lb: Vec3, axis: Vec3) raises -> Int:
+        """Anchors held together and `axis` (a unit vector in each body's frame) kept aligned."""
+        if not _finite3(axis) or not (length(axis) > 1e-6):
+            raise Error("add_hinge_joint: the axis must be finite and non-zero")
+        var ab = self._joint_bodies(a, b)
+        return self.scene.add_joint(Joint6.hinge(ab[0], ab[1], la, lb, axis))
+
+    def add_weld_joint(mut self, a: Int64, b: Int64, la: Vec3, lb: Vec3) raises -> Int:
+        """A rigid bond: anchors together and the current relative rotation held."""
+        var ab = self._joint_bodies(a, b)
+        var rel = self.scene.bset.bodies[ab[0]].rotation().conjugate() * self.scene.bset.bodies[ab[1]].rotation()
+        return self.scene.add_joint(Joint6.weld(ab[0], ab[1], la, lb, rel))
+
+    def remove_joint(mut self, j: Int) raises:
+        self.scene.remove_joint(j)
+
+    def joint_count(self) -> Int:
+        """Joint slots ever added, removed ones included (indices never shift)."""
+        return len(self.scene.joints)
 
     def reserve_slot(mut self, h: Int64) raises:
         """One-shot: the next body added gets exactly the identity `h` had (its slot and generation). The slot must be
