@@ -473,6 +473,38 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             ex.collide = False
         return ex
 
+    def remove_joint(mut self, c: Int) raises:
+        """Take joint `c` out of the simulation. The slot stays (joint indices do not shift, so drives, break
+        thresholds and held indices stay valid) and becomes a `JOINT_BROKEN` one, which nothing solves, and a
+        body it referenced can then be removed. Removing a joint twice is an error."""
+        if c < 0 or c >= len(self.joints):
+            raise Error("ContactScene6.remove_joint: joint index out of range")
+        if self.joints[c].kind == JOINT_BROKEN:
+            raise Error("ContactScene6.remove_joint: the joint is already removed or broken")
+        self.joints[c].kind = JOINT_BROKEN
+        self.joints[c].acc = Vec3(0, 0, 0, 0)
+        self.joints[c].acc_ang = Vec3(0, 0, 0, 0)
+        self._ensure_ext()
+
+    def joint_is_plain(self, c: Int) -> Bool:
+        """True when joint `c` has the state `add_joint` gives a new joint at the bodies' current poses: no limit,
+        motor, spring, cone or D6, the zero-angle references where creation would put them, no break thresholds.
+        A scene can describe such a joint by its kind, bodies and anchors alone."""
+        if c < 0 or c >= len(self.joints) or c >= len(self.jext):
+            return False
+        if self.break_force[c] < Real.MAX or self.break_torque[c] < Real.MAX:
+            return False
+        for d in range(len(self.drives)):
+            if self.drives[d].a == self.joints[c].a and self.drives[d].b == self.joints[c].b:
+                return False
+        ref e = self.jext[c]
+        var f = self._new_ext(self.joints[c])
+        return (
+            not e.active() and e.collide == f.collide and e.ref_a == f.ref_a and e.ref_b == f.ref_b
+            and e.ref_rel.x == f.ref_rel.x and e.ref_rel.y == f.ref_rel.y and e.ref_rel.z == f.ref_rel.z and e.ref_rel.w == f.ref_rel.w
+            and e.lim_on == f.lim_on
+        )
+
     def _ensure_ext(mut self):
         """Keep `jext` as long as `joints` (joints added by any path) and
         `any_ext` current."""
@@ -799,7 +831,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     " drive; remove the drive first"
                 )
         for c in range(len(self.joints)):
-            if self.joints[c].a == i or self.joints[c].b == i:
+            if self.joints[c].kind != JOINT_BROKEN and (self.joints[c].a == i or self.joints[c].b == i):
                 raise Error(
                     "ContactScene6.remove_body: body is referenced by a"
                     " joint; remove the joint first"

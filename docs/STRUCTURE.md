@@ -1624,7 +1624,7 @@ counted, not listed.
 
 ### `physics/solver6.mojo`
 - struct `ContactReport` — 0 methods
-- struct `ContactScene6` — 105 methods
+- struct `ContactScene6` — 107 methods
 - `def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R)`
 - `def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W)`
 - aliases: `FORCE_MODE_ACCELERATION`, `FORCE_MODE_FORCE`, `FORCE_MODE_IMPULSE`, `FORCE_MODE_VELOCITY_CHANGE`
@@ -2056,7 +2056,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 153 public declarations
+## embed (layer 6) — 6 modules, 154 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2135,6 +2135,7 @@ counted, not listed.
 - struct `SceneChange` — 0 methods
 - struct `SceneDoc` — 0 methods
 - struct `SceneField` — 0 methods
+- struct `SceneJoint` — 0 methods
 - struct `SceneMaterial` — 0 methods
 - `def add_body_record(mut world: EmbedWorld, s: SceneBody) -> Int64`
 - `def body_equal(a: SceneBody, b: SceneBody) -> Bool`
@@ -2173,7 +2174,7 @@ counted, not listed.
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 36 methods
+- struct `EmbedWorld` — 42 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods
