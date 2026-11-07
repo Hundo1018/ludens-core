@@ -1865,6 +1865,8 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 [PASS] solvers - 11 / 11 checks
 --- tests/test_sparse_large.mojo ---
 [PASS] sparse_large - 6 / 6 checks
+--- tests/test_sparse_sdf.mojo ---
+[PASS] sparse_sdf - 19 / 19 checks
 --- tests/test_sparse_set.mojo ---
 [PASS] sparse_set - 14 / 14 checks
 --- tests/test_sparse_volume.mojo ---

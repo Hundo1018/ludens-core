@@ -127,3 +127,4 @@ physics.mac_levelset_particles  # [api] particle level set volume correction, 17
 physics.mac_levelset_particles3  # [api] 3-D particle level set volume correction for hosts (17.60, test_levelset_particles3)
 physics.mac_body  # [api] disk drag coupling to the grid gas, 17.61 (test_body_drag)
 embed.undo  # [api] undo / redo for an editor: the consumer is ludens-shell's editor commands (ROADMAP 17.43, tests/test_undo)
+geometry.sparse_sdf  # [api] narrow-band SDF grid for hosts that bake large static shapes (17.52 follow-up, tests/test_sparse_sdf); the solver shape still takes the dense SdfGrid
