@@ -84,6 +84,7 @@ from .interpolation import PoseHistory, PoseQT, PoseInterpolator, DqNlerp
 from .tiers import TierPolicy, Tier
 from .flow import FlowStack, TICK_SIM, TICK_TIMERS, TICK_EVENTS
 from .host_inbox import ConfigInbox
+from .rules import Actor, Rules, TagRegistry
 
 
 @fieldwise_init
@@ -139,6 +140,12 @@ struct Runtime[B: StorageBackend, Body: Body6](Movable, Deinitable):
     var config: Dict[Int, Int]
     var fired: List[TimerFire]  # ROADMAP 17.72: this frame's timer fires, for `take_fired`
     var fired_capacity: Int
+    # ROADMAP 17.70: gameplay rules owned by the runtime. Off until `enable_rules`; ticks with the timers (an effect is
+    # a timed thing, so a state that pauses timers pauses effects) and is not carried by `carry_to`.
+    var rules: Rules
+    var actors: List[Actor]
+    var tags: TagRegistry
+    var rules_on: Bool
 
     def __init__(out self, dt: Real, gravity: Vec3, max_steps: Int = 8, outbox_capacity: Int = 4096, fired_capacity: Int = 4096):
         self.world = World[Self.B]()
@@ -166,6 +173,21 @@ struct Runtime[B: StorageBackend, Body: Body6](Movable, Deinitable):
         self.config = Dict[Int, Int]()
         self.fired = List[TimerFire]()
         self.fired_capacity = fired_capacity
+        self.rules = Rules(0)
+        self.actors = List[Actor]()
+        self.tags = TagRegistry()
+        self.rules_on = False
+
+    def enable_rules(mut self, health_attr: Int):
+        """Turn the rules on: from now on every tick that runs the timers also steps `rules` over `actors`. Define
+        effects with `rules.define`, tags with `tags.intern`, and actors with `add_actor`."""
+        self.rules = Rules(health_attr)
+        self.rules_on = True
+
+    def add_actor(mut self, n_attrs: Int, n_types: Int) -> Int:
+        """A rules actor (attributes, effects, shield, resistances); returns its index into `actors`."""
+        self.actors.append(Actor(n_attrs, n_types))
+        return len(self.actors) - 1
 
     # ------------------------------------------------------------ lifecycle
 
@@ -533,6 +555,8 @@ struct Runtime[B: StorageBackend, Body: Body6](Movable, Deinitable):
                     self.fired.append(f)
                 else:
                     self.loop.counters.incr(TIMER_FIRES_DROPPED)
+            if self.rules_on:
+                self.rules.step(self.actors)
         if not self.runs(TICK_SIM):
             return
         self.scene.step(Real(self.loop.dt), self.gravity, self.cfg)

@@ -49,7 +49,7 @@ counted, not listed.
 - struct `SpanStat` — 0 methods
 - struct `TraceBuffer` — 10 methods
 
-## geometry (layer 1) — 45 modules, 280 public declarations
+## geometry (layer 1) — 46 modules, 282 public declarations
 
 ### `geometry/aabb.mojo`
 - struct `AABB` — 9 methods
@@ -333,6 +333,10 @@ counted, not listed.
 - `def skin_motor(bones: List[Motor3], rest: List[SIMD[.float32, 4]], idx_a: List[Int], idx_b: List[Int], w_a: List[Float32], mut out: List[SIMD[.float32, 4]])`
 - `def skin_motor_k(bones: List[Motor3], rest: List[SIMD[.float32, 4]], idx: List[Int], w: List[Float32], k: Int, mut out: List[SIMD[.float32, 4]])`
 - `def skin_motor_k_scaled(bones: List[Motor3], scale: List[SIMD[.float32, 4]], centre: List[SIMD[.float32, 4]], rest: List[SIMD[.float32, 4]], idx: List[Int], w: List[Float32], k: Int, mut out: List[SIMD[.float32, 4]])`
+
+### `geometry/sparse_sdf.mojo`
+- struct `SparseSdfGrid` : DistanceField3 — 9 methods
+- aliases: `BRICK`
 
 ### `geometry/sparse_volume.mojo`
 - struct `SparseVolume` — 5 methods
@@ -1621,7 +1625,7 @@ counted, not listed.
 
 ### `physics/solver6.mojo`
 - struct `ContactReport` — 0 methods
-- struct `ContactScene6` — 107 methods
+- struct `ContactScene6` — 109 methods
 - `def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R)`
 - `def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W)`
 - aliases: `FORCE_MODE_ACCELERATION`, `FORCE_MODE_FORCE`, `FORCE_MODE_IMPULSE`, `FORCE_MODE_VELOCITY_CHANGE`
@@ -1959,7 +1963,7 @@ counted, not listed.
 
 ### `gameplay/runtime.mojo`
 - struct `RigidBodyRef` : ComponentType — 0 methods
-- struct `Runtime` — 32 methods
+- struct `Runtime` — 34 methods
 - struct `StepHandle` — 0 methods
 - aliases: `ID`
 
@@ -2171,7 +2175,7 @@ counted, not listed.
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 44 methods
+- struct `EmbedWorld` — 47 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods

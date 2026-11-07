@@ -455,6 +455,8 @@
 > **歷史**:
 > - 量測(2026-09-29,`bench_gpu_contact`,F22 修正前):寬相開啟後,N=4096 箱每幀 CPU 收集 + 簿記(不含求解)達 82 ms,N 每 ×4 成長約 ×12 —— `refresh_islands` 與 `update_sleep` 的 island 喚醒 / 入睡迴圈為 O(n²),warm-start 對快取的線性比對為 O(pairs × cache)(審計 F22)。這是 GPU 與 CPU 路徑共同的瓶頸,因此排為本項第一個工作(已由上面的 F22 第一批處理)。
 
+> **關節負載回報(2026-11-06,#92 的「關節力矩進事件」子句)**:`EmbedWorld.track_joint_loads(on)`、`joint_load(j) -> (力 N, 力矩 N·m)`(上一個 tick 的峰值)、`released_joints()`(該 tick 超過斷裂閾值而釋放的關節);求解器 `ContactScene6.set_track_joint_loads` / `joint_load`,不需要設閾值就取樣每個子步的關節負載,不改變模擬(開關前後世界雜湊相同,`tests/test_joint_loads.mojo`)。量測對照解析解:2 kg 掛在球關節下,力 = m g = 19.62 N(誤差 3% 內);焊接關節在距錨點 1 m 處懸掛 2 kg,力 19.62 N、力矩 19.62 N·m(誤差 5% 內)。取樣開啟時與 `any_break` 一樣走序列路徑(平行 / 分層閘門同樣判斷)。未做:C-ABI 欄位(`ld_world_get_events_ex` 尚無關節事件),要追加進凍結清單時再做。
+
 #### 17.44 複合形狀 — Wave B
 
 > **狀態**:✅ 完成(2026-10-14:一 body 多凸子形狀、質量性質聚合 + 主軸、配對 / 網格 / SDF 分派、查詢、軟體粒子、快照、槽位、圓形子形狀滾動錨點、`FractureSet` 凹零件走複合;CCD 見 17.46;GPU 屬 17.17)。
@@ -987,6 +989,8 @@
 > - **測試** `test_cylinder` 7/7:滾動 2.2345238(解析 2.2345319,8 段 2.234532);r 0.3、hl 0.7 站立 y = 0.6999、軸 y = 1.0;躺下 y = 0.2995;
 >   慣量公式;64 段請求得 16 段;三角柱站立。
 > - **橢球**:以 hull 細分超過 30 面上限,接觸幾何會被截斷,故本輪不提供 `add_ellipsoid`(只給慣量),待 support-mapping 接觸入口。
+
+> **稀疏 SDF(2026-11-06,後續片)**:`geometry/sparse_sdf.mojo` `SparseSdfGrid`——8×8×8 節點的磚,只存有節點落在 `band` 內(含外圈一個節點)的磚,其餘磚讀為 `sign * band`(每磚一個符號)。實作 `DistanceField3`(`sphere_trace` 直接可用)。`from_dense`(由密集格建)與 `from_field`(不配置密集格,以磚中心距離略過遠處的磚,假設場是 1-Lipschitz)、`to_dense`。取樣公式與 `SdfGrid` 相同,所以真實距離在 `band - 2 cell` 內的點,距離與梯度與密集格逐位相同(`tests/test_sparse_sdf.mojo` 19 項,6000+ 隨機點);遠處符號正確。變異測試:拿掉外圈,57 個格子讀錯,測試失敗。量測(`experiments/exp_sparse_sdf.mojo`,球半徑 0.3 倍盒寬,band = 4 格,單次):res 64 / 128 / 192 的密集格 1.0 / 8.0 / 27.0 MiB,稀疏 0.55 / 1.9 / 4.3 MiB(儲存 280 of 512 / 928 of 4096 / 2080 of 13824 磚);`from_field` 建置 1.5 / 1.2 / 3.6 ms 對密集 1.7 / 7.3 / 34 ms;100 萬次 `distance` 每次約 41 ns,密集約 18 ns(磚表多一層查找,約 2.3 倍)。**未做**:`SHAPE_SDF` 碰撞體仍收密集 `SdfGrid`(要用請先 `to_dense`),快照(`physics/serialize`)不存稀疏格;`sdf_contact` 目前只收 `Sdf3`。
 
 #### 17.53 查詢擴充 — Wave A(承接 17.13 的待辦)
 > **狀態**:✅ 完成(CPU;2026-10-14:凸形掃掠 / 重疊、距離與最近點對、all-hits / any-hit、命中三角形與重心座標、單面選項、mesh BVH / heightfield DDA 射線遍歷、持久預篩 `QueryIndex`、批次派發、角色盒形選項、命中 / 載具輪表面材質、批次平行加速(LBVH + 共用 index)、CGA 假說(否定)✅;GPU 批次對真實形狀屬第 7 層)。
@@ -3084,6 +3088,8 @@
 > **交付**:`gameplay/rules.mojo`(屬性 / tag / 效果 / 技能 / 傷害管線)。測試:普通(+20 % buff 到期、冷卻、堆疊上限)/ 整合(17.71 命中 → 傷害管線 → 死亡事件經 `Channel` → `Runtime.despawn`;效果狀態存檔再載入 / 回放雜湊一致;`oop` 對照)/ 極端(層數溢位夾限、同一修飾器移除兩次、對已 despawn 實體套用(陳舊 handle)、零長持續時間、負屬性夾限、同 tick 雙方致命傷害的結算序、1e6 修飾器、整數溢位)。
 > **相依**:17.11、17.35、17.38、17.39 / 17.40、17.37(效果實例池)、17.77(ECS 表達力)、17.71、17.15(utility AI 讀屬性)、17.49。
 > **邊界**:血條等 UI、VFX / SFX 播放(以事件交宿主)、平衡數值與內容屬設計;背包 / 戰利品 / 任務屬 17.72;網路複製屬 17.16。
+
+> **Runtime 擁有 Rules(2026-11-06,#97 的後半)**:`Runtime.enable_rules(health_attr)`、`add_actor(n_attrs, n_types)`;`Runtime` 新增 `rules` / `actors` / `tags` / `rules_on`,規則預設關閉,開啟後每個執行計時器的 tick 也對 `actors` 跑一次 `Rules.step`(效果是有時間的東西,所以暫停計時器的流程狀態也暫停效果;不新增 `TICK_*` 位元,既有流程遮罩與 golden 不變)。`carry_to` 不攜帶規則(與計時器一樣屬於執行期,由宿主重建)。`tests/test_runtime_rules.mojo` 7 項:預設關閉時規則 tick 為 0;同一個 buff + 週期傷害,執行期 400 frame 與獨立 `Rules` 400 tick,`actor_to_bytes` 在 tick 150 / 301 / 400 逐位元組相同,死亡 tick 相同,buff 準確到期;流程狀態只跑模擬(無計時器)250 frame,規則 tick 與角色位元組不動,恢復後 300 規則 tick 等於獨立角色。變異測試:把 `step` 移出計時器區塊,暫停的兩項失敗。`test_runtime_*`、`test_flow*`、`test_rules*` 各檔不變。**未做**:規則的快照(`actor_to_bytes` 已存在,Runtime 的整體存檔尚不含它);完整框架的元件化(Rules 仍是 `List[Actor]`)。
 
 #### 17.72 流程服務 — Wave C
 > **進度註(2026-10-13)**:`gameplay/flow.mojo`(`FlowStack`:push / pop、頂端狀態以 `TICK_SIM` / `TICK_TIMERS` / `TICK_EVENTS` 遮罩決定誰 tick;`Flags`:
