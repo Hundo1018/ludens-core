@@ -285,6 +285,18 @@ struct EmbedWorld(Movable):
         """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0)."""
         self.scene.set_material_softness(material, hertz, zeta)
 
+    def track_joint_loads(mut self, on: Bool):
+        """Measure the load of every joint each step (see `joint_load`). Does not change the simulation."""
+        self.scene.set_track_joint_loads(on)
+
+    def joint_load(self, j: Int) raises -> Tuple[Real, Real]:
+        """(force N, torque N m): the peak constraint load of joint `j` in the last tick; (0, 0) when not tracking."""
+        return self.scene.joint_load(j)
+
+    def released_joints(self) -> List[Int]:
+        """Joints whose break threshold was exceeded in the last tick (they are now inert)."""
+        return self.scene.broken_joints.copy()
+
     def _joint_bodies(self, a: Int64, b: Int64) raises -> Tuple[Int, Int]:
         var ia = self._id(a).index()
         var ib = self._id(b).index()

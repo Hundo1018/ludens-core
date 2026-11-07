@@ -243,6 +243,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
     var peak_force: List[Real]  # per-substep load peaks of the current step
     var peak_torque: List[Real]
     var any_break: Bool  # some joint has a finite threshold: sample loads
+    var track_loads: Bool  # host asked for per-joint loads (`joint_load`): sample them without any threshold
+    var load_force: List[Real]  # each joint's peak force of the last step
+    var load_torque: List[Real]
     var rules: List[ContactRule]  # ROADMAP 17.26: per-contact modification
     var softs: List[SoftBody]
     var colliders: ColliderSet  # shape kinds, hull/mesh tables, filters (F1)
@@ -337,6 +340,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         self.peak_force = List[Real]()
         self.peak_torque = List[Real]()
         self.any_break = False
+        self.track_loads = False
+        self.load_force = List[Real]()
+        self.load_torque = List[Real]()
         self.rules = List[ContactRule]()
         self.softs = List[SoftBody]()
         self.colliders = ColliderSet()
@@ -2600,8 +2606,32 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             pairs = pairs3^
         return True
 
+    def set_track_joint_loads(mut self, on: Bool):
+        """Sample every joint's load each substep so `joint_load` can report it (a threshold does the same for the
+        joints that have one). Host state like the solver settings: not part of the snapshot."""
+        self.track_loads = on
+        if not on:
+            self.load_force = List[Real]()
+            self.load_torque = List[Real]()
+
+    def joint_load(self, c: Int) raises -> Tuple[Real, Real]:
+        """The peak constraint force (N) and torque (N m) joint `c` carried in the last step; (0, 0) before the
+        first step or when tracking is off. In a steady state a hanging mass m reads m g."""
+        if c < 0 or c >= len(self.joints):
+            raise Error("ContactScene6.joint_load: joint index out of range")
+        if c >= len(self.load_force):
+            return (Real(0), Real(0))
+        return (self.load_force[c], self.load_torque[c])
+
     def _release_overloaded(mut self):
         self.broken_joints = List[Int]()
+        if self.track_loads:
+            self.load_force = self.peak_force.copy()
+            self.load_torque = self.peak_torque.copy()
+            if not self.any_break:
+                for c in range(len(self.peak_force)):
+                    self.peak_force[c] = 0
+                    self.peak_torque[c] = 0
         if self.any_break:
             # 17.19 A2: a peak carries the scaled excess; subtract its magnitude
             for c in range(min(len(self.jexcess_up), len(self.peak_force))):
@@ -3024,7 +3054,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         if colored:
             colored = self._color_pairs(pairs, clo, chi)
         var tiered = len(self.tier_period) > 0
-        if tiered and (colored or len(self.softs) > 0 or ccd or len(self.drives) > 0 or self.any_break):
+        if tiered and (colored or len(self.softs) > 0 or ccd or len(self.drives) > 0 or self.any_break or self.track_loads):
             self.counters.incr(TIER_FALLBACK)
             tiered = False
         if tiered:
@@ -3045,13 +3075,13 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             self.cache = pairs2^
             self.step_index += 1
             return
-        if parallel and (colored or len(self.softs) > 0 or len(self.drives) > 0 or self.any_break):
+        if parallel and (colored or len(self.softs) > 0 or len(self.drives) > 0 or self.any_break or self.track_loads):
             # F23: the island-parallel path assumes no soft bodies, no ccd
             # and no colored solving; falling back is correct but used to be
             # silent -- count it so a caller relying on the parallel path
             # can notice it never actually ran in parallel.
             self.counters.incr(PARALLEL_FALLBACK_SERIAL)
-        if parallel and not colored and len(self.softs) == 0 and len(self.drives) == 0 and not self.any_break:
+        if parallel and not colored and len(self.softs) == 0 and len(self.drives) == 0 and not self.any_break and not self.track_loads:
             # partition: pairs reordered so each island is a contiguous range
             var labels = List[Int]()
             var first = List[Int]()
@@ -3162,7 +3192,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 soft_sweep(
                 self.bset, pairs, 0, len(pairs), h, bias_rate, 1, 0, False, 2, mu
                 )
-            if self.any_break:
+            if self.any_break or self.track_loads:
                 sample_loads(self.joints, h, self.peak_force, self.peak_torque)
                 if self.any_ext:
                     sample_ext_loads(self.bset, self.joints, self.jext, h, self.peak_force, self.peak_torque)

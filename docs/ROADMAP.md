@@ -455,6 +455,8 @@
 > **歷史**:
 > - 量測(2026-09-29,`bench_gpu_contact`,F22 修正前):寬相開啟後,N=4096 箱每幀 CPU 收集 + 簿記(不含求解)達 82 ms,N 每 ×4 成長約 ×12 —— `refresh_islands` 與 `update_sleep` 的 island 喚醒 / 入睡迴圈為 O(n²),warm-start 對快取的線性比對為 O(pairs × cache)(審計 F22)。這是 GPU 與 CPU 路徑共同的瓶頸,因此排為本項第一個工作(已由上面的 F22 第一批處理)。
 
+> **關節負載回報(2026-11-06,#92 的「關節力矩進事件」子句)**:`EmbedWorld.track_joint_loads(on)`、`joint_load(j) -> (力 N, 力矩 N·m)`(上一個 tick 的峰值)、`released_joints()`(該 tick 超過斷裂閾值而釋放的關節);求解器 `ContactScene6.set_track_joint_loads` / `joint_load`,不需要設閾值就取樣每個子步的關節負載,不改變模擬(開關前後世界雜湊相同,`tests/test_joint_loads.mojo`)。量測對照解析解:2 kg 掛在球關節下,力 = m g = 19.62 N(誤差 3% 內);焊接關節在距錨點 1 m 處懸掛 2 kg,力 19.62 N、力矩 19.62 N·m(誤差 5% 內)。取樣開啟時與 `any_break` 一樣走序列路徑(平行 / 分層閘門同樣判斷)。未做:C-ABI 欄位(`ld_world_get_events_ex` 尚無關節事件),要追加進凍結清單時再做。
+
 #### 17.44 複合形狀 — Wave B
 
 > **狀態**:✅ 完成(2026-10-14:一 body 多凸子形狀、質量性質聚合 + 主軸、配對 / 網格 / SDF 分派、查詢、軟體粒子、快照、槽位、圓形子形狀滾動錨點、`FractureSet` 凹零件走複合;CCD 見 17.46;GPU 屬 17.17)。
