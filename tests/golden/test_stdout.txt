@@ -156,7 +156,7 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
   target past the end (x 20.000086 ): camera x 11.999986  s 24.00001 of 24.00002
 [PASS] camera_spring - 8 / 8 checks
 --- tests/test_capi.mojo ---
-  gen_bindings: up to date (62 functions);  rust host hash e8b9cc5196858e23  c host hash e8b9cc5196858e23
+  gen_bindings: up to date (65 functions);  rust host hash e8b9cc5196858e23  c host hash e8b9cc5196858e23
 [PASS] capi - 101 / 101 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61208 bytes ( 501 per frame incl. keyframes )
@@ -1625,6 +1625,8 @@ replay: scripted run equals live True  posts one frame later differ True
 [PASS] save_checkpoint - 6 / 6 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
+--- tests/test_scene_joints.mojo ---
+[PASS] scene_joints - 23 / 23 checks
 --- tests/test_scene_kinematic.mojo ---
 [PASS] scene_kinematic - 21 / 21 checks
 --- tests/test_scene_materials.mojo ---
@@ -1865,6 +1867,8 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 [PASS] solvers - 11 / 11 checks
 --- tests/test_sparse_large.mojo ---
 [PASS] sparse_large - 6 / 6 checks
+--- tests/test_sparse_sdf.mojo ---
+[PASS] sparse_sdf - 19 / 19 checks
 --- tests/test_sparse_set.mojo ---
 [PASS] sparse_set - 14 / 14 checks
 --- tests/test_sparse_volume.mojo ---
