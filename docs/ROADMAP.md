@@ -3275,7 +3275,7 @@
 
 #### 17.12 可編輯場景 / prefab / 實例化
 
-> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;關節、凸殼、網格為後續片)
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;第四片:關節;凸殼、網格為後續片)
 > **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
 > **決定(2026-11-02)**:編輯器放在 ludens-shell;場景檔案格式由 ludens-shell 定義(ludens-shell #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-shell #12)。
 > **現況**:`physics/serialize.mojo` = 全狀態 f32 bit-pattern 決定論快照(自註「非 asset reference」)。
@@ -3293,7 +3293,8 @@
 > - 量測(一般執行,方塊,Real = Float32,單次、4 核容器):1e3 / 1e4 物體,匯出 0.35 / 2.1 ms,匯入 0.46 / 5.2 ms,轉成列 6.7 / 59 ms,由列讀回 16 / 285 ms,無變更的 diff 18 / 382 ms;對照快照存 / 讀 0.28 / 2.6 ms 與 0.93 / 10 ms;列數 44 008 / 440 008(每物體 44 列)。文字路徑比快照慢約兩個數量級;場景存檔頻率低,可接受。diff 目前以兩張字典建構,可改為依路徑順序合併。
 > **第二片(2026-11-06)**:膠囊(`BODY_CAPSULE`,`size` = 半徑、圓柱半長)與運動學物體(`SceneBody.kinematic`,列 `body.N.kinematic` 只在為真時輸出,所以沒有運動學物體的場景列數不變)。`EmbedWorld` 新增 `add_capsule` 與 `set_kinematic`(此前嵌入邊界沒有這兩個入口)。`tests/test_scene_kinematic.mojo` 21 項:場景路徑 == 原世界 == 快照路徑,tick 0 與 300 tick 後逐位相同(運動學方塊以 1 m/s 持續移動);列數 8 + 44 × 4 + 1;靜態 + 運動學、半長 0 的膠囊被拒絕且不改世界;刪除膠囊與運動學方塊後 undo,列相同、句柄相同;把物體改成運動學後 undo 再 redo。變異測試:匯入時不呼叫 `set_kinematic`,6 項失敗。`test_scene_io` 44/44、`test_undo` 52/52 不變。
 > **第三片(2026-11-06)**:表面材質表(17.50 的 `material_mu` / `material_hz` / `material_zeta`):`SceneDoc.materials`、`EmbedWorld.set_material_friction` / `set_material_softness`、列 `materials.count` 與 `material.K.{id,friction,hertz,zeta}`(表為空時不輸出,既有場景列數不變)。`tests/test_scene_materials.mojo` 17 項:場景路徑 == 快照路徑,tick 0 與 300 tick 後逐位相同;表在快照雜湊內;無表 / 有表的列數;列的往返恆等;改一個摩擦值 = 一列差異,套用後等於目標;重複 id、id 超出範圍、什麼都沒設、負阻尼被拒絕且不改世界。變異測試:匯入時不套用柔度,3 項失敗。注意:表只作用於網格 / 高度場三角形與 `surface_friction`,而嵌入邊界尚無法建立網格,所以目前只有查詢能看到它;undo 不涵蓋此表(世界層級,不屬於任何物體)。
-> **遺留待辦**:關節(#104)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
+> **第四片(2026-11-06,#104 前半)**:球 / 距離 / 鉸鏈 / 焊接關節。`EmbedWorld.add_ball_joint` / `add_distance_joint` / `add_hinge_joint` / `add_weld_joint` / `remove_joint` / `joint_count`(嵌入邊界此前沒有任何關節入口);引擎 `ContactScene6.remove_joint`(關節槽位保留、種類改為 `JOINT_BROKEN`,索引不位移,被它參照的物體之後可以移除;`remove_body` 現在忽略已移除或已釋放的關節)與 `joint_is_plain`。`SceneDoc.joints`(以物體在場景中的位置命名兩端)與列 `joints.count`、`joint.K.*`(無關節時不輸出)。匯出以名稱拒絕:限位 / 馬達 / 彈簧 / 驅動 / 斷裂閾值,以及零角參考與建立時位置不符的關節(物體在建立關節後轉動過,例如模擬跑過之後的鉸鏈)。`tests/test_scene_joints.mojo` 23 項:場景路徑 == 快照路徑 == 原世界,tick 0 與 300 tick 後逐位相同(對照:同樣物體沒有關節,結果不同);列往返恆等;三種拒絕;`remove_joint` 與移除物體;壞文件不改世界。變異測試:匯入時不建關節,4 項失敗。**限制**:含鉸鏈的世界模擬過之後不能匯出(零角參考是建立時的姿態);編輯器的「試玩後還原」本來就回到快照,不受影響。後半(物體刪除與 undo 帶回關節)為 #104 的下一片。
+> **遺留待辦**:undo 帶關節(#104 後半)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
