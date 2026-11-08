@@ -337,6 +337,8 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
   pool of 100, 150 spawns: live 100  dropped 50
   explosion: exposure open / walled / half 1.0 -1.0 0.22222222   open crate vx 11.993687  half-hidden |w| 13.191245  was asleep True
 [PASS] combat - 16 / 16 checks
+--- tests/test_combustion.mojo ---
+[PASS] combustion - 13 / 13 checks
 --- tests/test_compound.mojo ---
   box + sphere: mass 73.51033 want 73.51032163829112  com 0.22792937 0.13675761 want 0.22792936346530543 0.13675761807918324
   principal moments 1.3993801 9.605963 10.202511  hand sum 1.3993802 9.605963 10.202511  product of inertia -2.7351523
