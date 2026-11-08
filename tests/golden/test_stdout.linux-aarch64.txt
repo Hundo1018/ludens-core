@@ -36,6 +36,8 @@ ball of 7232 particles: sphericity isotropic 1.1089764  anisotropic 1.0873781 ; 
   2-link energy drift: 0.00013608613925259716 e0: -16.314327239990234
   bob-pendulum period: 2.0383333826903254 s (analytic 2.0367, maximal-coord 2.050)
 [PASS] chain - 8 / 8 checks
+--- tests/test_combustion.mojo ---
+[PASS] combustion - 13 / 13 checks
 --- tests/test_constraints.mojo ---
   equality residual: 0.0
   approaching: 0.0   impulse: 2.0
