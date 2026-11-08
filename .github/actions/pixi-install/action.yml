@@ -35,4 +35,11 @@ runs:
           "https://github.com/prefix-dev/pixi/releases/download/${PIXI_VERSION}/${asset}"
         chmod +x "$bin"
         "$bin" --version
+        echo "$dir" >> "$GITHUB_PATH"
         echo "bin=$bin" >> "$GITHUB_OUTPUT"
+    # setup-pixi is not used: it refuses to overwrite a binary that is already
+    # at its target path, and this step is what places that binary.
+    - shell: bash
+      run: |
+        set -euo pipefail
+        "$HOME/.pixi/bin/pixi" install --locked

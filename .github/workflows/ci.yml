@@ -24,12 +24,6 @@ jobs:
         with:
           fetch-depth: 0  # full history: changelog and archindex read git
       - uses: ./.github/actions/pixi-install
-        id: pixi
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-bin-path: ${{ steps.pixi.outputs.bin }}
-          locked: true
-          cache: true
       - name: gate tool selftest (golden, archindex)
         run: pixi run gate -- --selftest
       - name: doc references (README, CLAUDE, ROADMAP, ARCHITECTURE)
@@ -82,12 +76,6 @@ jobs:
           repository: Hundo1018/ludens-wasm-rt
           path: ludens-wasm-rt
       - uses: ./.github/actions/pixi-install
-        id: pixi
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-bin-path: ${{ steps.pixi.outputs.bin }}
-          locked: true
-          cache: true
       - name: wasm gate (scenes native vs wasmtime, worlds native vs node)
         run: pixi run wasm-gate
 
@@ -108,12 +96,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/pixi-install
-        id: pixi
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-bin-path: ${{ steps.pixi.outputs.bin }}
-          locked: true
-          cache: true
       # First run on a platform: no golden to compare against yet, so record
       # one (the suite must still pass) and print it between markers; it is
       # read back from the job log and committed as
@@ -162,12 +144,6 @@ jobs:
         with:
           fetch-depth: 0  # full history: changelog and archindex read git
       - uses: ./.github/actions/pixi-install
-        id: pixi
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-bin-path: ${{ steps.pixi.outputs.bin }}
-          locked: true
-          cache: true
       - run: pixi run test-stress
       - run: pixi run examples
       - run: pixi run experiments
