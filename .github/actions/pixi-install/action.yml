@@ -1,0 +1,38 @@
+name: pixi-install
+description: >
+  Download the pinned pixi binary with retries and back-off, then point
+  prefix-dev/setup-pixi at it. The release download sometimes answers 502 /
+  503 / 504 for hours; without this, setup-pixi fails before any build step.
+inputs:
+  pixi-version:
+    description: pixi release tag to download (without the leading v is not accepted; use the tag as published)
+    required: false
+    default: v0.83.0
+outputs:
+  bin:
+    description: absolute path of the installed pixi binary
+    value: ${{ steps.dl.outputs.bin }}
+runs:
+  using: composite
+  steps:
+    - id: dl
+      shell: bash
+      env:
+        PIXI_VERSION: ${{ inputs.pixi-version }}
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in
+          x86_64)  asset=pixi-x86_64-unknown-linux-musl ;;
+          aarch64) asset=pixi-aarch64-unknown-linux-musl ;;
+          *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+        esac
+        dir="$HOME/.pixi/bin"
+        mkdir -p "$dir"
+        bin="$dir/pixi"
+        # --retry-all-errors makes curl retry on 5xx too, not only on timeouts.
+        curl -fsSL --retry 10 --retry-all-errors --retry-delay 20 --max-time 900 \
+          -o "$bin" \
+          "https://github.com/prefix-dev/pixi/releases/download/${PIXI_VERSION}/${asset}"
+        chmod +x "$bin"
+        "$bin" --version
+        echo "bin=$bin" >> "$GITHUB_OUTPUT"
