@@ -1636,7 +1636,7 @@ counted, not listed.
 
 ### `physics/solver6.mojo`
 - struct `ContactReport` — 0 methods
-- struct `ContactScene6` — 109 methods
+- struct `ContactScene6` — 110 methods
 - `def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R)`
 - `def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W)`
 - aliases: `FORCE_MODE_ACCELERATION`, `FORCE_MODE_FORCE`, `FORCE_MODE_IMPULSE`, `FORCE_MODE_VELOCITY_CHANGE`
@@ -1721,7 +1721,7 @@ counted, not listed.
 - `def apply_buoyancy_surface[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], waters: List[WaterVolume], water: W, t: Float32, gravity: SIMD[.float32, 4], dt: Float32, samples: Int = Int(8))`
 - `def float_body[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], id: BodyId, half: SIMD[.float32, 4], water: W, t: Float32, density: Float32, gravity: SIMD[.float32, 4], drag: Float32 = 1, samples: Int = Int(4)) -> Real`
 
-## gameplay (layer 5) — 49 modules, 328 public declarations
+## gameplay (layer 5) — 50 modules, 331 public declarations
 
 ### `gameplay/abilities.mojo`
 - struct `Abilities` — 6 methods
@@ -2028,7 +2028,7 @@ counted, not listed.
 
 ### `gameplay/vehicle_drive.mojo`
 - struct `DriveConfig` — 3 methods
-- struct `TorqueCurve` — 4 methods
+- struct `TorqueCurve` — 5 methods
 - `def split_axle(kind: Int, torque: Float32, w_left: Float32, w_right: Float32, preload: Float32, lock: Float32, max_bias: Float32) -> Tuple[Float32, Float32]`
 - aliases: `DIFF_LOCKED`, `DIFF_LSD`, `DIFF_OPEN`, `RAD_S_TO_RPM`
 
@@ -2049,6 +2049,11 @@ counted, not listed.
 - struct `TireModel` — 2 methods
 - `def solve_axis(tire: TireModel, on_x: Bool, a: Float32, b: Float32, other_s: Float32, den: Float32, mu_eff: Float32, fz: Float32) -> Real`
 
+### `gameplay/vehicle_truck.mojo`
+- `def fifth_wheel(mut sc: ContactScene6[QuatBody6], tractor: BodyId, trailer: BodyId, point: SIMD[.float32, 4], max_pitch: Float32 = 0.14999999999999999, max_roll: Float32 = 0.10000000000000001) -> Int`
+- `def semi_trailer_config(mass: Float32 = Float32("12000"), length: Float32 = 8, track: Float32 = 1.8999999999999999) -> VehicleConfig`
+- `def truck_config(mass: Float32 = Float32("8000"), wheelbase: Float32 = 4.4000000000000004, axle_gap: Float32 = 1.3999999999999999, track: Float32 = 1.8999999999999999) -> VehicleConfig`
+
 ### `gameplay/vehicle_tunnel.mojo`
 - struct `CarShape` — 2 methods
 - struct `PolarPoint` — 0 methods
@@ -2068,7 +2073,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 154 public declarations
+## embed (layer 6) — 6 modules, 155 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2176,17 +2181,18 @@ counted, not listed.
 
 ### `embed/undo.mojo`
 - struct `BodyRec` — 0 methods
+- struct `JointRec` — 0 methods
 - struct `SnapshotUndo` — 7 methods
 - struct `SolverFlags` — 0 methods
-- struct `Transaction` — 1 methods
-- struct `UndoLog` — 12 methods
+- struct `Transaction` — 2 methods
+- struct `UndoLog` — 14 methods
 - `def read_flags(world: EmbedWorld) -> SolverFlags`
 - `def write_flags(mut world: EmbedWorld, f: SolverFlags)`
 
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 45 methods
+- struct `EmbedWorld` — 49 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods

@@ -485,18 +485,50 @@ struct Vehicle[W: WheelCast = RayWheel](Movable):
         if self.shift_timer > 0:
             te = 0
         var total = te * ratio * self.cfg.drive.efficiency  # along the gear direction
-        # Axle shares: two driven axles split by front_bias, otherwise equal.
+        # Axle shares: two driven axles that include axle 0 split by front_bias, otherwise equal (a pair like axles
+        # 1 and 2 used to get 1 - front_bias each, 20 % more torque than the engine made).
         var axles = 0
         for a in range(4):
             if (axle_mask >> a) & 1 == 1:
                 axles += 1
+        var axle_t = List[Real](length=4, fill=0)
+        var first = -1
+        var second = -1
         for a in range(4):
             if (axle_mask >> a) & 1 == 0:
                 continue
+            if first < 0:
+                first = a
+            else:
+                second = a
             var share = Real(1) / Real(axles)
-            if axles == 2:
+            if axles == 2 and (axle_mask & 1) == 1:
                 share = self.cfg.drive.front_bias if a == 0 else (1 - self.cfg.drive.front_bias)
-            var t_axle = total * share
+            axle_t[a] = total * share
+        if axles == 2 and self.cfg.drive.axle_diff_kind != DIFF_OPEN:
+            # a diff / limited slip between the two driven axles replaces the fixed split: the slower axle gets more
+            var w1 = Real(0)
+            var n1 = 0
+            var w2 = Real(0)
+            var n2 = 0
+            for w in range(n):
+                if self.cfg.wheels[w].driven:
+                    if self.cfg.wheels[w].axle == first:
+                        w1 += self.wheels[w].omega * sgn
+                        n1 += 1
+                    else:
+                        w2 += self.wheels[w].omega * sgn
+                        n2 += 1
+            var ax = split_axle(
+                self.cfg.drive.axle_diff_kind, total, w1 / Real(n1), w2 / Real(n2),
+                self.cfg.drive.axle_diff_preload, self.cfg.drive.axle_diff_lock, self.cfg.drive.axle_diff_max,
+            )
+            axle_t[first] = ax[0]
+            axle_t[second] = ax[1]
+        for a in range(4):
+            if (axle_mask >> a) & 1 == 0:
+                continue
+            var t_axle = axle_t[a]
             var a0 = -1
             var a1 = -1
             for w in range(n):

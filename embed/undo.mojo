@@ -28,6 +28,7 @@ not restore host material ids (`save` does not hold them).
 """
 from embed.scene_io import SceneBody, body_equal, body_record, restore_body, same_shape, write_body_record
 from embed.world import EmbedWorld
+from physics.joints6 import JOINT_BROKEN, Joint6
 
 
 @fieldwise_init
@@ -62,10 +63,27 @@ struct BodyRec(Copyable, Movable):
     var after: SceneBody
 
 
+@fieldwise_init
+struct JointRec(Copyable, Movable):
+    """One joint slot's state before and after a transaction. Joint slots never shift (`remove_joint` keeps the slot),
+    so the slot number is the identity; an inert (`JOINT_BROKEN`) record means "no joint"."""
+    var slot: Int
+    var before: Joint6
+    var after: Joint6
+
+
+def _joint_equal(a: Joint6, b: Joint6) -> Bool:
+    return (
+        a.kind == b.kind and a.a == b.a and a.b == b.b and a.la == b.la and a.lb == b.lb and a.rest == b.rest
+        and a.axis_a == b.axis_a and a.axis_b == b.axis_b
+    )
+
+
 struct Transaction(Copyable, Movable):
     var name: String
     var merge_key: Int
     var recs: List[BodyRec]
+    var jrecs: List[JointRec]
     var flags_known: Bool
     var flags_before: SolverFlags
     var flags_after: SolverFlags
@@ -74,6 +92,7 @@ struct Transaction(Copyable, Movable):
         self.name = name
         self.merge_key = merge_key
         self.recs = List[BodyRec]()
+        self.jrecs = List[JointRec]()
         self.flags_known = False
         self.flags_before = SolverFlags(False, False, False, False)
         self.flags_after = SolverFlags(False, False, False, False)
@@ -81,6 +100,12 @@ struct Transaction(Copyable, Movable):
     def find(self, h: Int64) -> Int:
         for i in range(len(self.recs)):
             if self.recs[i].handle == h:
+                return i
+        return -1
+
+    def find_joint(self, slot: Int) -> Int:
+        for i in range(len(self.jrecs)):
+            if self.jrecs[i].slot == slot:
                 return i
         return -1
 
@@ -101,6 +126,27 @@ def _apply(mut world: EmbedWorld, rec: BodyRec, to_before: Bool) raises:
             restore_body(world, h, target)
     elif world.is_alive(h):
         world.remove(h)
+
+
+def _apply_step(mut world: EmbedWorld, t: Transaction, to_before: Bool) raises:
+    """Put every body and joint of a transaction to its record from before (`to_before`) or after. Order matters
+    because a body cannot be removed while a live joint holds it and a joint cannot be restored without its bodies:
+    joints that become inert first, then the bodies (restored in the order the transaction made them, removed in
+    reverse), then joints that become live."""
+    for k in range(len(t.jrecs)):
+        var target = t.jrecs[k].before if to_before else t.jrecs[k].after
+        if target.kind == JOINT_BROKEN:
+            world.restore_joint(t.jrecs[k].slot, target)
+    if to_before:
+        for k in range(len(t.recs) - 1, -1, -1):
+            _apply(world, t.recs[k], True)
+    else:
+        for k in range(len(t.recs)):
+            _apply(world, t.recs[k], False)
+    for k in range(len(t.jrecs)):
+        var target = t.jrecs[k].before if to_before else t.jrecs[k].after
+        if target.kind != JOINT_BROKEN:
+            world.restore_joint(t.jrecs[k].slot, target)
 
 
 struct UndoLog(Movable):
@@ -163,6 +209,25 @@ struct UndoLog(Movable):
         self._capture_flags(world)
         self.cur.recs.append(BodyRec(h, False, True, SceneBody.empty(), SceneBody.empty()))
 
+    def touch_joint(mut self, world: EmbedWorld, slot: Int) raises:
+        """Call before changing or removing joint `slot`: keeps its state. Touching it twice is harmless."""
+        if self.depth == 0:
+            raise Error("UndoLog.touch_joint: no open transaction")
+        if self.cur.find_joint(slot) >= 0:
+            return
+        var rec = world.joint_record(slot)
+        self.cur.jrecs.append(JointRec(slot, rec, rec))
+
+    def created_joint(mut self, world: EmbedWorld, slot: Int) raises:
+        """Call right after adding the joint in slot `slot` inside the transaction."""
+        if self.depth == 0:
+            raise Error("UndoLog.created_joint: no open transaction")
+        if self.cur.find_joint(slot) >= 0:
+            raise Error("UndoLog.created_joint: the joint is already in this transaction")
+        var inert = world.joint_record(slot)
+        inert.kind = JOINT_BROKEN
+        self.cur.jrecs.append(JointRec(slot, inert, inert))
+
     def commit(mut self, world: EmbedWorld) raises:
         """Close the transaction. Nested commits only count down; the outermost one keeps the records from after the
         edit. A transaction that changed nothing leaves no step and keeps the redo chain."""
@@ -184,8 +249,14 @@ struct UndoLog(Movable):
             if r.existed_before and r.existed_after and body_equal(r.before, r.after):
                 continue
             t.recs.append(r^)
+        for i in range(len(self.cur.jrecs)):
+            var jr = self.cur.jrecs[i].copy()
+            jr.after = world.joint_record(jr.slot)
+            if _joint_equal(jr.before, jr.after):
+                continue
+            t.jrecs.append(jr^)
         self.cur = Transaction(String(), 0)
-        if len(t.recs) == 0:
+        if len(t.recs) == 0 and len(t.jrecs) == 0:
             return
         self.future = List[Transaction]()
         if self._merge(t):
@@ -198,7 +269,7 @@ struct UndoLog(Movable):
             self.past = kept^
 
     def _merge(mut self, t: Transaction) -> Bool:
-        if t.merge_key == 0 or len(self.past) == 0:
+        if t.merge_key == 0 or len(self.past) == 0 or len(t.jrecs) > 0 or len(self.past[len(self.past) - 1].jrecs) > 0:
             return False
         var n = len(self.past) - 1
         if self.past[n].merge_key != t.merge_key or len(self.past[n].recs) != len(t.recs):
@@ -222,8 +293,7 @@ struct UndoLog(Movable):
         """Throw the open transaction away: every body it touched goes back to its record from before."""
         if self.depth == 0:
             raise Error("UndoLog.abort: no open transaction")
-        for k in range(len(self.cur.recs) - 1, -1, -1):
-            _apply(world, self.cur.recs[k], True)
+        _apply_step(world, self.cur, True)
         if self.cur.flags_known:
             write_flags(world, self.cur.flags_before)
         self.cur = Transaction(String(), 0)
@@ -237,8 +307,7 @@ struct UndoLog(Movable):
         if len(self.past) == 0:
             return False
         var n = len(self.past) - 1
-        for k in range(len(self.past[n].recs) - 1, -1, -1):
-            _apply(world, self.past[n].recs[k], True)
+        _apply_step(world, self.past[n], True)
         if self.past[n].flags_known:
             write_flags(world, self.past[n].flags_before)
         self.future.append(self.past.pop())
@@ -250,8 +319,7 @@ struct UndoLog(Movable):
         if len(self.future) == 0:
             return False
         var n = len(self.future) - 1
-        for k in range(len(self.future[n].recs)):
-            _apply(world, self.future[n].recs[k], False)
+        _apply_step(world, self.future[n], False)
         if self.future[n].flags_known:
             write_flags(world, self.future[n].flags_after)
         self.past.append(self.future.pop())

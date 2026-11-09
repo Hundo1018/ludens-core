@@ -36,6 +36,17 @@ jobs:
         run: pixi run layers-sync
       - name: ROADMAP subsystem table matches the index (17.87)
         run: pixi run roadmap-status -- --check
+      # docs/STRUCTURE.md flows one way: the structure job below writes it on
+      # main and branches only pull it. A PR that changes it would bring the
+      # merge conflicts back, so the PR's merge result must match main.
+      - name: docs/STRUCTURE.md is main's version (CI owns it)
+        if: github.event_name == 'pull_request'
+        run: |
+          if ! git diff --quiet "origin/${{ github.base_ref }}" HEAD -- docs/STRUCTURE.md; then
+            echo "docs/STRUCTURE.md differs from ${{ github.base_ref }}. Take main's version:" >&2
+            echo "    git checkout origin/${{ github.base_ref }} -- docs/STRUCTURE.md" >&2
+            exit 1
+          fi
       - name: floating-point flag policy (docs/ARCHITECTURE.md §6)
         run: pixi run flag-policy
       - name: benchmark template / files / report consistency
