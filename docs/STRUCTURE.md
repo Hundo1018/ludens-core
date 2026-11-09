@@ -1136,7 +1136,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 91 modules, 505 public declarations
+## physics (layer 4) — 91 modules, 507 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1352,6 +1352,11 @@ counted, not listed.
 - `def fem_coupled_step[B: Body6](mut scene: ContactScene6[B], mut port: FemContactPort, mut fem: FemContinuum, dt: Float32, gravity: SIMD[.float32, 4], cfg: SolverConfig, mut counters: Counters, substeps: Int = Int(16))`
 - `def point_contact[B: Body6](scene: ContactScene6[B], b: Int, x: SIMD[.float32, 4], x_prev: SIMD[.float32, 4], r: Float32, dt: Float32) -> Tuple[Bool, SIMD[.float32, 4], SIMD[.float32, 4]]`
 - aliases: `S`
+
+### `physics/fem_visco.mojo`
+- struct `ViscoState` — 1 methods
+- `def step_visco[M: Material](mut st: ViscoState, mut body: FemBody, dt: Float32, gravity: SIMD[.float32, 4], floor_y: Float32 = -1.0E+30)`
+- `def visco_forces[M: Material](mut st: ViscoState, body: FemBody, dt: Float32, mut fx: List[Float32], mut fy: List[Float32], mut fz: List[Float32])`
 
 ### `physics/fields.mojo`
 - struct `ForceField` — 4 methods
@@ -1572,9 +1577,6 @@ counted, not listed.
 
 ### `physics/rope.mojo`
 - struct `Rope` : ContinuumSolver — 10 methods
-
-### `physics/rope_twist.mojo`
-- struct `RopeTwist` — 7 methods
 
 ### `physics/screw.mojo`
 - struct `ScrewBody` : ComponentType — 2 methods
