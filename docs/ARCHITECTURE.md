@@ -313,7 +313,8 @@ change simulation bits, and how that is enforced (`pixi run flag-policy`,
 - Same toolchain + same target CPU + default optimisation ⇒ bit-identical results. The goldens and every bitwise parity test rely on this.
 - The toolchain is pinned exactly in `pixi.toml` (R1).
 - The pinned x86-64 target: `x86-64`. `scripts/run_tests.sh` passes it to every test (R2).
-  Other architectures compile for the host and keep their own golden file.
+  linux-aarch64 pins `neoverse-n1`, because the arm CI runners differ in CPU model and a host build changed
+  golden digits between them. osx-arm64 compiles for the host. Each platform keeps its own golden file.
 
 **Which flags change bits** (`pixi run fp-probe`, 17.76). These do not: `-O1`, `-O2`, haswell, skylake-avx512, the host CPU, and SIMD width.
 Two things do:
