@@ -3339,6 +3339,7 @@
 > - 量測(一般執行,方塊,單一物體移動,單次):`UndoLog` 提交 / 復原 1e3:41 / 20 µs,1e4:44 / 138 µs,1e5:275 µs / 1.05 ms,每步 512 bytes;`SnapshotUndo` 提交 / 復原 1e3:0.67 / 1.0 ms,1e4:6.4 / 9.8 ms,1e5:142 / 113 ms,每步 0.36 / 3.6 / 36 MB。1e5 時復原的 1 ms 大部分是為了重算「有人回報 / CCD」旗標而掃描全部物體。
 > **遺留待辦**:ECS 實體的反向操作(4.4 command buffer、17.11 schema 欄位差分,與 observers 推播相容);關節、運動學、其他形狀、地形編輯的反向操作;整批變更(全場景變形)時快照較省的情形尚未量;bench 列未進 `BENCHMARK_REPORT.md`。
 
+> **進度註(2026-11-06,實體復原的前置:`respawn`,#83)**:`StorageBackend.respawn(e) -> Bool` 與 `World.respawn`:把剛被 `despawn` 的實體以相同 id 與世代帶回(復原刪除時,編輯器持有的選取、階層父子、關係參照才仍然有效)。條件:該 id 還在空閒清單上、世代正好是 `e.gen + 1`(沒被後來的 spawn 重用);否則回 False 且世界不變。只還原身分,不還原元件。六個後端(sparse、archetype、bitset、reactive、naive、chunked)各自實作,`tests/test_ecs_respawn.mojo`(component,6/6):六個後端對同一情境的 20 項觀察逐項相同且等於預期值;涵蓋復原後同 id 同世代、實體數、元件已清空、查詢只見一次、對存活實體 / 已被重用的 id / 憑空的 id / 負 id / 錯誤世代的拒絕、重用者資料不變、兩輪 despawn → respawn。變異:拿掉世代檢查,chunked 與參考不一致,測試失敗。**未做**:註冊表驅動的「實體全部元件」擷取與還原、`EcsUndoLog`(touch / created / deleted 記錄、巢狀、合併、深度上限)、階層與關係在刪除父節點再復原後的整合驗收。#83 仍開著。
 #### 17.77 ECS 表達力 — Wave B
 
 > **狀態**:✅ 完成(2026-10-14:過濾器 with / without / any(六後端原生)、N 元查詢、`for_each3`、pull 變更偵測、資源、延遲 remove / despawn / spawn、

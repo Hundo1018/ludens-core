@@ -75,6 +75,11 @@ struct World[B: StorageBackend](Movable, Deinitable):
                     self.add_tick[c][e.id] = -1
         self.backend.despawn(e)
 
+    def respawn(mut self, e: Entity) -> Bool:
+        """Bring a despawned entity back with the same id and generation (undo of a delete). Only while its id has
+        not been reused by a later spawn; its components are not restored. False when it cannot be brought back."""
+        return self.backend.respawn(e)
+
     def is_alive(self, e: Entity) -> Bool:
         return self.backend.is_alive(e)
 

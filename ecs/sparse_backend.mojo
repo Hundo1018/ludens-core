@@ -81,6 +81,25 @@ struct SparseSetBackend[*CTs: ComponentType](StorageBackend):
         self.alive.set(id, gen)
         return Entity(id, gen)
 
+    def _take_free(mut self, e: Entity) -> Bool:
+        """Is `e` exactly the occupant a `despawn` just retired: its id is on the free list and its generation was
+        bumped once past `e.gen`? Removes the id from the free list when so."""
+        if e.id < 0 or e.id >= len(self.gens) or self.gens[e.id] != e.gen + 1:
+            return False
+        for k in range(len(self.free_ids)):
+            if self.free_ids[k] == e.id:
+                _ = self.free_ids.pop(k)
+                self.gens[e.id] = e.gen
+                return True
+        return False
+
+    def respawn(mut self, e: Entity) -> Bool:
+        """Bring a despawned entity back under the same id and generation (undo of a delete): only while its id has not been reused. Components are not restored. False when it cannot."""
+        if not self._take_free(e):
+            return False
+        self.alive.set(e.id, e.gen)
+        return True
+
     def despawn(mut self, e: Entity):
         if not self.is_alive(e):
             return
