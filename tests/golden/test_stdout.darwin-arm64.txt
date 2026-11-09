@@ -87,6 +87,8 @@ lattice: 50 / 50  ring: 12
 [PASS] diag_trace - 7 / 7 checks
 --- tests/test_ecs_respawn.mojo ---
 [PASS] ecs_respawn - 6 / 6 checks
+--- tests/test_embed_touching.mojo ---
+[PASS] embed_touching - 6 / 6 checks
 --- tests/test_entity_undo.mojo ---
 [PASS] entity_undo - 9 / 9 checks
 --- tests/test_fem_visco.mojo ---
