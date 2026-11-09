@@ -402,15 +402,15 @@ counted, not listed.
 ### `ecs/archetype.mojo`
 - struct `ArchView2` — 7 methods
 - struct `Archetype` — 0 methods
-- struct `ArchetypeBackend` : Defaultable, StorageBackend — 19 methods
+- struct `ArchetypeBackend` : Defaultable, StorageBackend — 18 methods
 - aliases: `MAX_ARCH`, `N`, `Slot`
 
 ### `ecs/bitset_backend.mojo`
-- struct `BitsetBackend` : Defaultable, StorageBackend — 16 methods
+- struct `BitsetBackend` : Defaultable, StorageBackend — 15 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/chunked_backend.mojo`
-- struct `ChunkedBackend` : Defaultable, StorageBackend — 19 methods
+- struct `ChunkedBackend` : Defaultable, StorageBackend — 18 methods
 - aliases: `CHUNK_BYTES`, `CHUNK_ROWS`, `N`, `Slot`
 
 ### `ecs/commands.mojo`
@@ -438,7 +438,7 @@ counted, not listed.
 - aliases: `ID`
 
 ### `ecs/naive_backend.mojo`
-- struct `NaiveBackend` : Defaultable, StorageBackend — 16 methods
+- struct `NaiveBackend` : Defaultable, StorageBackend — 15 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/pool.mojo`
@@ -449,7 +449,7 @@ counted, not listed.
 
 ### `ecs/reactive_backend.mojo`
 - struct `ObsEvent` — 0 methods
-- struct `ReactiveBackend` : Defaultable, StorageBackend — 19 methods
+- struct `ReactiveBackend` : Defaultable, StorageBackend — 18 methods
 - aliases: `EV_ADD`, `EV_REMOVE`, `EV_SET`, `N`, `Slot`
 
 ### `ecs/relations.mojo`
@@ -469,7 +469,7 @@ counted, not listed.
 - `def write_values[T: Copyable](vals: List[T], schema: TypeSchema, mut out: List[UInt8])`
 
 ### `ecs/sparse_backend.mojo`
-- struct `SparseSetBackend` : Defaultable, StorageBackend — 16 methods
+- struct `SparseSetBackend` : Defaultable, StorageBackend — 15 methods
 - aliases: `N`, `Slot`
 
 ### `ecs/sparse_set.mojo`
@@ -500,7 +500,7 @@ counted, not listed.
 - `def propagate_full[B: StorageBackend](mut w: World[B], h: Hierarchy)`
 
 ### `ecs/world.mojo`
-- struct `World` — 27 methods
+- struct `World` — 26 methods
 
 ## fluid (layer 2) — 5 modules, 29 public declarations
 
@@ -1136,7 +1136,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 90 modules, 504 public declarations
+## physics (layer 4) — 91 modules, 507 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1352,6 +1352,11 @@ counted, not listed.
 - `def fem_coupled_step[B: Body6](mut scene: ContactScene6[B], mut port: FemContactPort, mut fem: FemContinuum, dt: Float32, gravity: SIMD[.float32, 4], cfg: SolverConfig, mut counters: Counters, substeps: Int = Int(16))`
 - `def point_contact[B: Body6](scene: ContactScene6[B], b: Int, x: SIMD[.float32, 4], x_prev: SIMD[.float32, 4], r: Float32, dt: Float32) -> Tuple[Bool, SIMD[.float32, 4], SIMD[.float32, 4]]`
 - aliases: `S`
+
+### `physics/fem_visco.mojo`
+- struct `ViscoState` — 1 methods
+- `def step_visco[M: Material](mut st: ViscoState, mut body: FemBody, dt: Float32, gravity: SIMD[.float32, 4], floor_y: Float32 = -1.0E+30)`
+- `def visco_forces[M: Material](mut st: ViscoState, body: FemBody, dt: Float32, mut fx: List[Float32], mut fy: List[Float32], mut fz: List[Float32])`
 
 ### `physics/fields.mojo`
 - struct `ForceField` — 4 methods
