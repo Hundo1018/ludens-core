@@ -3303,6 +3303,7 @@
 > **第四片(2026-11-06,#104 前半)**:球 / 距離 / 鉸鏈 / 焊接關節。`EmbedWorld.add_ball_joint` / `add_distance_joint` / `add_hinge_joint` / `add_weld_joint` / `remove_joint` / `joint_count`(嵌入邊界此前沒有任何關節入口);引擎 `ContactScene6.remove_joint`(關節槽位保留、種類改為 `JOINT_BROKEN`,索引不位移,被它參照的物體之後可以移除;`remove_body` 現在忽略已移除或已釋放的關節)與 `joint_is_plain`。`SceneDoc.joints`(以物體在場景中的位置命名兩端)與列 `joints.count`、`joint.K.*`(無關節時不輸出)。匯出以名稱拒絕:限位 / 馬達 / 彈簧 / 驅動 / 斷裂閾值,以及零角參考與建立時位置不符的關節(物體在建立關節後轉動過,例如模擬跑過之後的鉸鏈)。`tests/test_scene_joints.mojo` 23 項:場景路徑 == 快照路徑 == 原世界,tick 0 與 300 tick 後逐位相同(對照:同樣物體沒有關節,結果不同);列往返恆等;三種拒絕;`remove_joint` 與移除物體;壞文件不改世界。變異測試:匯入時不建關節,4 項失敗。**限制**:含鉸鏈的世界模擬過之後不能匯出(零角參考是建立時的姿態);編輯器的「試玩後還原」本來就回到快照,不受影響。後半(物體刪除與 undo 帶回關節)為 #104 的下一片。
 > **遺留待辦**:undo 帶關節(#104 後半)/ 凸殼 / 網格參照的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
+> **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-shell 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:`EmbedWorld` 的方塊 / 球體物體;ECS 實體、關節、運動學為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
