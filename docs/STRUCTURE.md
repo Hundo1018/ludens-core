@@ -1136,7 +1136,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 91 modules, 507 public declarations
+## physics (layer 4) — 92 modules, 508 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1577,6 +1577,9 @@ counted, not listed.
 
 ### `physics/rope.mojo`
 - struct `Rope` : ContinuumSolver — 10 methods
+
+### `physics/rope_twist.mojo`
+- struct `RopeTwist` — 7 methods
 
 ### `physics/screw.mojo`
 - struct `ScrewBody` : ComponentType — 2 methods
