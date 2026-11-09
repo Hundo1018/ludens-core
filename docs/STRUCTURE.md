@@ -1136,7 +1136,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 90 modules, 504 public declarations
+## physics (layer 4) — 91 modules, 507 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1352,6 +1352,11 @@ counted, not listed.
 - `def fem_coupled_step[B: Body6](mut scene: ContactScene6[B], mut port: FemContactPort, mut fem: FemContinuum, dt: Float32, gravity: SIMD[.float32, 4], cfg: SolverConfig, mut counters: Counters, substeps: Int = Int(16))`
 - `def point_contact[B: Body6](scene: ContactScene6[B], b: Int, x: SIMD[.float32, 4], x_prev: SIMD[.float32, 4], r: Float32, dt: Float32) -> Tuple[Bool, SIMD[.float32, 4], SIMD[.float32, 4]]`
 - aliases: `S`
+
+### `physics/fem_visco.mojo`
+- struct `ViscoState` — 1 methods
+- `def step_visco[M: Material](mut st: ViscoState, mut body: FemBody, dt: Float32, gravity: SIMD[.float32, 4], floor_y: Float32 = -1.0E+30)`
+- `def visco_forces[M: Material](mut st: ViscoState, body: FemBody, dt: Float32, mut fx: List[Float32], mut fy: List[Float32], mut fz: List[Float32])`
 
 ### `physics/fields.mojo`
 - struct `ForceField` — 4 methods
@@ -1713,7 +1718,7 @@ counted, not listed.
 - `def apply_buoyancy_surface[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], waters: List[WaterVolume], water: W, t: Float32, gravity: SIMD[.float32, 4], dt: Float32, samples: Int = Int(8))`
 - `def float_body[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], id: BodyId, half: SIMD[.float32, 4], water: W, t: Float32, density: Float32, gravity: SIMD[.float32, 4], drag: Float32 = 1, samples: Int = Int(4)) -> Real`
 
-## gameplay (layer 5) — 50 modules, 331 public declarations
+## gameplay (layer 5) — 49 modules, 328 public declarations
 
 ### `gameplay/abilities.mojo`
 - struct `Abilities` — 6 methods
@@ -2020,7 +2025,7 @@ counted, not listed.
 
 ### `gameplay/vehicle_drive.mojo`
 - struct `DriveConfig` — 3 methods
-- struct `TorqueCurve` — 5 methods
+- struct `TorqueCurve` — 4 methods
 - `def split_axle(kind: Int, torque: Float32, w_left: Float32, w_right: Float32, preload: Float32, lock: Float32, max_bias: Float32) -> Tuple[Float32, Float32]`
 - aliases: `DIFF_LOCKED`, `DIFF_LSD`, `DIFF_OPEN`, `RAD_S_TO_RPM`
 
@@ -2040,11 +2045,6 @@ counted, not listed.
 - struct `TireCurve` — 3 methods
 - struct `TireModel` — 2 methods
 - `def solve_axis(tire: TireModel, on_x: Bool, a: Float32, b: Float32, other_s: Float32, den: Float32, mu_eff: Float32, fz: Float32) -> Real`
-
-### `gameplay/vehicle_truck.mojo`
-- `def fifth_wheel(mut sc: ContactScene6[QuatBody6], tractor: BodyId, trailer: BodyId, point: SIMD[.float32, 4], max_pitch: Float32 = 0.14999999999999999, max_roll: Float32 = 0.10000000000000001) -> Int`
-- `def semi_trailer_config(mass: Float32 = Float32("12000"), length: Float32 = 8, track: Float32 = 1.8999999999999999) -> VehicleConfig`
-- `def truck_config(mass: Float32 = Float32("8000"), wheelbase: Float32 = 4.4000000000000004, axle_gap: Float32 = 1.3999999999999999, track: Float32 = 1.8999999999999999) -> VehicleConfig`
 
 ### `gameplay/vehicle_tunnel.mojo`
 - struct `CarShape` — 2 methods

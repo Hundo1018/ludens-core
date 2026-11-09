@@ -130,9 +130,8 @@ def main() raises:
   - `commit-msg`:主旨須為 Conventional Commit(`type(scope): subject`)。
   - `pre-commit`:依暫存檔案選檢查:`.mojo` → `arch check` + tier 標頭;`.md` → `doclint` + `layers-sync`;
     `docs/ROADMAP.md` → 子系統表對索引;`pixi.toml` / `scripts/*.sh` → 浮點旗標政策;新增 `.mojo` → 孤島檢查。
-    暫存 diff 動到引擎 `.mojo` 的宣告行(`def` / `struct` / `trait` / `alias` / `comptime`)時,重新產生 `docs/STRUCTURE.md` 並加入本次 commit
-    (`mojo doc` 重建索引約 85 秒;只改函式本體不觸發)。
-  - `pre-push`:CI 的快速檢查(gate selftest、arch、doclint、layers-sync、roadmap-status、orphans、flag-policy、perf governance、bench-fresh、`structure --check`),約 26 秒;
+    `docs/STRUCTURE.md` 不再由 commit 產生:每次 push 到 main 時 CI 重新產生並提交回 main;PR 分支不改此檔(避免合併衝突),本地只需 pull
+  - `pre-push`:CI 的快速檢查(gate selftest、arch、doclint、layers-sync、roadmap-status、orphans、flag-policy、perf governance、bench-fresh),約 26 秒;
     `CHANGELOG.md` 落後 HEAD 超過 150 個 commit 時只警告。完整 `pixi run gate` 不在 hook 內。
 - Claude Code hook(`.claude/settings.json`):
   - PreToolUse 擋:直接編輯產生檔(`BENCHMARK_REPORT.md`、`CHANGELOG.md`、`docs/STRUCTURE.md`、`bindings/` 下的產物、`tests/golden/`);
@@ -140,7 +139,7 @@ def main() raises:
     只看實際執行的指令(heredoc 本文與引號內文字不算);這是護欄,不是安全邊界。
   - PostToolUse:編輯 `tests/test_*.mojo` 後檢查第一行 `# tier:`;編輯引擎 `.mojo` 後跑 `arch check`。
 - 產生檔不手改:`docs/STRUCTURE.md`(`pixi run structure`)、`CHANGELOG.md`(`pixi run changelog`)、`BENCHMARK_REPORT.md`(`pixi run benchmark`)、
-  `bindings/`(`pixi run bindings`)。CI 對 `STRUCTURE.md`、分層表、ROADMAP 子系統表各有一步檢查。
+  `bindings/`(`pixi run bindings`)。CI 在 main 的 push 上重新產生並提交 `STRUCTURE.md`;分層表、ROADMAP 子系統表各有一步檢查。
 
 ## 文件
 
