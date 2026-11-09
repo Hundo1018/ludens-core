@@ -130,7 +130,9 @@ def main() raises:
   - `commit-msg`:主旨須為 Conventional Commit(`type(scope): subject`)。
   - `pre-commit`:依暫存檔案選檢查:`.mojo` → `arch check` + tier 標頭;`.md` → `doclint` + `layers-sync`;
     `docs/ROADMAP.md` → 子系統表對索引;`pixi.toml` / `scripts/*.sh` → 浮點旗標政策;新增 `.mojo` → 孤島檢查。
-    `docs/STRUCTURE.md` 不再由 commit 產生:每次 push 到 main 時 CI 重新產生並提交回 main;PR 分支不改此檔(避免合併衝突),本地只需 pull
+    `docs/STRUCTURE.md` 單向流動:每次 push 到 main 時 CI 重新產生並提交回 main;分支只 pull 不改。
+    暫存的版本與 `origin/main` 不同時 pre-commit 擋下(改用 `git checkout origin/main -- docs/STRUCTURE.md`),
+    CI 的 gate 也在 PR 上檢查同一件事。
   - `pre-push`:CI 的快速檢查(gate selftest、arch、doclint、layers-sync、roadmap-status、orphans、flag-policy、perf governance、bench-fresh),約 26 秒;
     `CHANGELOG.md` 落後 HEAD 超過 150 個 commit 時只警告。完整 `pixi run gate` 不在 hook 內。
 - Claude Code hook(`.claude/settings.json`):

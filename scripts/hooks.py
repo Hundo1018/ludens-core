@@ -155,11 +155,40 @@ def precommit_plan(staged, added, dirs, decl_changed=False):
     return checks, regen
 
 
+STRUCTURE_DOC = "docs/STRUCTURE.md"
+
+
+def structure_edit_problem(staged_blob, main_blob):
+    """Message when a commit would give docs/STRUCTURE.md content main does not have.
+
+    The file flows one way: CI regenerates it on main, branches only pull it.
+    staged_blob is None when the commit does not touch the file; main_blob is
+    None when origin/main is not fetched (nothing to compare against).
+    """
+    if staged_blob is None or main_blob is None or staged_blob == main_blob:
+        return None
+    return (f"{STRUCTURE_DOC} differs from origin/main. CI owns this file; take main's version:\n"
+            f"    git checkout origin/main -- {STRUCTURE_DOC}")
+
+
+def _blob(rev_path):
+    p = subprocess.run(["git", "rev-parse", "-q", "--verify", rev_path], cwd=ROOT, capture_output=True, text=True)
+    return p.stdout.strip() or None
+
+
 def cmd_pre_commit():
     staged = git_lines("diff", "--cached", "--name-only", "--diff-filter=ACMR")
     added = git_lines("diff", "--cached", "--name-only", "--diff-filter=A")
     if not staged:
         return 0
+    if STRUCTURE_DOC in staged:
+        main_blob = _blob(f"origin/main:{STRUCTURE_DOC}")
+        if main_blob is None:
+            print(f"[hooks] warn origin/main not fetched: cannot check {STRUCTURE_DOC} (git fetch origin main)")
+        problem = structure_edit_problem(_blob(f":{STRUCTURE_DOC}"), main_blob)
+        if problem:
+            print(f"[hooks] FAIL {problem}")
+            return 1
     dirs = engine_dirs()
     diff = subprocess.run(["git", "diff", "--cached", "-U0", "--", "*.mojo"], cwd=ROOT, capture_output=True, text=True).stdout
     checks, _ = precommit_plan(staged, added, dirs, declaration_changed(diff, dirs))
@@ -360,6 +389,10 @@ def selftest():
     checks, regen = precommit_plan(["python/ludens/_capi.py"], [], dirs)
     assert checks == [] and not regen
 
+    assert structure_edit_problem(None, "a") is None, "a commit that does not touch the doc passes"
+    assert structure_edit_problem("a", "a") is None, "main's version (pulled or merged) passes"
+    assert structure_edit_problem("b", "a"), "any other content is refused"
+    assert structure_edit_problem("b", None) is None, "no origin/main to compare: not blocked"
     assert pre_edit_problem("BENCHMARK_REPORT.md") and pre_edit_problem("CHANGELOG.md")
     assert pre_edit_problem("docs/STRUCTURE.md") and pre_edit_problem("tests/golden/test_stdout.txt")
     assert pre_edit_problem("physics/solver6.mojo") is None and pre_edit_problem("docs/ROADMAP.md") is None
