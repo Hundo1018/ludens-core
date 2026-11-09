@@ -31,13 +31,18 @@
 # `skylake` runs on any AVX2 host (ROADMAP 17.81 cross-machine probe).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# x86-64 pins x86-64 (above). Other architectures (linux-aarch64, osx-arm64;
-# ROADMAP 17.76) compile for the host until each has a pinned target and its
-# own golden file (scripts/agent_gate.sh picks the file per platform).
+# x86-64 pins x86-64 (above). linux-aarch64 pins neoverse-n1 (ARMv8.2): the
+# GitHub arm runners are not all the same CPU model, and compiling for the
+# host gave one runner 560 where the golden says 558 (test_predicates) and a
+# different fft_ocean velocity. neoverse-n1 runs on N1 and N2 hosts alike.
+# osx-arm64 still compiles for the host. Each platform keeps its own golden
+# file (scripts/agent_gate.sh picks it per platform).
 if [ -n "${LUDENS_TARGET_CPU:-}" ]; then
     TARGET_CPU="$LUDENS_TARGET_CPU"
 elif [ "$(uname -m)" = "x86_64" ]; then
     TARGET_CPU=x86-64
+elif [ "$(uname -s)-$(uname -m)" = "Linux-aarch64" ]; then
+    TARGET_CPU=neoverse-n1
 else
     TARGET_CPU=""
 fi
