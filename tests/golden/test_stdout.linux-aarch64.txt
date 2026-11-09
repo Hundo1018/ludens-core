@@ -89,6 +89,8 @@ lattice: 50 / 50  ring: 12
 [PASS] embed_touching - 6 / 6 checks
 --- tests/test_fem_visco.mojo ---
 [PASS] fem_visco - 7 / 7 checks
+--- tests/test_fifth_wheel.mojo ---
+[PASS] fifth_wheel - 5 / 5 checks
 --- tests/test_fsm.mojo ---
 [PASS] fsm - 17 / 17 checks
 --- tests/test_ga_core.mojo ---
@@ -346,6 +348,10 @@ bone turned 90 deg about y: deviation from the turned rest shape 9.270978e-06
 [PASS] vdb_zip - 14 / 14 checks
 --- tests/test_vec.mojo ---
 [PASS] vec - 13 / 13 checks
+--- tests/test_vehicle_semitrailer.mojo ---
+[PASS] vehicle_semitrailer - 5 / 5 checks
+--- tests/test_vehicle_truck.mojo ---
+[PASS] vehicle_truck - 10 / 10 checks
 --- tests/test_workstealing.mojo ---
 [PASS] workstealing - 4 / 4 checks
 --- tests/test_abilities.mojo ---

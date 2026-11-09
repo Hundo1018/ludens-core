@@ -669,6 +669,8 @@ displacement grid vs exact sums: worst 8.2701445e-06 m
 [PASS] fft_ocean - 8 / 8 checks
 --- tests/test_fields.mojo ---
 [PASS] fields - 16 / 16 checks
+--- tests/test_fifth_wheel.mojo ---
+[PASS] fifth_wheel - 5 / 5 checks
 --- tests/test_filter_events.mojo ---
   gap — unfiltered 0.49889916  same-layer excluded 0.4  one-sided mask 0.4
   sensor: crate y at step 30 1.764792  free-fall reference 1.764792
@@ -2143,9 +2145,13 @@ hitch: trailer moved 3.9998922 m, worst anchor gap 0.00029503176
 seat after the car turned and moved: 0.23395228 0.9 5.441889
 wall on the left: exit ok True  at x 1.6
 [PASS] vehicle_seat - 5 / 5 checks
+--- tests/test_vehicle_semitrailer.mojo ---
+[PASS] vehicle_semitrailer - 5 / 5 checks
 --- tests/test_vehicle_slope.mojo ---
   3 s on 35 deg: dx at mu 0.45 -5.8746033  mu 0.75 5.2446976  mu 0.9 7.3349304
 [PASS] vehicle_slope - 3 / 3 checks
+--- tests/test_vehicle_truck.mojo ---
+[PASS] vehicle_truck - 10 / 10 checks
 --- tests/test_vehicle_wheel.mojo ---
 [PASS] vehicle_wheel - 133 / 133 checks
 --- tests/test_water.mojo ---
