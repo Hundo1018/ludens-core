@@ -89,6 +89,8 @@ lattice: 50 / 50  ring: 12
 [PASS] ecs_respawn - 6 / 6 checks
 --- tests/test_entity_undo.mojo ---
 [PASS] entity_undo - 9 / 9 checks
+--- tests/test_fem_visco.mojo ---
+[PASS] fem_visco - 7 / 7 checks
 --- tests/test_fsm.mojo ---
 [PASS] fsm - 17 / 17 checks
 --- tests/test_ga_core.mojo ---

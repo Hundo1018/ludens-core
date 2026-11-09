@@ -136,7 +136,9 @@ def precommit_plan(staged, added, dirs, decl_changed=False):
     """
     checks = []
     touches_mojo = any(f.endswith(".mojo") or f == "scripts/arch_layers.toml" or f == "scripts/build_engine.sh" for f in staged)
-    regen = decl_changed or "scripts/arch_layers.toml" in staged
+    # docs/STRUCTURE.md is no longer written by commits: CI regenerates it on main,
+    # so PR branches never edit it and merges do not conflict on it (see ci.yml).
+    regen = False
     docs = [f for f in staged if f.endswith(".md") or f in DOC_FILES]
     if touches_mojo:
         checks.append(("arch check (layers, cycles, reach-through)", arch("check")))
@@ -160,21 +162,11 @@ def cmd_pre_commit():
         return 0
     dirs = engine_dirs()
     diff = subprocess.run(["git", "diff", "--cached", "-U0", "--", "*.mojo"], cwd=ROOT, capture_output=True, text=True).stdout
-    checks, regen = precommit_plan(staged, added, dirs, declaration_changed(diff, dirs))
+    checks, _ = precommit_plan(staged, added, dirs, declaration_changed(diff, dirs))
     ok = True
     for label, argv in checks:
         ok = run(label, argv) and ok
-    if not ok:
-        return 1
-    if regen:
-        if not run("regenerate docs/STRUCTURE.md", script("gen_structure.py")):
-            return 1
-        # `git diff --quiet` is 1 for a modified tracked file; an untracked one needs ls-files
-        stale = subprocess.run(["git", "diff", "--quiet", "--", "docs/STRUCTURE.md"], cwd=ROOT).returncode != 0
-        if stale or "docs/STRUCTURE.md" not in git_lines("ls-files", "docs/STRUCTURE.md"):
-            subprocess.run(["git", "add", "docs/STRUCTURE.md"], cwd=ROOT, check=True)
-            print("[hooks] docs/STRUCTURE.md changed and was added to this commit")
-    return 0
+    return 0 if ok else 1
 
 
 # --------------------------------------------------------------------------- pre-push
@@ -211,7 +203,6 @@ def cmd_pre_push():
         ("floating-point flag policy", script("flag_policy.py")),
         ("benchmark template / files / report", script("perf.py", "governance")),
         ("benchmark report not older than any bench", script("bench_fresh.py")),
-        ("docs/STRUCTURE.md up to date", script("gen_structure.py", "--check")),
     ]
     ok = True
     for label, argv in checks:
@@ -348,8 +339,8 @@ def selftest():
     dirs = {"physics", "collision", "harness"}
     checks, regen = precommit_plan(["physics/solver6.mojo"], [], dirs)
     assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers"] and not regen
-    assert precommit_plan(["physics/solver6.mojo"], [], dirs, decl_changed=True)[1]
-    assert precommit_plan(["scripts/arch_layers.toml"], [], dirs)[1]
+    assert not precommit_plan(["physics/solver6.mojo"], [], dirs, decl_changed=True)[1], "commits never regenerate the doc"
+    assert not precommit_plan(["scripts/arch_layers.toml"], [], dirs)[1]
     body_only = "+++ b/physics/solver6.mojo\n@@ -1 +1 @@\n-    x = 1\n+    x = 2\n"
     new_def = "+++ b/physics/solver6.mojo\n@@ -1,0 +2 @@\n+def zz() -> Int:\n"
     assert not declaration_changed(body_only, dirs) and declaration_changed(new_def, dirs)
