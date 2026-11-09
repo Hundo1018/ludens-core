@@ -36,8 +36,6 @@ jobs:
         run: pixi run layers-sync
       - name: ROADMAP subsystem table matches the index (17.87)
         run: pixi run roadmap-status -- --check
-      - name: docs/STRUCTURE.md is current (17.87)
-        run: pixi run structure -- --check
       - name: floating-point flag policy (docs/ARCHITECTURE.md §6)
         run: pixi run flag-policy
       - name: benchmark template / files / report consistency
@@ -158,3 +156,41 @@ jobs:
           path: |
             build/*.log
             BENCHMARK_REPORT.md
+
+  # docs/STRUCTURE.md is owned by CI: each push to main regenerates it and
+  # commits the result back to main. PR branches never edit the file, so
+  # merges cannot conflict on it; pull main to see the current listing.
+  structure:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/pixi-install
+      - name: regenerate docs/STRUCTURE.md and commit it to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -q -B main origin/main
+            pixi run structure
+            if git diff --quiet -- docs/STRUCTURE.md; then
+              echo "docs/STRUCTURE.md is already current"
+              exit 0
+            fi
+            git add docs/STRUCTURE.md
+            git commit -q -m "docs: regenerate docs/STRUCTURE.md"
+            if git push origin HEAD:main; then
+              echo "pushed regenerated docs/STRUCTURE.md"
+              exit 0
+            fi
+            echo "push raced with another commit on main (attempt $attempt); retrying"
+          done
+          echo "could not push after 3 attempts" >&2
+          exit 1
