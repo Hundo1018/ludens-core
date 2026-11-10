@@ -46,7 +46,7 @@
 | 17.83 | 基準線檔、夜間牆鐘閘門 | env-blocked | 固定主機 |
 | 17.86 | Rope 扭轉;frame-reading 接觸 / 空氣;Greenhill B / C;`rod_from_strand` parity | deferred | 繩索 / 毛髮消費者 |
 | 13.9 | 批次多世界步進 | ⏸ | 平台決策(見 §3:wasm 方向可能解開) |
-| 17.12 | 場景 / prefab 格式 | 🔶 | 2026-11-02 排程;第一片完成(2026-11-06),檔案格式由 ludens-shell 定義 |
+| 17.12 | 場景 / prefab 格式 | 🔶 | 2026-11-02 排程;第一片完成(2026-11-06),檔案格式由 ludens-engine 定義 |
 | 17.43 | Undo / redo 交易層 | 🔶 | 2026-11-02 排程;第一片完成(2026-11-06):`EmbedWorld` 物體 |
 
 ## 2. GPU 層(第 7 層)規劃
@@ -150,7 +150,7 @@ B 段的論文出處(modal synthesis、FoleyAutomatic、氣泡聲)來自記憶,*
 
 ### 4.2 兩個綁定要怎麼改(草案,工具鏈部分待 4.1 實測)
 
-整體形態:第三個 repo(瀏覽器 app / 範本)把 ludens-engine、wgpu-mojo、miniaudio-mojo 三個 Mojo 套件編成**同一份 IR**,
+整體形態:第三個 repo(瀏覽器 app / 範本)把 ludens-core、wgpu-mojo、miniaudio-mojo 三個 Mojo 套件編成**同一份 IR**,
 走 17.89 的 retarget → wasm64 → 連結;JS 端只負責提供匯入(瀏覽器 WebGPU、AudioWorklet)與每幀呼叫匯出的 `frame()`。
 
 兩個 repo 共同的改動:

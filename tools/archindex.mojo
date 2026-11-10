@@ -1,4 +1,4 @@
-"""Architecture index + gate for ludens-engine (ROADMAP 17.0a; docs/ARCHITECTURE.md
+"""Architecture index + gate for ludens-core (ROADMAP 17.0a; docs/ARCHITECTURE.md
 S4-S5; spec: docs/design/archindex.md).
 
 Builds an index of every declaration (from `mojo doc`'s own JSON dump, so

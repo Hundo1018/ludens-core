@@ -1,5 +1,5 @@
 # tier: integration
-"""Joint loads reported to the host (ROADMAP 17.19 deferred clause "joint torque in events"; ludens-engine #92).
+"""Joint loads reported to the host (ROADMAP 17.19 deferred clause "joint torque in events"; ludens-core #92).
 
 - a mass of 2 kg hanging from a ball joint reads m g = 19.62 N after it settles; a weld holding the same mass with its centre
   1 m to the side of the anchor point reads m g in force and m g * 1 = 19.62 N m in torque;

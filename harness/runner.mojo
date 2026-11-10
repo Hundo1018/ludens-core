@@ -1,4 +1,4 @@
-"""A tiny test harness for ludens-engine.
+"""A tiny test harness for ludens-core.
 
 This nightly has no `mojo test` command and no `testing` stdlib module, so each
 test file is a normal program: build a `Suite`, run checks, then call `finish()`.

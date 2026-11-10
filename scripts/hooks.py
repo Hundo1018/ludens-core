@@ -1,4 +1,4 @@
-"""Git and Claude Code hooks for ludens-engine (ROADMAP 17.87).
+"""Git and Claude Code hooks for ludens-core (ROADMAP 17.87).
 
 One entry point for every hook, so the rules live in one tested file:
 

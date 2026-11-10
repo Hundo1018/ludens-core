@@ -1,8 +1,8 @@
-"""Scene read/write for an editor (ROADMAP 17.12, ludens-engine #82).
+"""Scene read/write for an editor (ROADMAP 17.12, ludens-core #82).
 
 A scene is the authored content of a world: settings plus its bodies. It is not the deterministic snapshot
 (`EmbedWorld.save`, which also holds warm-start caches, sleep timers and the tick) and it carries no file
-format. The file format is the host's: ludens-shell defines it (ludens-shell #9) and reads / writes the flat
+format. The file format is the host's: ludens-engine defines it (ludens-engine #9) and reads / writes the flat
 `SceneField` list below, so a new body property is one new path here and no format change.
 
   `export_scene(world)`            -> `SceneDoc`        what an editor shows

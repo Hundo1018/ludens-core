@@ -1,5 +1,5 @@
 # tier: integration
-"""Joints in the scene API (ROADMAP 17.12 slice 4; ludens-engine #82, #104).
+"""Joints in the scene API (ROADMAP 17.12 slice 4; ludens-core #82, #104).
 
 - a chain of ball, hinge, distance and weld joints: scene path == snapshot path == original at tick 0 and after
   300 ticks (the joints constrain the motion, so a joint lost in the round trip changes the hash);

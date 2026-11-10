@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Precompile every ludens-engine package into build/*.mojoc, in dependency order.
+# Precompile every ludens-core package into build/*.mojoc, in dependency order.
 # This nightly only resolves cross-file imports through precompiled .mojoc on the
 # -I path (source dirs are not searched), so packages must be built before tests.
 #

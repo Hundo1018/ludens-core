@@ -1,4 +1,4 @@
-"""Undo and redo for edits to a world's bodies (ROADMAP 17.43, ludens-engine #83).
+"""Undo and redo for edits to a world's bodies (ROADMAP 17.43, ludens-core #83).
 
 An editor groups its edits into transactions. For each body a transaction touches, the log keeps the body's scene
 record (`embed.scene_io.SceneBody`) from before the edit and from after it, so one mechanism covers a move, a velocity,

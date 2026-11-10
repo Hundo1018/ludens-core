@@ -1,5 +1,5 @@
 # tier: integration
-"""Scene read/write (ROADMAP 17.12, ludens-engine #82; the file format is ludens-shell #9).
+"""Scene read/write (ROADMAP 17.12, ludens-core #82; the file format is ludens-engine #9).
 
 - seam: a world rebuilt from its exported scene is bit-identical to the one rebuilt from its deterministic
   snapshot (`EmbedWorld.save` / `load`): same hash at tick 0 and after 300 ticks;

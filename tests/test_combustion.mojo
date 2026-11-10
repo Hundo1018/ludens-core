@@ -1,5 +1,5 @@
 # tier: unit
-"""Fire on a grid (ROADMAP 17.61 fire / combustion; ludens-engine #95).
+"""Fire on a grid (ROADMAP 17.61 fire / combustion; ludens-core #95).
 
 - one cell, no conduction: it burns to the adiabatic temperature T0 + heat_per_fuel * fuel (analytic), the heat it gained
   is exactly heat_per_fuel times the fuel it lost (the ledger), and a step of 2 dt burns what two steps of dt do;

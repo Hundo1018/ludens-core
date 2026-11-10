@@ -140,7 +140,7 @@ def build(out_dir, prebuilt=None):
     dist = "ludens-%s.dist-info" % version
     meta = (
         "Metadata-Version: 2.1\nName: ludens\nVersion: %s\n"
-        "Summary: Python bindings for ludens-engine (ctypes over the frozen C-ABI)\n"
+        "Summary: Python bindings for ludens-core (ctypes over the frozen C-ABI)\n"
         "Requires-Python: >=3.8\n"
         "License: MIT OR Apache-2.0\n" % version
     )

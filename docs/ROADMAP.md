@@ -86,7 +86,7 @@
 - 12.1 C-ABI 嵌入邊界宣告 **v0.x 凍結**;腳本層先做 **Python 綁定**(17.21),hot reload 之後再接。
   Python 綁定放在核心 repo 的最上層獨立套件,測試以客戶端方式安裝進乾淨環境(不用 `-I build`)。
 - **網路**:傳輸層與線路格式交給宿主;本庫提供 rollback 核心、預測策略 seam 與 byte payload API(17.16)。
-- **場景格式**由 ludens-shell 定義(2026-11-02 決定,ludens-shell #9);引擎提供 schema 讀寫、diff / apply 與和決定論快照的 parity(17.12,第一片完成)。
+- **場景格式**由 ludens-engine 定義(2026-11-02 決定,ludens-engine #9);引擎提供 schema 讀寫、diff / apply 與和決定論快照的 parity(17.12,第一片完成)。
 - **wasm 為跨平台交付形態(2026-11-01)**:方向 C 不變;除原生共享庫與 Python wheel 外,以 **wasm64** 模組作為跨平台通用產物
   (瀏覽器、Node / Deno、WASI、能載入 wasm 的宿主),匯出介面即 12.1 C-ABI。整套 C-ABI 已實測可編成 wasm64 並與原生無 FMA 建置
   逐位相同;浮點政策(wasm 自有 golden 或擴大決定論承諾)待決。見 17.89、`docs/design/17.89-wasm-platform.md`。
@@ -96,7 +96,7 @@
 
 - **不在本 repo**(架構分離,不是「不做」):渲染主體、音訊、輸入裝置、圖形化編輯器本體(視窗、gizmo、
   inspector / outliner 面板、節點圖 UI、資產瀏覽器、undo 歷史 UI、play-in-editor 外殼)。若要做,以獨立層 /
-  repo 建在本庫的 headless API 之上。2026-11-02 決定:編輯器放在 ludens-shell(`editor/` 與共用 `ui/`)。
+  repo 建在本庫的 headless API 之上。2026-11-02 決定:編輯器放在 ludens-engine(`editor/` 與共用 `ui/`)。
 - **使用者明令排除**:場景描述格式 MJCF / URDF、MJX、MJWarp(Phase 13,格式綁定先於技術);
   RL 與機器人專屬能力(2026-10-09 盤點時排除:Gym 式介面、物理參數域隨機化、感測器雜訊 / 延遲、
   LiDAR / 深度感測器、引擎內 NN 推論、抓取、運動規劃、狀態估計、ROS 2、FMI)。
@@ -115,7 +115,7 @@
 | 編輯器需要的能力 | 核心提供者 | 狀態 |
 |---|---|---|
 | Inspector:按名稱列出 / 讀寫任意型別的欄位 | 17.11 `TypeSchema` / `TypeRegistry` | ✅(非純資料型別未在編譯期擋) |
-| 場景 / prefab / 實例覆寫的**可編輯、可 diff 資產格式** | 17.12 | 🔶 引擎端第一片完成(方塊 / 球體物體、設定、列級 diff / apply、與快照 parity);關節 / 運動學 / 其他形狀為後續片;檔案格式本體由 ludens-shell 定義(#9) |
+| 場景 / prefab / 實例覆寫的**可編輯、可 diff 資產格式** | 17.12 | 🔶 引擎端第一片完成(方塊 / 球體物體、設定、列級 diff / apply、與快照 parity);關節 / 運動學 / 其他形狀為後續片;檔案格式本體由 ludens-engine 定義(#9) |
 | 視窗疊圖 / gizmo 的繪圖來源(接觸點、AABB、island 顏色) | 17.9 `DrawQueue` | ✅ |
 | 滑鼠點選物件(picking) | 17.13 raycast / shapecast | ✅ |
 | 跨存讀穩定的物件身分(選取、參照不因重載失效) | 17.0g `BodyId` · ECS entity id · 3.3 relationships(階層 / outliner) | ✅ |
@@ -862,7 +862,7 @@
 > - **配對枚舉**:O(n²) 改走既有 `BroadPhase`(以掃掠 AABB;不新增 broadphase 種類)。(例:1e4 個子彈體的 CCD 配對不再是 5e7 對)
 > - **與 island 平行 / colored 相容**(每 island 局部 frac),不再退回串行;軟體粒子(點)對 hull / mesh 的射線掃。
 > **W0 進度(2026-11-02,#72)**:根目錄 `wasm.toml`(`mojo_defines = LUDENS_SERIAL=True, ASSERT=none`)+ `pixi run wasm`(`scripts/wasm.sh`,以 [ludens-wasm-rt](https://github.com/Hundo1018/ludens-wasm-rt) 驅動,#1–#8 皆已結案;驅動的 pixi 環境提供 LLVM 23.1.4 / lld / node 24,引擎自己的 mojo 排在 PATH 前面)產出 `build/ludens64.wasm`(959 894 B,61 匯出,audit 通過)。`tools/wasm/poc/` 的 `retarget.py`、`shim.c`、`sanitize.py`、`run64*` 已刪,`FINDINGS.md` 與 `run_native*.py` 保留;`tools/wasm/world_hash.mjs` 是 node 端的參考場景。實測:12 體 240 tick 雜湊 `4624da7477e83eff`,wasm(node 24)== 原生 `--target-cpu x86-64`(無 FMA);1012 體 120 tick:數學函式編進模組(musl)`27240daf65efad83`、原生 glibc `8603cbbd2a58fce7`,兩者不同 —— 這正是 #75 浮點政策(c)要消除的差。每 tick:1012 體 wasm 6.73 ms、原生 4.86 ms。
-> **W5(新增,#76;[ludens-wasm-rt #8](https://github.com/Hundo1018/ludens-wasm-rt/issues/8))**:`wasm.toml` 的 `[native]` 段(`mojo_defines`、`static_libs`、`link_flags`)讓同一份進入點與清單以 `--target native` 產出原生參考建置,`pixi run wasm -- --native` 建 `tools/wasm/ref_entry.mojo`(C-ABI + 參考場景的 `main`),印出 12 體 240 tick `0x4624da7477e83eff` 與 1012 體 120 tick 兩個雜湊;`pixi run wasm` 建 wasm64。驗收的另一半(ludens-shell 以兩個 target 建出兩個產物並跑 parity 閘門)在 [ludens-shell #4](https://github.com/Hundo1018/ludens-shell/issues/4)。
+> **W5(新增,#76;[ludens-wasm-rt #8](https://github.com/Hundo1018/ludens-wasm-rt/issues/8))**:`wasm.toml` 的 `[native]` 段(`mojo_defines`、`static_libs`、`link_flags`)讓同一份進入點與清單以 `--target native` 產出原生參考建置,`pixi run wasm -- --native` 建 `tools/wasm/ref_entry.mojo`(C-ABI + 參考場景的 `main`),印出 12 體 240 tick `0x4624da7477e83eff` 與 1012 體 120 tick 兩個雜湊;`pixi run wasm` 建 wasm64。驗收的另一半(ludens-engine 以兩個 target 建出兩個產物並跑 parity 閘門)在 [ludens-engine #4](https://github.com/Hundo1018/ludens-engine/issues/4)。
 > **#75 浮點政策(c)落地(2026-11-02)**:參考建置釘 `--target-cpu x86-64`(無 FMA),`geometry/trig.mojo` 是 musl `sinf`/`cosf` 的移植(引擎自有 sin/cos,39 個檔改用),`pixi run trig-parity` 對 wasm 與原生逐位比對;skylake(FMA)降為速度變體,以容差表檢查。實測 **1012 體 120 tick 雜湊 原生 == node 24 == `27240daf65efad83`**(先前 wasm 與 glibc 原生差一個),12 體 240 tick `4624da7477e83eff` 亦同。無 FMA 後 5 個測試的閾值/記錄值移到無 FMA 地板(`loops` 直接解殘差 1.4e-5、`mpm_domain` KE 0.999989、`levelset_particles` 差一格、`sim_cache_pack` 197486 B),另抓到一個真問題:`rigid_air_part._solve6` 在 `c dt/m = 1e7` 時主元消成 0 → NaN,現以最大元素的 1e-7 為主元下限。golden 於 x86-64 重錄(239 段末位改變、新增 `test_trig`);`test_gpu_narrow` / `test_gpu_contact` 在本機 GPU 上於 HEAD 即失敗(與本變更無關),其 golden 段沿用原文。 量測(ref 場景 12×240 + 1012×120 tick 的整程序時間,各 3 次):x86-64 0.61–0.63 s、skylake 0.53–0.57 s,差約 11 %(`BENCHMARK_REPORT.md`「FMA off vs on」一節,另次量測 1.72 vs 1.45 ms/tick,約 19 %,視負載而異),超過 10 % 門檻,故仍以 x86-64 為參考並新增 `pixi run capi-fast`(skylake 的 `build/libludens-fast.so`)給原生嵌入者。wasmtime(`tools/wasm/world_hash_wasmtime.py`)與 node 24、原生三者的兩個雜湊相同。`fp-probe` 仍顯示 FMA 是唯一位元因子(skylake 與參考差 6.65e-3 / 1.07e-6 / 3.0e-7),但參考建置不含 FMA,故該因子只存在於速度變體。
 > **W2 進度(2026-11-02,#74)**:`pixi run wasm-gate`(`scripts/wasm_gate.sh`)建 wasm64 與原生參考庫,`tools/wasm/scenes.py` 以同一組 C-ABI 呼叫跑 7 個場景(raycast、ccd、saveload、nav、fracture、events、water),原生(ctypes)對 wasmtime 逐場景比雜湊,再加 12 / 1012 體世界原生對 node 24;11 個雜湊記在 `tests/golden/wasm_scenes.txt`,全部相同。非有限狀態的場景印 `nan` 並跳過比對。CI 新增 `wasm` 工作。軟體與回呼不經 C-ABI 匯出,改由 `tools/wasm/gate_entry.mojo` 在模組內跑(系統 + 接觸訂閱兩個回呼函式指標;軟體立方體落地 200 步),匯出 `gate_callback` / `gate_soft`,原生建置、wasmtime、node 24 三邊雜湊相同(`70de3b2b073254eb`、`bc731d3ec9104465`);`wasm.sh` 以 `LUDENS_WASM_ENTRY` / `LUDENS_WASM_EXPORT` 換入口。golden 共 11 列。
 > **W1 進度(2026-11-02,#73)**:`-D LUDENS_SERIAL=True`(`scheduler/build_opts.mojo`)讓 `dispatch_for` / `policy.Parallel` / `ws_parallel_for` 不進 `parallelize`,`embed/capi.mojo` 的執行緒檢查改常數;`pixi run wasm-probe -- --capi` 以 `-D ASSERT=none` 發出 IR 並稽核 `ld_*` 可達匯入:只剩配置器、`write`、`clock_gettime`,加上 std 自帶的 abort 報告(`dup fdopen fclose fflush`)與 `Error` 的 `GetStackTrace`(引擎碼無法移除;ludens-wasm-rt 的 runtime 定義了它們,連結後的 `ludens64.wasm` 只匯入 `host_write` 與 `host_now_ns`,宿主端 declare 稽核零未知符號)。同時修正 `wasm_probe.py` 不認帶引號的 Mojo 符號、先前低報匯入的缺陷(新增 selftest)。`fminf` / `fmaxf` 與 GPU 剔除待 ludens-wasm-rt #2。
@@ -3203,7 +3203,7 @@
 | 17.9 | [Debug-draw 指令佇列](ROADMAP_HISTORY.md#179-debug-draw-指令佇列--wave-a工具) | ✅ | A | `diag/draw.mojo` 的 `DrawQueue[dtype]` 是固定容量的 immediate-mode 指令佇列(line / sphere / box / arrow / text / contact-point,帶生命期、溢位 drop + 計數),由 test_diag_draw 與 bench_diag 表 (c) 覆蓋。 |
 | 17.10 | [Profiling / tracing hooks](ROADMAP_HISTORY.md#1710-profiling--tracing-hooks--wave-a工具) | ✅ | A | `diag/trace.mojo` 提供 begin/end 與 with-scoped span(`-D LUDENS_TRACE` 關閉時編譯為無)、計數器與 Chrome trace 匯出,並在 `ContactScene6` 每步標註 5 組階段 span。 |
 | 17.11 | [反射 / 型別註冊表](ROADMAP_HISTORY.md#1711-反射--型別註冊表--wave-b架構解鎖多項) | ✅ | B | `ecs/schema.mojo` 以 Mojo 1.1 `reflect[T]` 在編譯期產生 `TypeSchema`(含巢狀點號路徑)、按欄位名的版本容忍讀寫與 `TypeRegistry` 型別擦除存取,並有 parity 測試、bench_schema 與範例 23_reflection_inspector。 |
-| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | 🔶 | C | schema 化、可 diff 的場景讀寫(檔案格式由 ludens-shell 定義),與決定論快照分開並以 parity 連結;第一片(方塊 / 球體物體)完成,關節等為後續片。 |
+| 17.12 | [可編輯場景 / prefab / 實例化](#1712-可編輯場景--prefab--實例化) | 🔶 | C | schema 化、可 diff 的場景讀寫(檔案格式由 ludens-engine 定義),與決定論快照分開並以 parity 連結;第一片(方塊 / 球體物體)完成,關節等為後續片。 |
 | 17.32 | [執行期分級日誌設施](ROADMAP_HISTORY.md#1732-執行期分級日誌設施--wave-a工具錯誤政策的記錄層) | ✅ | A | `diag/log.mojo` + `diag/level.mojo` 提供分級加分類的 `LogRing` 環形緩衝,用 comptime `LUDENS_LOG_LEVEL` 閘門,溢位時丟最新一筆並計數,`bench_diag` 表 (a) 量到關閉的層級零成本;solver6 的 NaN 隔離會發 WARN 日誌。 |
 | 17.33 | [執行期斷言 / 不變量檢查層](ROADMAP_HISTORY.md#1733-執行期斷言--不變量檢查層--wave-a工具錯誤政策的立即終止層) | ✅ | A | `diag/invariant.mojo` 把引擎的 `debug_assert` 慣例寫成文件,另加熱路徑用的 `invariant_finite`(NaN / Inf 檢查);測試以 `-D ASSERT=all` 執行,由 `tests/test_diag_invariant.mojo` 驗證。 |
 | 17.34 | [每幀 / 暫存集區配置器(frame arena)](ROADMAP_HISTORY.md#1734-每幀--暫存集區配置器--wave-a) | ✅ | A | `diag/arena.mojo` 的 `FrameArena` 是在單一次配置上運作的 bump allocator,提供型別化的 `alloc[T]` 與 `reset()`,溢位時 raise 並計數;已有與 List 的 parity 測試,`bench_diag` 表 (b) 量到每筆約 1.9 ns,List-per-frame 慢 1.5–4 倍;seam 列在 CATEGORY §2.2。 |
@@ -3285,7 +3285,7 @@
 
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;第四片:關節;凸殼、網格為後續片)
 > **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
-> **決定(2026-11-02)**:編輯器放在 ludens-shell;場景檔案格式由 ludens-shell 定義(ludens-shell #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-shell #12)。
+> **決定(2026-11-02)**:編輯器放在 ludens-engine;場景檔案格式由 ludens-engine 定義(ludens-engine #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-engine #12)。
 > **現況**:`physics/serialize.mojo` = 全狀態 f32 bit-pattern 決定論快照(自註「非 asset reference」)。
 > **缺口**:schema 化、可 diff、版本化的場景格式、prefab / blueprint、nested scene 組合、實例覆寫(override)、entity template。
 > **對照組**:UE `.umap` + Blueprint、Unity prefab + YAML scene、Godot `.tscn` + PackedScene、glTF / USD 匯入。
@@ -3294,7 +3294,7 @@
 > **seam?**:是 —— 場景格式讀寫 vs 決定論快照 → parity(同場景兩路徑載入後逐位相同)。
 > **交付**:普通(存讀一個場景)/ 整合(prefab 實例 + 覆寫、warm-start cache 保留)/ 極端(空場景、循環 prefab 參照、缺資源、格式版本升級)。
 > **歷史**:原標「⚠️ gated」—— 檔案格式綁定是「先於技術的架構決策」(同 Phase 13 排除 MJCF/URDF、同 13.9),待平台整合方向確定;2026-10-09 方向拍板 C 後此 gating 解除,改為「跟宿主格式、本輪不排」。
-> **進度註(2026-11-06,第一片,ludens-engine #82)**:`embed/scene_io.mojo`(與 `EmbedWorld` 同包;編輯器與引擎編進同一個模組,以 Mojo 直接呼叫,不經 C-ABI):
+> **進度註(2026-11-06,第一片,ludens-core #82)**:`embed/scene_io.mojo`(與 `EmbedWorld` 同包;編輯器與引擎編進同一個模組,以 Mojo 直接呼叫,不經 C-ABI):
 > - `SceneDoc`(設定 + 方塊 / 球體物體,每個物體含 21 個物理屬性:摩擦、反彈、阻尼、重力縮放、速度上限、接觸模型、睡眠、CCD、軸鎖定,以引擎既有的設定函式套用,彙總旗標一併更新)、`export_scene`、`import_scene`;`scene_to_fields` / `scene_from_fields` 把文件轉成 (路徑, 規範文字) 列,供宿主的檔案格式讀寫;`scene_diff` / `scene_apply` 是 prefab 覆寫的列級差異與套用(`before` 與底稿不符則拒絕)。
 > - 不支援的內容明確拒絕並指名:關節、軟體、規則、運動學、其他形狀、自訂慣量張量、破碎物、水槽、每物體重力區、凍結物體、下一步待施的力。
 > - `tests/test_scene_io.mojo` 44 項。seam:場景路徑與快照路徑建出的世界,tick 0 與 300 tick 後雜湊逐位相同。1/3、2/7、1/9 與一般旋轉經 世界 → 列 → 世界 不失真。diff 只列出改動的 3 列與新增物體的 44 列,套用回去等於目標。壞文件(版本、尺寸、質量、非單位四元數、缺列、格式錯)被拒絕且不改世界。1000 物體往返逐位相同。使用者資料的 2^64 級數值保留(`Int` 解析在 2^63 失敗,改逐位解析)。屬性以引擎的設定函式建出的世界,往返後 tick 0 與 300 tick 後雜湊逐位相同(模擬跑 300 tick 才抓得到彙總旗標漏設);對照組:屬性確實改變模擬。變異測試:拿掉匯入時的旋轉寫入,5 項失敗;拿掉全部屬性套用或只拿掉阻尼的設定,各 2 項失敗;還原後 44/44。
@@ -3303,9 +3303,9 @@
 > **第三片(2026-11-06)**:表面材質表(17.50 的 `material_mu` / `material_hz` / `material_zeta`):`SceneDoc.materials`、`EmbedWorld.set_material_friction` / `set_material_softness`、列 `materials.count` 與 `material.K.{id,friction,hertz,zeta}`(表為空時不輸出,既有場景列數不變)。`tests/test_scene_materials.mojo` 17 項:場景路徑 == 快照路徑,tick 0 與 300 tick 後逐位相同;表在快照雜湊內;無表 / 有表的列數;列的往返恆等;改一個摩擦值 = 一列差異,套用後等於目標;重複 id、id 超出範圍、什麼都沒設、負阻尼被拒絕且不改世界。變異測試:匯入時不套用柔度,3 項失敗。注意:表只作用於網格 / 高度場三角形與 `surface_friction`,而嵌入邊界尚無法建立網格,所以目前只有查詢能看到它;undo 不涵蓋此表(世界層級,不屬於任何物體)。
 > **第四片(2026-11-06,#104 前半)**:球 / 距離 / 鉸鏈 / 焊接關節。`EmbedWorld.add_ball_joint` / `add_distance_joint` / `add_hinge_joint` / `add_weld_joint` / `remove_joint` / `joint_count`(嵌入邊界此前沒有任何關節入口);引擎 `ContactScene6.remove_joint`(關節槽位保留、種類改為 `JOINT_BROKEN`,索引不位移,被它參照的物體之後可以移除;`remove_body` 現在忽略已移除或已釋放的關節)與 `joint_is_plain`。`SceneDoc.joints`(以物體在場景中的位置命名兩端)與列 `joints.count`、`joint.K.*`(無關節時不輸出)。匯出以名稱拒絕:限位 / 馬達 / 彈簧 / 驅動 / 斷裂閾值,以及零角參考與建立時位置不符的關節(物體在建立關節後轉動過,例如模擬跑過之後的鉸鏈)。`tests/test_scene_joints.mojo` 23 項:場景路徑 == 快照路徑 == 原世界,tick 0 與 300 tick 後逐位相同(對照:同樣物體沒有關節,結果不同);列往返恆等;三種拒絕;`remove_joint` 與移除物體;壞文件不改世界。變異測試:匯入時不建關節,4 項失敗。**限制**:含鉸鏈的世界模擬過之後不能匯出(零角參考是建立時的姿態);編輯器的「試玩後還原」本來就回到快照,不受影響。後半見下一段。
 > **第五片(2026-11-06,#104 後半)**:undo 帶關節。`UndoLog.touch_joint(world, slot)` / `created_joint(world, slot)`,交易記錄關節槽位前後的狀態(`JointRec`;槽位不位移,所以槽位號就是身分,`JOINT_BROKEN` 表示「沒有關節」);`EmbedWorld.joint_record` / `restore_joint`(引擎 `ContactScene6.restore_joint`,累積衝量歸零)。套用順序:先讓變成無效的關節失效,再處理物體(復原時依原順序加回、重做時反向移除),最後讓變成有效的關節生效,因為物體有有效關節時不能移除、關節沒有物體不能恢復。`tests/test_undo_joints.mojo` 18 項:刪除帶兩個關節的中間物體,undo 後同一個句柄、三個關節、場景列相同,120 tick 後所有物體位置與未編輯的世界逐位相同;redo / 再次 undo;交易中新增的關節 undo 變無效、redo 回來、槽位不變;abort 放回被移除的關節;先移除物體(未移除關節)被引擎拒絕且可 abort;沒有改變的關節編輯不留步驟。變異測試:不恢復變成有效的關節,3 項失敗。連續拖曳合併(`merge_key`)不與關節記錄合併。
-> **遺留待辦**:凸殼 / 網格參照、ECS 實體的後續片;prefab 實例展開屬宿主格式(ludens-shell #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
+> **遺留待辦**:凸殼 / 網格參照、ECS 實體的後續片;prefab 實例展開屬宿主格式(ludens-engine #9),引擎已提供覆寫的列級 diff / apply;bench 列尚未進 `BENCHMARK_REPORT.md`(需整套 `pixi run benchmark`)。
 
-> **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-shell 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
+> **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-engine 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:`EmbedWorld` 的方塊 / 球體物體;ECS 實體、關節、運動學為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
@@ -3330,7 +3330,7 @@
 > - 極端:空交易、巢狀 abort、undo 超過深度上限、redo 被新變更截斷、復原已被其他交易刪除的實體參照、1e5 實體場景單欄位編輯的差分 vs 快照成本。
 > **邊界**:本條只做 headless 核心 API;undo 歷史的 UI 屬編輯器本體(不在本 repo)。
 > **決定**:2026-10-09 修訂(Wave C 暫停點,平台方向 = C 嵌入式模擬函式庫)列為不排。
-> **進度註(2026-11-06,第一片,ludens-engine #83)**:`embed/undo.mojo`、`embed/scene_io.mojo` 的單物體紀錄、`BodySet` 的槽位保留。
+> **進度註(2026-11-06,第一片,ludens-core #83)**:`embed/undo.mojo`、`embed/scene_io.mojo` 的單物體紀錄、`BodySet` 的槽位保留。
 > - 作法:交易記下每個被碰到的物體在編輯前後的場景紀錄(`SceneBody`),所以移動、速度、屬性、碰撞層、使用者資料、新增、刪除用同一套機制,不必為每種操作寫反向函式。`UndoLog`:`begin` / `touch` / `created` / `commit` / `abort` / `undo` / `redo`;巢狀只算最外層;同 `merge_key` 的連續交易合併(拖曳是一步,拖回起點則整步消失);新提交截斷 redo;超過 `max_steps` 丟最舊。
 > - **身分還原**:刪除後復原,物體回到同一個 `BodyId`(槽位與世代)。`BodySet` 新增一次性的槽位保留(`reserve_slot`)與每槽「用過的最高世代」(`gen_hwm`):復原時世代倒回舊值,但之後的刪除從高水位往上加,舊句柄不會對上日後的物體(沒有高水位時,測試的別名檢查失敗)。
 > - **旗標**:`any_props` / `any_contact_model` / `any_report` / `any_bullet` 會被序列化(旗標為真時快照多一段)。交易記下編輯前後的旗標,undo / redo 倒回,所以只含屬性編輯的腳本復原後快照雜湊與原始相同。
@@ -4049,13 +4049,13 @@
 > **待決**:「視訊」指影片媒體、畫面輸出或兩者;核心只出資料或另附參考合成器;宿主層是否另開 repo;瀏覽器優先或原生優先;編解碼器授權容忍度。
 > **核心側進度(2026-11-02,#77 第一段)**:ABI 0.6 追加 `ld_contact_event_ex`(104 B:法向衝量 / 力 / 接近速度 / 峰值 / 接觸點 / 法向 / 切向相對速度 / 材質 a、b / 持續接觸旗標)、`ld_world_get_events_ex`、`ld_body_set_material` / `get_material`(材質不存檔,載入後由宿主重設);`ContactEvent.tvel` 由求解器在事件步末只讀計算。`test_capi` 73/73(C 宿主驗欄位與 `abi_v0.txt` 僅追加)。**第二段**:`ld_world_add_fracture_box` / `ld_world_get_fragments` / `ld_world_get_fracture_events`(`FractureSet` 納入 `EmbedWorld`,焊接斷裂事件每次一筆;含破碎物的世界拒絕存讀檔,`LD_ERR_STATE`);`ld_world_frame_size` / `ld_world_export_frame`(自描述影格串流:姿態、速度、睡眠 / 靜態旗標、材質、user)。`test_capi` 86/86。**未做**:流體氣泡生成事件(`flip_diffuse` / FLIP 水尚無嵌入 API,需整套流體 C-ABI)、破碎物存讀檔。
 > **核心側進度(2026-11-02,#77 第二段)**:`ld_world_add_water`(2D FLIP 水槽,xy 平面,`FlipWater2` + `DiffuseParticles`)、`ld_world_bubble_event_count`、`ld_world_get_bubble_events`(`ld_bubble_event` 32 B:tick、x、y、u、v)—— 粒子在 `DiffuseParticles.update` 內由非氣泡轉為氣泡時記一筆(上限 65536 筆/步,超過丟最新並記入 `bubble_dropped`),不改任何既有輸出;含水槽的世界與含破碎物件的世界一樣拒絕存讀檔(`LD_ERR_STATE`)。`abi_v0.txt` 僅追加,`test_capi` C 宿主與 Python `World.add_water` / `bubble_events` 均有測。**驗收對照**:C 宿主收到新欄位 ✔、`abi_v0.txt` 只追加 ✔;「golden 其他段不變」被 #75 的 x86-64 重錄取代(整體末位改變,見 17.89)。
-> **下游追蹤(#77 驗收)**:綁定目標 —— wgpu-mojo [#15–#20](https://github.com/Hundo1018/wgpu-mojo/issues)、miniaudio-mojo [#4–#6](https://github.com/Hundo1018/miniaudio-mojo/issues);宿主側 —— ludens-shell [#1–#5](https://github.com/Hundo1018/ludens-shell/issues);工具鏈 —— ludens-wasm-rt [#1–#8](https://github.com/Hundo1018/ludens-wasm-rt/issues)。破碎物件 / 水槽世界的存讀檔仍拒絕,留待後續。
+> **下游追蹤(#77 驗收)**:綁定目標 —— wgpu-mojo [#15–#20](https://github.com/Hundo1018/wgpu-mojo/issues)、miniaudio-mojo [#4–#6](https://github.com/Hundo1018/miniaudio-mojo/issues);宿主側 —— ludens-engine [#1–#5](https://github.com/Hundo1018/ludens-engine/issues);工具鏈 —— ludens-wasm-rt [#1–#8](https://github.com/Hundo1018/ludens-wasm-rt/issues)。破碎物件 / 水槽世界的存讀檔仍拒絕,留待後續。
 
 ---
 
 #### 17.91 換模組世界移交(熱重載)
 
-> **狀態**:🔶 部分完成(2026-11-06 第一片:Mojo 端 API、測試、原生與 wasm64 跨建置實測、C-ABI 0.7;aarch64 與 Python 包裝未做)。消費者:ludens-shell #14(程式碼熱重載)。issue:ludens-engine #84。
+> **狀態**:🔶 部分完成(2026-11-06 第一片:Mojo 端 API、測試、原生與 wasm64 跨建置實測、C-ABI 0.7;aarch64 與 Python 包裝未做)。消費者:ludens-engine #14(程式碼熱重載)。issue:ludens-core #84。
 > **做法**:殼把世界從舊模組存出、建立新模組實例、載入。`EmbedWorld.save` / `load` 只還原模擬狀態(設定、系統、宿主材質 id 不在其中),所以 `embed/transfer.mojo` 在外面包一層移交 blob:魔數、`TRANSFER_VERSION`、純量寬度、設定雜湊(dt、重力、單位比例、max_steps 與影響結果的 `SolverConfig` 欄位;`parallel` / `workers` / `dispatch` / `parallel_collision` 為執行方式,不計入)、宿主材質表、已註冊名稱集合的雜湊、payload 校驗和,最後是 `save` 的內容。
 > **API**:`transfer_save(world, registered)`、`transfer_check(world, blob, registered) -> Int`(不改任何東西)、`transfer_load(mut world, blob, registered)`(失敗時世界不變,錯誤字串以 `transfer_load(-N)` 開頭)、`transfer_info(blob)`(只讀標頭)。狀態碼:`XFER_TRUNCATED -1`、`XFER_MAGIC -2`、`XFER_VERSION -3`、`XFER_SCALAR -4`、`XFER_SETTINGS -5`、`XFER_REGISTRATION -6`、`XFER_CORRUPT -7`。
 > **不在 blob 裡(新模組重建)**:已註冊系統與接觸訂閱(宿主以名稱重新註冊,`registered` 的集合不同即拒絕;順序無關)、設定(新實例以相同值建立,雜湊不同即拒絕)、擷取(`capture_*`)與 trace、待取事件清單、宿主指標 / 回呼(`user` 的 `UInt64` 在 blob 裡)、破碎物件與水(`save` 本身拒絕)。
@@ -4063,11 +4063,11 @@
 > - `tests/test_transfer.mojo` 29 項:60 tick 時移交到新實例,再跑 120 tick 的雜湊等於不中斷的世界;宿主材質與 user data 保留;版本、純量寬度、重力 / dt / 求解器欄位、註冊集合不符各自回具名狀態碼且目標世界不變(`workers` 不影響);payload 任一位元組翻轉都不被接受;blob 每個長度的前綴(0 到 size-1)都被拒絕;空世界載入到有物體的世界會取代它。變異測試:拿掉材質還原,1 項失敗;設定雜湊拿掉重力,1 項失敗;拿掉校驗和比對,2 項失敗;還原後 29/29。
 > - 跨建置:`pixi run python scripts/xfer_probe.py` 以 `experiments/xfer_probe.mojo` 建兩個程式(第二個以 `-D XFER_EXTRA=True` 多一個被呼叫的無關函式),A 跑 60 tick 存 blob 再跑 120 tick,B 載入後跑 120 tick:blob 15 084 bytes,兩邊雜湊 `7951823624565538389`;對照:B 只跑 119 tick 得到 `15404143680321627531`。
 > - 耗時(`experiments/exp_transfer_cost.mojo`,單次、4 核容器,方塊 + 每體一個材質與 user data):1e3 / 1e4 / 1e5 物體,`transfer_save` 1.5 / 13 / 183 ms,`transfer_check` 0.8 / 6.2 / 48 ms,`transfer_load`(含 check)4.1 / 35 / 375 ms,blob 228 KB / 2.3 MB / 22.8 MB;對照 `save` 0.8 / 5.9 / 91 ms、`load` 1.9 / 16 / 215 ms。移交約為單純存 / 讀的 2 倍,每次熱重載一次,可接受。
-> - wasm64(ludens-shell PR #26,`pixi run -e wasm xfer-parity`):模組 A 在 tick 60 存出,另外建置、多了無關程式碼的模組 B 載入後跑 120 tick,雜湊 `7951823624565538389`,與原生不中斷、原生換模組、wasm64 不中斷三者相同;blob 兩邊都是 15 084 bytes。
+> - wasm64(ludens-engine PR #26,`pixi run -e wasm xfer-parity`):模組 A 在 tick 60 存出,另外建置、多了無關程式碼的模組 B 載入後跑 120 tick,雜湊 `7951823624565538389`,與原生不中斷、原生換模組、wasm64 不中斷三者相同;blob 兩邊都是 15 084 bytes。
 > - C-ABI 0.7(2026-11-06):`ld_world_transfer_size` / `ld_world_transfer_save` / `ld_world_transfer_load`,已註冊名稱以 `\n` 分隔的字串傳入(NULL = 無),狀態碼 `LD_ERR_XFER_*`(-101 .. -107,對應 Mojo 端 `XFER_*`),追加進 `abi_v0.txt`;Rust / C# 綁定重新產生。`tests/test_capi.mojo` 101/101(新增 9 項,C 宿主:size == 寫入長度、緩衝少 1 byte → `LD_ERR_BUFFER`、名稱換順序 → OK、存、跑 60、載、跑 60 雜湊相同、少一個名稱 / 沒有名稱 → -106、截斷 → -101、版本改 99 → -103、魔數損壞 → -102)。注意:`test_capi` 要以 `--target-cpu x86-64` 執行(`run_tests.sh` 如此);不加時原生側會使用 FMA,與 C 宿主載入的共享庫相差約 1e-4,三項比對失敗,與本次變更無關(以舊版原始碼對照確認)。
 > Python 綁定(2026-11-06):`World.transfer_save(registered)` / `transfer_load(blob, registered)`,失敗丟 `TransferError`(`.code`、`.reason`);`client_check.py` 加 4 項(名稱換順序可載入並雜湊相同、缺名稱、截斷、名稱含換行),`test_python_binding` 14/14;`ludens` 套件的最低 ABI 升為 0.7。
 > **未做**:aarch64。
-> **相依 / 連結**:17.21「遺留待辦:Mojo 系統的 hot reload」(本條只做世界移交,系統由殼重新註冊)、6.10、ludens-shell #14。
+> **相依 / 連結**:17.21「遺留待辦:Mojo 系統的 hot reload」(本條只做世界移交,系統由殼重新註冊)、6.10、ludens-engine #14。
 
 ## 工程、測試、效能與工具鏈
 
@@ -4100,7 +4100,7 @@
 #### 17.81 CI / 授權 / 發行 — Wave A(工程,先於其他各項)
 > **狀態**:✅ 完成(2026-10-13:CI / 發行工作流、授權、衛生、跨機 golden 探針、首次 CI 實績、可重現性探針;選配的工具鏈升版金絲雀未做)。
 > **現況**:
-> - **沒有 CI**:`.github/` 目錄不存在(`ls .github` 失敗);`git ls-files` 中 `\.github|\.ya?ml$` 零命中。`origin` 是 GitHub(`git@github.com:Hundo1018/ludens-engine.git`),
+> - **沒有 CI**:`.github/` 目錄不存在(`ls .github` 失敗);`git ls-files` 中 `\.github|\.ya?ml$` 零命中。`origin` 是 GitHub(`git@github.com:Hundo1018/ludens-core.git`),
 >   且已有 PR 合併(`git log --merges` 見 `Merge pull request #10 / #11`),但沒有任何自動檢查掛在 PR 上。
 > - **沒有授權**:`git ls-files | grep -iE "licen|copying"` 零命中;`README.md`、`pixi.toml` 對 `licen` 零命中;`pixi.toml:1-7` 的 `[workspace]` 無 license 欄位。
 >   `git tag` 為 0 個(沒有任何版本標記);`pixi.toml:6` 版本固定 `0.1.0`。

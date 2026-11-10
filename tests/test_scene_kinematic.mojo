@@ -1,5 +1,5 @@
 # tier: integration
-"""Capsules and kinematic bodies in the scene API (ROADMAP 17.12 slice 2, 17.43; ludens-engine #82, #83).
+"""Capsules and kinematic bodies in the scene API (ROADMAP 17.12 slice 2, 17.43; ludens-core #82, #83).
 
 - a world with a capsule and a kinematic box that carries a velocity: scene path == snapshot path at tick 0 and after
   300 ticks (the kinematic box keeps moving, the capsule falls and rests);
