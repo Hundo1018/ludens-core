@@ -1,5 +1,5 @@
 # tier: integration
-"""Module-swap world transfer (ROADMAP 17.91, ludens-engine #84).
+"""Module-swap world transfer (ROADMAP 17.91, ludens-core #84).
 
 - hand-over: a world saved at tick 60 and loaded into a fresh instance continues bit for bit like the world that was
   never interrupted (same hash after N more ticks, same events), with a scene that has bodies of both shapes, host

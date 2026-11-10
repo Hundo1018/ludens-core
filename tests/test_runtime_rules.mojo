@@ -1,5 +1,5 @@
 # tier: system
-"""Rules owned by the Runtime (ROADMAP 17.70, ludens-engine #97).
+"""Rules owned by the Runtime (ROADMAP 17.70, ludens-core #97).
 
 `Runtime.enable_rules` / `add_actor`: the runtime steps its `rules` over its `actors` on every tick that runs the timers.
 

@@ -1,4 +1,4 @@
-/* ludens-engine embedding API (ROADMAP 12.1), ABI v0.7.
+/* ludens-core embedding API (ROADMAP 12.1), ABI v0.7.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):

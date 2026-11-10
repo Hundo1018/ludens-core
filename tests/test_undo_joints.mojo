@@ -1,5 +1,5 @@
 # tier: integration
-"""Undo and redo with joints (ROADMAP 17.43 / 17.12; ludens-engine #104, second half).
+"""Undo and redo with joints (ROADMAP 17.43 / 17.12; ludens-core #104, second half).
 
 - deleting a body that has joints (the joints removed first, then the body, in one transaction) and undoing it brings
   back the same body handle, the same joints in the same slots, and the scene rows equal the rows before; after 120

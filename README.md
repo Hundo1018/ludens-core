@@ -1,4 +1,4 @@
-# ludens-engine
+# ludens-core
 
 A **test-driven, seam-swappable game-engine core** written in Mojo,
 with a geometric-algebra spine: one `Multivector[p,q,r]` generator powers PGA

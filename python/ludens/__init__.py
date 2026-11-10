@@ -1,4 +1,4 @@
-"""ludens: Python bindings for ludens-engine (ROADMAP 17.21).
+"""ludens: Python bindings for ludens-core (ROADMAP 17.21).
 
 A ctypes layer over the frozen C-ABI (`embed/ludens.h`, ROADMAP 12.1); the
 shared library and the Mojo runtime libraries it needs ship inside the

@@ -1,5 +1,5 @@
 # tier: integration
-"""The surface material table in the scene API (ROADMAP 17.12 slice 3, 17.50; ludens-engine #82).
+"""The surface material table in the scene API (ROADMAP 17.12 slice 3, 17.50; ludens-core #82).
 
 - a world with a material table: scene path == snapshot path at tick 0 and after 300 ticks;
 - the table is part of the snapshot hash (a world without it hashes differently), so the comparison above sees it;

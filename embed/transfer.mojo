@@ -1,6 +1,6 @@
-"""Hand a world to a new module instance (ROADMAP 17.91, ludens-engine #84).
+"""Hand a world to a new module instance (ROADMAP 17.91, ludens-core #84).
 
-Code hot reload in the editor (ludens-shell #14) works by swapping the module: save the world from the old
+Code hot reload in the editor (ludens-engine #14) works by swapping the module: save the world from the old
 instance, build the new instance, load. `EmbedWorld.save` / `load` already round-trip the simulation, but a swap needs
 more than that, so this file wraps them in a transfer blob that checks, before anything is changed, that the new side
 can continue the run bit for bit and says which condition failed:

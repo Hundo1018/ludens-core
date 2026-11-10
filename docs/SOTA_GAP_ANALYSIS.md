@@ -1,4 +1,4 @@
-# SOTA 差距分析:ludens-engine × 前沿數學 / 前沿物理 / 前沿引擎 / SOTA 引擎
+# SOTA 差距分析:ludens-core × 前沿數學 / 前沿物理 / 前沿引擎 / SOTA 引擎
 
 > 2026-07-10。方法:內部全量盤點(~12,900 行 Mojo、44 測試檔、10 benchmark、docs/experiments 全讀)
 > + 三路外部研究(2023–2026 文獻與引擎官方文件,出處 URL 全附)。

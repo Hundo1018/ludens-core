@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-ludens-engine:以 Mojo 寫的遊戲引擎核心(ECS、碰撞、6-DOF 剛體、軟體、流體、可微模擬),
+ludens-core:以 Mojo 寫的遊戲引擎核心(ECS、碰撞、6-DOF 剛體、軟體、流體、可微模擬),
 以 `Multivector[p,q,r]` 幾何代數為數學基底。無渲染層,無腳本層。
 
 ## 工具鏈

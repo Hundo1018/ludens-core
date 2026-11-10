@@ -35,14 +35,14 @@ jobs:
         run: |
           set -euo pipefail
           v="${GITHUB_REF_NAME}"
-          d="dist/ludens-engine-$v"
+          d="dist/ludens-core-$v"
           mkdir -p "$d/mojoc" "$d/lib" "$d/include"
           cp build/*.mojoc "$d/mojoc/"
           cp build/libludens.so "$d/lib/"
           cp embed/ludens.h "$d/include/"
           cp LICENSE-MIT LICENSE-APACHE NOTICE README.md "$d/"
           grep -E '^(modular|mojo) ' pixi.toml > "$d/TOOLCHAIN"
-          tar -C dist -czf "dist/ludens-engine-$v-linux-64.tar.gz" "ludens-engine-$v"
+          tar -C dist -czf "dist/ludens-core-$v-linux-64.tar.gz" "ludens-core-$v"
           cp build/dist/*.whl dist/
           (cd dist && sha256sum *.tar.gz *.whl > SHA256SUMS)
           pixi run changelog -- --stdout > dist/CHANGELOG.md

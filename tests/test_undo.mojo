@@ -1,5 +1,5 @@
 # tier: integration
-"""Undo / redo for body edits (ROADMAP 17.43, ludens-engine #83).
+"""Undo / redo for body edits (ROADMAP 17.43, ludens-core #83).
 
 - contract: after every undo and every redo of a 10-step edit script the world's scene rows equal the rows recorded
   at that step, and the live handles are the same ones (a removed body comes back with its old BodyId);

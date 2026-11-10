@@ -1,4 +1,4 @@
-"""Experiment: what a module-swap world transfer costs (ROADMAP 17.91, ludens-engine #84).
+"""Experiment: what a module-swap world transfer costs (ROADMAP 17.91, ludens-core #84).
 
 Per body count N (boxes, never stepped, each with a host material id and user data): `transfer_save`, `transfer_check`
 (header, checksum, settings, registrations), `transfer_load`, the blob size, and for comparison the plain
