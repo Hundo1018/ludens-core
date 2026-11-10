@@ -46,7 +46,9 @@ runs:
         path: |
           .pixi
           ~/.cache/rattler/cache
-        key: pixi-env-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pixi.lock') }}
+        # github.workspace is in the key: a pixi environment records its own path and refuses to run from
+        # another one, and the workspace path contains the repository name (it changed with the rename).
+        key: pixi-env-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pixi.lock') }}-${{ github.workspace }}
     - shell: bash
       run: |
         set -euo pipefail
