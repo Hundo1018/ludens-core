@@ -2594,6 +2594,25 @@ hashes equal.
 
 @bench benchmarks/bench_python.mojo
 
+## Undo and redo (17.43)
+
+The seam: `UndoLog` keeps the record of each body an edit touched, before and after; `SnapshotUndo` keeps a
+whole-world snapshot before and after. `tests/test_undo.mojo` checks that both return the same world. The first table
+is one edit step (k bodies moved with one `teleport_many`) on a world of n boxes: time to commit the step, time to
+undo it, and the bytes the step keeps. The last column is snapshot time over record time (commit + undo): above 1
+the records are faster.
+
+What to read from it. Records cost is proportional to the bodies touched and independent of the world size for a
+small edit; snapshots cost the whole world every step whatever the edit. So for one body the records win by a factor
+that grows with the world, and for an edit that touches every body the snapshot wins: it writes each body once in a
+compact form, while a record is the full editable description of a body (256 bytes, twice). The crossover is between
+10 % and all of the bodies.
+
+The second table is `EntityUndo` (ECS entities) on each storage backend. It has one implementation, so no ratio:
+the point is that no column grows with the number of entities, and how the backends differ.
+
+@bench benchmarks/bench_undo.mojo
+
 ## Large worlds (17.8)
 
 What f32 loses far from the origin is resolution: at 1e5 m the spacing of

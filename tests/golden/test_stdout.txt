@@ -2162,6 +2162,8 @@ wall on the left: exit ok True  at x 1.6
 [PASS] vehicle_truck - 10 / 10 checks
 --- tests/test_vehicle_wheel.mojo ---
 [PASS] vehicle_wheel - 133 / 133 checks
+--- tests/test_wake_islands.mojo ---
+[PASS] wake_islands - 13 / 13 checks
 --- tests/test_water.mojo ---
   single wave Q=0: max |height - A cos(kx - wt)| 0.0   omega 1.7546399 (sqrt(g k) = 1.7546399 )
   steepness 0.8: inverse-map error 9.23872e-07   crest height 0.5
