@@ -120,7 +120,7 @@
 | 滑鼠點選物件(picking) | 17.13 raycast / shapecast | ✅ |
 | 跨存讀穩定的物件身分(選取、參照不因重載失效) | 17.0g `BodyId` · ECS entity id · 3.3 relationships(階層 / outliner) | ✅ |
 | 編輯即時反映(欄位變更推播給視圖) | 4.4 push-based observers | ✅ |
-| Undo / redo | 17.43(`EmbedWorld` 物體與關節:`embed/undo.mojo`;ECS 實體的刪除復原:`ecs/entity_undo.mojo`) | 🔶 物體(方塊 / 球體 / 膠囊 / 運動學)、關節的 `UndoLog` 與 `SnapshotUndo`,以及實體刪除的復原已完成;實體欄位變更的紀錄、地形編輯、凸殼 / 網格未做 |
+| Undo / redo | 17.43(`EmbedWorld` 物體與關節:`embed/undo.mojo`;ECS 實體的刪除、元件變更與交易:`ecs/entity_undo.mojo`) | 🔶 物體(方塊 / 球體 / 膠囊 / 運動學)、關節的 `UndoLog` 與 `SnapshotUndo`,以及實體刪除、元件變更 / 移除與交易的復原已完成;地形編輯、凸殼 / 網格、bench 列未做 |
 | Play-in-editor:進入播放、停止後還原 | 6.10 快照 / 17.40 存檔 | ✅ |
 | 時間軸拖動 / 回看模擬 | 17.39 `seek` / `first_divergence` | ✅ |
 | Profiler 面板 | 17.10 trace(Chrome trace 匯出)· 17.80(執行期追蹤開關、物理擷取檔與回看) | ✅(runtime 開關與擷取檔 → 17.80 ⬜) |
@@ -3211,7 +3211,7 @@
 | 17.38 | [遊戲事件匯流排 / 訊息系統](ROADMAP_HISTORY.md#1738-遊戲事件匯流排--訊息系統--wave-a) | ✅ | A | `scheduler/events.mojo` 提供 `EventChannel` seam:`Channel[E]`(pull,正式路徑)對照 `PushChannel[E]`(fan-out),投遞依呼叫序決定、雙緩衝、每個讀者有自己的游標,未讀而丟棄的事件計入 `diag.counters`;測試有 `test_events` / `test_events_gameloop` / `test_events_contacts`,bench 為 `bench_events`。 |
 | 17.39 | [輸入錄製 / 決定論回放(QA・ghost,非網路)](ROADMAP_HISTORY.md#1739-輸入錄製--決定論回放qaghost非網路--wave-b) | ✅ | B | `gameplay/replay.mojo` 提供 `SimState` / `Recorder`(錄製輸入、定期存快照、每 tick 存 FNV-1a 狀態雜湊)以及 `replay_from_start` / `seek` / `first_divergence` / `ghost`;`test_replay` 8/8 驗證 seek 與全程重跑逐位相同;`bench_replay` 在快照間隔 10 時尋位只要 0.10 ms,全程重跑則是 32.6 ms。 |
 | 17.40 | [存檔系統(相對於決定論快照)](ROADMAP_HISTORY.md#1740-存檔系統相對於決定論快照--wave-b) | ✅ | B | `gameplay/save.mojo` 建在 17.11 schema 上,提供 `SaveWriter` / `SaveReader`:具名區段,按欄位名載入,處理新增、刪除、改型的欄位並以 `ReadReport` 回報;`save_bodies` / `load_bodies` 只存動態體的姿態與速度;`test_save` 11/11 驗證存檔涵蓋的欄位與 6.10 快照逐位相同;`bench_save` 的存檔大小為 74 KB,快照為 932 KB。 |
-| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | 🔶 | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;物體、關節的交易層與實體刪除的復原已完成(`embed/undo.mojo`、`ecs/entity_undo.mojo`),實體欄位變更紀錄、地形編輯與 bench 列未做。 |
+| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | 🔶 | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;物體、關節的交易層與實體的刪除、元件變更、交易復原已完成(`embed/undo.mojo`、`ecs/entity_undo.mojo`),地形編輯、凸殼 / 網格與 bench 列未做。 |
 | 17.77 | [ECS 表達力](#1777-ecs-表達力--wave-b) | ✅ | B | N 元查詢與迭代、過濾器、變更偵測、單例 / 資源、有狀態系統與使用者系統註冊、延遲結構變更補齊 |
 | 17.79 | [資源治理](#1779-資源治理--wave-b) | ✅ | B | 記憶體記帳、容量上限與滿載政策、預留與穩態零配置、收縮、執行緒 / GPU 資源政策、資源上限觸發的退讓 |
 | 17.80 | [觀測](#1780-觀測--wave-b工具執行期追蹤開關物理擷取檔與回看) | ✅ | B | (a)runtime 追蹤開關、(b)緩衝政策、(c)多執行緒與 GPU 軌、(d)counter 軌、(e)物理擷取檔、(f)回看 |
@@ -3308,7 +3308,7 @@
 > **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-engine 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
 #### 17.43 Undo / redo 交易層(編輯器前置)
 
-> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 完成:`EmbedWorld` 的物體(含膠囊、運動學)與關節、ECS 實體刪除的復原;實體欄位變更紀錄、地形編輯、凸殼 / 網格為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
+> **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 完成:`EmbedWorld` 的物體(含膠囊、運動學)與關節、ECS 實體刪除的復原;2026-11-12 完成:實體元件變更 / 移除與交易的復原;地形編輯、凸殼 / 網格為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
 > **緣起**:2026-09-30 編輯器邊界分類找出的缺口 —— 外部編輯器依賴的 15 項核心能力中,除 17.12(gated)外唯一未編號者。編輯器邊界分類表把 Undo / redo 標為 🔶「零件在,交易 / 反向操作層未做」,並指出真正擋住外部編輯器的是 17.12 場景 / prefab 格式與 17.43 undo 交易層。
 > **現況**:零件已在但未組合:
 > - `ecs/commands.mojo` `CommandBuffer`(4.4)只記**正向**結構變更(實際只有 despawn / relate / unrelate,`ecs/commands.mojo:43-49`;延遲 add 在 `SetBuffer.set`,延遲 remove 不存在 —— 2026-10-10 校正),`apply` 後不留反向資訊。
@@ -3337,10 +3337,11 @@
 > - `SnapshotUndo`:同契約的另一個實作,每步兩份 `save()`;不還原宿主材質 id(`save` 不含)。
 > - `tests/test_undo.mojo` 52 項。10 步腳本(移動、速度、碰撞層、使用者資料、摩擦、新增、刪除、阻尼、接觸回報、CCD)每個 undo / redo 後,`UndoLog` 與 `SnapshotUndo` 的場景列都等於當時記錄的列,存活句柄相同;不含新增 / 刪除的腳本全部復原後,快照雜湊等於原始,再跑 300 tick 與未編輯的世界逐位相同;槽位被別的物體佔用後依序復原仍回到原句柄。變異測試:拿掉 undo 的旗標還原,2 項失敗;拿掉世代高水位,2 項失敗。
 > - 量測(一般執行,方塊,單一物體移動,單次):`UndoLog` 提交 / 復原 1e3:41 / 20 µs,1e4:44 / 138 µs,1e5:275 µs / 1.05 ms,每步 512 bytes;`SnapshotUndo` 提交 / 復原 1e3:0.67 / 1.0 ms,1e4:6.4 / 9.8 ms,1e5:142 / 113 ms,每步 0.36 / 3.6 / 36 MB。1e5 時復原的 1 ms 大部分是為了重算「有人回報 / CCD」旗標而掃描全部物體。
-> **遺留待辦**(2026-11-10 對照 main 更新;關節見 `tests/test_undo_joints.mojo`,膠囊與運動學見 `tests/test_scene_kinematic.mojo`,實體刪除見下方兩則進度註):ECS 實體**欄位變更**的紀錄(17.11 schema 欄位差分,與 observers 推播相容)、實體交易與 `UndoLog` 的合併;凸殼 / 網格形狀與地形編輯的反向操作;整批變更(全場景變形)時快照較省的情形尚未量;bench 列未進 `BENCHMARK_REPORT.md`。
+> **遺留待辦**(2026-11-10 對照 main 更新;關節見 `tests/test_undo_joints.mojo`,膠囊與運動學見 `tests/test_scene_kinematic.mojo`,實體刪除見下方兩則進度註):實體交易與 `embed/undo.mojo` `UndoLog` 合成同一個堆疊(目前是兩個各自的堆疊,由宿主記順序);以 17.11 schema 記單一欄位的位元組差分(目前記整個元件的型別化值);凸殼 / 網格形狀與地形編輯的反向操作;整批變更(全場景變形)時快照較省的情形尚未量;bench 列未進 `BENCHMARK_REPORT.md`。
 
 > **進度註(2026-11-06,實體復原的前置:`respawn`,#83)**:`StorageBackend.respawn(e) -> Bool` 與 `World.respawn`:把剛被 `despawn` 的實體以相同 id 與世代帶回(復原刪除時,編輯器持有的選取、階層父子、關係參照才仍然有效)。條件:該 id 還在空閒清單上、世代正好是 `e.gen + 1`(沒被後來的 spawn 重用);否則回 False 且世界不變。只還原身分,不還原元件。六個後端(sparse、archetype、bitset、reactive、naive、chunked)各自實作,`tests/test_ecs_respawn.mojo`(component,6/6):六個後端對同一情境的 20 項觀察逐項相同且等於預期值;涵蓋復原後同 id 同世代、實體數、元件已清空、查詢只見一次、對存活實體 / 已被重用的 id / 憑空的 id / 負 id / 錯誤世代的拒絕、重用者資料不變、兩輪 despawn → respawn。變異:拿掉世代檢查,chunked 與參考不一致,測試失敗。**未做**:註冊表驅動的「實體全部元件」擷取與還原、`EcsUndoLog`(touch / created / deleted 記錄、巢狀、合併、深度上限)、階層與關係在刪除父節點再復原後的整合驗收。#83 仍開著。
 > **進度註(2026-11-06,實體刪除的復原,#83)**:`ecs/entity_undo.mojo` 的 `EntityUndo[B, *Cs]`:`delete` 把實體的元件複製進同後端同元件組的墓地世界後從主世界 despawn;`undo` 以 `World.respawn` 帶回相同 id 與世代並把元件複製回來;`redo` 再刪;新的 `delete` 截斷 redo。元件以型別值複製,不經位元組,所以不需要 schema。`tests/test_entity_undo.mojo`(component,6/6):根、帶 `Link(root)` 的子、旁觀者;先刪子再刪根,undo 兩次依序帶回根、子,id / 世代 / 元件相同,子的 Link 指向存活的根,實體數回到 3;redo 兩次再移除;新刪除使 redo 失效;刪除後 id 被新 spawn 佔用時 undo 回 False、新實體不變、步驟留在堆疊;對已死實體 delete 會 raise;六個後端 20 項觀察逐項相同。第一版測試有兩個預期值是我算錯的(第 13 項的對象、堆疊深度 3 應為 2),依推演修正,沒有照輸出調整。**深度上限**:`EntityUndo(max_steps)`(預設 1000),超過時丟棄最舊的步驟並釋放它在墓地中的實體;測試:上限 2、刪四個,保留兩步、墓地剩兩個實體、第三次 undo 回 False,sparse set / archetype / chunked 一致(變異:拿掉上限,測試失敗)。**未做**:欄位修改(set / remove 元件)的前後值記錄、交易的巢狀 / 合併、與 `embed.undo.UndoLog` 合為同一個歷史、階層(`ecs/hierarchy`)與關係(`ecs/relations`)資源中的子節點清單在刪除父節點再復原後的整合驗收。#83 仍開著。
+> **進度註(2026-11-12,元件變更與交易,#83)**:`EntityUndo` 加上 `change(w, e, value, merge)`、`remove[C](w, e)`、`begin` / `commit`。變更記在同一個墓地世界:一筆變更有「之前」與「之後」兩個墓地實體,各持有該元件的型別化值或沒有(= 實體當時沒有這個元件),所以新增元件的復原是移除、移除的復原是放回原值。`merge` 讓堆疊頂端同一實體同一元件的變更吸收新值(拖曳是一步,復原回到拖曳前)。交易以編號把多筆紀錄綁成一步,巢狀只在最外層 `commit` 收尾,空交易不留步;交易開著時 `undo` / `redo` 拒絕。整步無法復原時(交易內被刪實體的 id 已被重用)先把這次已復原的部分重做回去再回 False,世界不變。深度上限以交易計,丟掉最舊一步時釋放它的墓地實體;新編輯截斷 redo 時也釋放。復原與重做走 `World.set` / `World.remove`,變更追蹤(`changed[C]`)看得到。`tests/test_entity_change_undo.mojo` 15 項,六個後端結果相同(以 sparse set 為參考,另與手寫期望值比對);變異檢查:讓 `merge` 失效、讓復原不移除元件,各使 1 項失敗。既有 `tests/test_entity_undo.mojo` 9 項不變。
 #### 17.77 ECS 表達力 — Wave B
 
 > **狀態**:✅ 完成(2026-10-14:過濾器 with / without / any(六後端原生)、N 元查詢、`for_each3`、pull 變更偵測、資源、延遲 remove / despawn / spawn、
