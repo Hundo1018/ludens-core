@@ -397,7 +397,7 @@ counted, not listed.
 - `def vlanes(d: Int) -> Int`
 - aliases: `PadW`, `Real`, `Vec2`, `Vec3`, `WorldType`
 
-## ecs (layer 2) — 22 modules, 80 public declarations
+## ecs (layer 2) — 22 modules, 82 public declarations
 
 ### `ecs/archetype.mojo`
 - struct `ArchView2` — 7 methods
@@ -427,8 +427,8 @@ counted, not listed.
 
 ### `ecs/entity_undo.mojo`
 - struct `DelStep` — 0 methods
-- struct `EntityUndo` — 3 methods
-- aliases: `N`
+- struct `EntityUndo` — 8 methods
+- aliases: `N`, `STEP_CHANGE`, `STEP_DELETE`
 
 ### `ecs/hierarchy.mojo`
 - struct `Hierarchy` — 2 methods
