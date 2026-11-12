@@ -1141,7 +1141,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 92 modules, 508 public declarations
+## physics (layer 4) — 92 modules, 509 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1457,6 +1457,7 @@ counted, not listed.
 - `def update_sleep[B: Body6](mut bset: BodySet[B], dt: Float32, cfg: SolverConfig)`
 - `def wake_if_kinematic_moving[B: Body6](mut bset: BodySet[B], ka: Int, kb: Int)`
 - `def wake_island[B: Body6](mut bset: BodySet[B], i: Int)`
+- `def wake_islands[B: Body6](mut bset: BodySet[B], idx: List[Int])`
 
 ### `physics/joint_ext.mojo`
 - struct `JointExt` — 3 methods
@@ -2078,7 +2079,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 155 public declarations
+## embed (layer 6) — 6 modules, 156 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2165,13 +2166,14 @@ counted, not listed.
 - `def export_body(world: EmbedWorld, i: Int) -> SceneBody`
 - `def export_scene(world: EmbedWorld) -> SceneDoc`
 - `def import_scene(mut world: EmbedWorld, doc: SceneDoc)`
+- `def refresh_flags(mut world: EmbedWorld)`
 - `def restore_body(mut world: EmbedWorld, h: Int64, s: SceneBody)`
 - `def same_shape(a: SceneBody, b: SceneBody) -> Bool`
 - `def scene_apply(base: List[SceneField], changes: List[SceneChange]) -> List[SceneField]`
 - `def scene_diff(a: List[SceneField], b: List[SceneField]) -> List[SceneChange]`
 - `def scene_from_fields(fields: List[SceneField]) -> SceneDoc`
 - `def scene_to_fields(doc: SceneDoc) -> List[SceneField]`
-- `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody)`
+- `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody, refresh: Bool = True, wake: Bool = True)`
 - aliases: `BODY_BOX`, `BODY_CAPSULE`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
 
 ### `embed/transfer.mojo`
@@ -2189,7 +2191,7 @@ counted, not listed.
 - struct `JointRec` — 0 methods
 - struct `SnapshotUndo` — 7 methods
 - struct `SolverFlags` — 0 methods
-- struct `Transaction` — 2 methods
+- struct `Transaction` — 3 methods
 - struct `UndoLog` — 14 methods
 - `def read_flags(world: EmbedWorld) -> SolverFlags`
 - `def write_flags(mut world: EmbedWorld, f: SolverFlags)`
