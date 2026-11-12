@@ -130,6 +130,26 @@ def wake_island[B: Body6](mut bset: BodySet[B], i: Int):
             bset.sleep_timer[j] = 0
 
 
+def wake_islands[B: Body6](mut bset: BodySet[B], idx: List[Int]):
+    """`wake_island` for every body in `idx`, in one pass over the bodies instead of one pass per body (a batch of k
+    writes on n bodies is n + k, not k x n). The result is the same as calling `wake_island` for each in turn: island
+    labels do not change while bodies are woken."""
+    var labels = Dict[Int, Bool]()
+    for k in range(len(idx)):
+        var i = idx[k]
+        if not bset.is_dynamic(i):
+            continue
+        bset.sleeping[i] = False
+        bset.sleep_timer[i] = 0
+        labels[Int(bset.island[i])] = True
+    if len(labels) == 0:
+        return
+    for j in range(len(bset.bodies)):
+        if bset.sleeping[j] and Int(bset.island[j]) in labels:
+            bset.sleeping[j] = False
+            bset.sleep_timer[j] = 0
+
+
 def update_sleep[B: Body6](mut bset: BodySet[B], dt: Real, cfg: SolverConfig):
     """Advance per-body still-timers; a whole island sleeps together.
     Kinematic bodies never enter this (ROADMAP 17.24: they never sleep,

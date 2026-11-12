@@ -26,8 +26,9 @@ the solver's to rebuild. `SnapshotUndo` is the other implementation of the same 
 (`EmbedWorld.save`) per step. It restores everything `save` holds, costs memory in proportion to the world, and does
 not restore host material ids (`save` does not hold them).
 """
-from embed.scene_io import SceneBody, body_equal, body_record, restore_body, same_shape, write_body_record
-from embed.world import EmbedWorld
+from embed.scene_io import SceneBody, body_equal, body_record, refresh_flags, restore_body, same_shape, write_body_record
+from embed.world import EmbedWorld, unpack_body
+from physics.islands import wake_islands
 from physics.joints6 import JOINT_BROKEN, Joint6
 
 
@@ -84,6 +85,7 @@ struct Transaction(Copyable, Movable):
     var merge_key: Int
     var recs: List[BodyRec]
     var jrecs: List[JointRec]
+    var slot_of: Dict[Int64, Int]  # handle -> index in recs, while the transaction is open (a step of k bodies is k lookups)
     var flags_known: Bool
     var flags_before: SolverFlags
     var flags_after: SolverFlags
@@ -93,15 +95,22 @@ struct Transaction(Copyable, Movable):
         self.merge_key = merge_key
         self.recs = List[BodyRec]()
         self.jrecs = List[JointRec]()
+        self.slot_of = Dict[Int64, Int]()
         self.flags_known = False
         self.flags_before = SolverFlags(False, False, False, False)
         self.flags_after = SolverFlags(False, False, False, False)
 
     def find(self, h: Int64) -> Int:
-        for i in range(len(self.recs)):
+        if len(self.slot_of) == len(self.recs):
+            return self.slot_of.get(h, -1)
+        for i in range(len(self.recs)):  # a transaction that was not built through `add`
             if self.recs[i].handle == h:
                 return i
         return -1
+
+    def add(mut self, var rec: BodyRec):
+        self.slot_of[rec.handle] = len(self.recs)
+        self.recs.append(rec^)
 
     def find_joint(self, slot: Int) -> Int:
         for i in range(len(self.jrecs)):
@@ -110,15 +119,17 @@ struct Transaction(Copyable, Movable):
         return -1
 
 
-def _apply(mut world: EmbedWorld, rec: BodyRec, to_before: Bool) raises:
-    """Put one body back to its record from before (`to_before`) or from after the transaction."""
+def _apply(mut world: EmbedWorld, rec: BodyRec, to_before: Bool) raises -> Int:
+    """Put one body back to its record from before (`to_before`) or from after the transaction. Returns the slot of a
+    body that was written in place (its island still has to be woken, see `_apply_step`), else -1."""
     var exists = rec.existed_before if to_before else rec.existed_after
     var target = rec.before.copy() if to_before else rec.after.copy()
     var h = rec.handle
     if exists:
         if world.is_alive(h):
             if same_shape(body_record(world, h), target):
-                write_body_record(world, h, target)
+                write_body_record(world, h, target, False, False)  # flags and waking: once per step, in _apply_step
+                return unpack_body(h).index()
             else:
                 world.remove(h)
                 restore_body(world, h, target)
@@ -126,6 +137,7 @@ def _apply(mut world: EmbedWorld, rec: BodyRec, to_before: Bool) raises:
             restore_body(world, h, target)
     elif world.is_alive(h):
         world.remove(h)
+    return -1
 
 
 def _apply_step(mut world: EmbedWorld, t: Transaction, to_before: Bool) raises:
@@ -137,12 +149,21 @@ def _apply_step(mut world: EmbedWorld, t: Transaction, to_before: Bool) raises:
         var target = t.jrecs[k].before if to_before else t.jrecs[k].after
         if target.kind == JOINT_BROKEN:
             world.restore_joint(t.jrecs[k].slot, target)
+    var written = List[Int]()  # slots written in place
     if to_before:
         for k in range(len(t.recs) - 1, -1, -1):
-            _apply(world, t.recs[k], True)
+            var slot = _apply(world, t.recs[k], True)
+            if slot >= 0:
+                written.append(slot)
     else:
         for k in range(len(t.recs)):
-            _apply(world, t.recs[k], False)
+            var slot = _apply(world, t.recs[k], False)
+            if slot >= 0:
+                written.append(slot)
+    # once for the step, not once per body: each walks every body, which made a step of k bodies cost k x (all bodies)
+    if len(written) > 0:
+        refresh_flags(world)
+        wake_islands(world.scene.bset, written)
     for k in range(len(t.jrecs)):
         var target = t.jrecs[k].before if to_before else t.jrecs[k].after
         if target.kind != JOINT_BROKEN:
@@ -196,7 +217,7 @@ struct UndoLog(Movable):
         if self.cur.find(h) >= 0:
             return
         self._capture_flags(world)
-        self.cur.recs.append(BodyRec(h, True, True, body_record(world, h), SceneBody.empty()))
+        self.cur.add(BodyRec(h, True, True, body_record(world, h), SceneBody.empty()))
 
     def created(mut self, world: EmbedWorld, h: Int64) raises:
         """Call right after adding body `h` inside the transaction."""
@@ -207,7 +228,7 @@ struct UndoLog(Movable):
         if self.cur.find(h) >= 0:
             raise Error("UndoLog.created: the body is already in this transaction")
         self._capture_flags(world)
-        self.cur.recs.append(BodyRec(h, False, True, SceneBody.empty(), SceneBody.empty()))
+        self.cur.add(BodyRec(h, False, True, SceneBody.empty(), SceneBody.empty()))
 
     def touch_joint(mut self, world: EmbedWorld, slot: Int) raises:
         """Call before changing or removing joint `slot`: keeps its state. Touching it twice is harmless."""

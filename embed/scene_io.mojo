@@ -774,7 +774,7 @@ def _check_record(s: SceneBody) raises:
     _validate(doc)
 
 
-def _refresh_flags(mut world: EmbedWorld):
+def refresh_flags(mut world: EmbedWorld):
     """`any_report` and `any_bullet` mean "some live body is flagged"; recompute them so removing the last flagged
     body (or writing its flag off) switches the solver's special case off again, as the setters do."""
     var any_report = False
@@ -790,9 +790,9 @@ def _refresh_flags(mut world: EmbedWorld):
     world.scene.bset.any_bullet = any_bullet
 
 
-def _write_props(mut world: EmbedWorld, slot: Int, p: BodyProps):
+def _write_props(mut world: EmbedWorld, slot: Int, p: BodyProps, refresh: Bool = True):
     """Write every property of slot `slot`, defaults included (the setters cannot set "unset" again). The flags the
-    solver gates on only go up here, except the two `_refresh_flags` recomputes."""
+    solver gates on only go up here, except the two `refresh_flags` recomputes."""
     ref bs = world.scene.bset
     bs.friction[slot] = p.friction
     bs.static_friction[slot] = p.static_friction
@@ -823,13 +823,16 @@ def _write_props(mut world: EmbedWorld, slot: Int, p: BodyProps):
         bs.any_props = True
     if p.static_friction >= 0 or p.rolling != 0 or p.spinning != 0 or p.contact_hertz != 0 or p.adhesion != 0:
         bs.any_contact_model = True
-    _refresh_flags(world)
+    if refresh:
+        refresh_flags(world)
 
 
-def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody) raises:
+def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody, refresh: Bool = True, wake: Bool = True) raises:
     """Overwrite the live body `h` with the record `s`, in place: pose, velocities, properties, collision layer, host
     material and user data. The shape and mass must be the body's own (`same_shape`); otherwise remove the body and
-    `restore_body` it. Wakes the body, as the engine's own setters do."""
+    `restore_body` it. Wakes the body, as the engine's own setters do. `refresh=False` leaves `any_report` / `any_bullet`
+    to one `refresh_flags` call by the caller, and `wake=False` the waking to one `wake_islands` call, for a batch of
+    writes (each refresh and each wake walks every body)."""
     _check_record(s)
     if not world.is_alive(h):
         raise Error("write_body_record: the handle is not a live body")
@@ -840,11 +843,12 @@ def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody) raises:
     world.scene.bset.bodies[slot].q = s.rot
     world.scene.bset.bodies[slot].vel = s.vel
     world.scene.bset.bodies[slot].omega = s.omega
-    _write_props(world, slot, s.props)
+    _write_props(world, slot, s.props, refresh)
     world.set_layer(h, s.category, s.mask)
     world.set_material(h, s.material)
     world.set_user(h, s.user)
-    world.scene.wake(world.scene.bset.id_of(slot))
+    if wake:
+        world.scene.wake(world.scene.bset.id_of(slot))
 
 
 def restore_body(mut world: EmbedWorld, h: Int64, s: SceneBody) raises:
