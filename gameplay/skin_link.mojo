@@ -137,6 +137,58 @@ def fit_bone_boxes(bind: Pose, rest: List[Vec3], idx: List[Int], w: List[Real], 
     return (halves^, offsets^)
 
 
+def fit_group_boxes(
+    bind: Pose, rest: List[Vec3], idx: List[Int], w: List[Real], k: Int, body_of: List[Int], frame_of: List[Int],
+    threshold: Real = 0.5,
+) raises -> Tuple[List[Vec3], List[Vec3]]:
+    """(half extents, centre offset) per body of a ragdoll whose bodies span several joints (ludens-engine#74): joint j
+    belongs to body body_of[j] (-1: none), and body b's box is fitted to every vertex its joints own with weight >=
+    `threshold`, in the bind frame of its frame bone frame_of[b]. A body that owns no vertex gets a zero box."""
+    if len(idx) != len(rest) * k or len(w) != len(rest) * k:
+        raise Error("fit_group_boxes: K (index, weight) pairs per vertex")
+    if len(body_of) != bind.bones:
+        raise Error("fit_group_boxes: one body index per joint")
+    for b in body_of:
+        if b >= len(frame_of):
+            raise Error("fit_group_boxes: a joint names body " + String(b) + ", there are " + String(len(frame_of)))
+    for f in frame_of:
+        if f < 0 or f >= bind.bones:
+            raise Error("fit_group_boxes: a frame bone is not a joint")
+    var lo = List[Vec3](length=len(frame_of), fill=Vec3(0, 0, 0, 0))
+    var hi = List[Vec3](length=len(frame_of), fill=Vec3(0, 0, 0, 0))
+    var seen = List[Bool](length=len(frame_of), fill=False)
+    for v in range(len(rest)):
+        var counted = List[Bool](length=len(frame_of), fill=False)
+        for j in range(k):
+            var joint = idx[v * k + j]
+            if joint < 0 or joint >= bind.bones or w[v * k + j] < threshold:
+                continue
+            var b = body_of[joint]
+            if b < 0 or counted[b]:
+                continue
+            counted[b] = True
+            var fb = frame_of[b]
+            var p = bind.q(fb).conjugate().rotate(rest[v] - bind.p(fb))
+            if not seen[b]:
+                lo[b] = p
+                hi[b] = p
+                seen[b] = True
+            else:
+                for a in range(3):
+                    lo[b][a] = min(lo[b][a], p[a])
+                    hi[b][a] = max(hi[b][a], p[a])
+    var halves = List[Vec3]()
+    var offsets = List[Vec3]()
+    for b in range(len(frame_of)):
+        if seen[b]:
+            halves.append((hi[b] - lo[b]) * 0.5)
+            offsets.append((hi[b] + lo[b]) * 0.5)
+        else:
+            halves.append(Vec3(0, 0, 0, 0))
+            offsets.append(Vec3(0, 0, 0, 0))
+    return (halves^, offsets^)
+
+
 def fit_bone_capsules(bind: Pose, rest: List[Vec3], idx: List[Int], w: List[Real], k: Int, threshold: Real = 0.5) raises -> Tuple[List[Vec3], List[Vec3], List[Real]]:
     """(a, b, radius) per bone in its bind frame: the segment runs along the
     longest axis of the fitted box through its centre, shortened by the
