@@ -1850,7 +1850,7 @@ soft body, 1 s on 9 skinned pins: bottom particle 0.19997013 m below the pinned 
 bind pose: worst vertex move 0.0    bone 1 at 90 deg: (0, 2.4, 0) -> -1.0 1.4000002 -0.0
 bone 0 box half 0.2 0.45 0.2  offset 0.45   capsule radius 0.2  axis 0.2 .. 0.7
 ragdoll bone 1 body after 1 s: 0.0 2.3997276 0.0
-[PASS] skin_link - 6 / 6 checks
+[PASS] skin_link - 10 / 10 checks
 --- tests/test_skin_pin.mojo ---
   soft body: 9 pins, 60 steps: worst pin offset after a step 0.0  momentum y 2.117157e-06
   FEM beam: worst pinned-node offset 0.0  tip direction 40.78841 deg (bone 45, gravity sags it)
