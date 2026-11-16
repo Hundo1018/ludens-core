@@ -2099,7 +2099,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 156 public declarations
+## embed (layer 6) — 6 modules, 159 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2223,8 +2223,11 @@ counted, not listed.
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `TickEvent` — 0 methods
+- `def dequantize_rotation(r: List[Int], scale: Float32 = 1.0E+6) -> Quat`
 - `def fnv1a(data: List[UInt8]) -> UInt64`
 - `def pack_body(id: BodyId) -> Int64`
+- `def quantize_rotation(rot: Quat, scale: Float32 = 1.0E+6) -> List[Int]`
+- `def teleport_rotation(rot: Quat) -> Quat`
 - `def unpack_body(h: Int64) -> BodyId`
 - aliases: `ABI_MAJOR`, `ABI_MINOR`, `EVENT_BEGAN`, `EVENT_ENDED`, `EVENT_STAY`, `LD_ERR_ARG`, `LD_ERR_BUFFER`, `LD_ERR_CALLBACK`, `LD_ERR_FORMAT`, `LD_ERR_HANDLE`, `LD_ERR_STALE`, `LD_ERR_STATE`, `LD_ERR_THREAD`, `LD_OK`, `PHASE_POST`, `PHASE_PRE`
 
