@@ -610,7 +610,7 @@ counted, not listed.
 - `def zeros(n: Int) -> List[Float32]`
 - `def zeros64(n: Int) -> List[Float64]`
 
-## procedural (layer 2) — 16 modules, 151 public declarations
+## procedural (layer 2) — 17 modules, 156 public declarations
 
 ### `procedural/anim.mojo`
 - struct `AnimClip` — 5 methods
@@ -687,6 +687,13 @@ counted, not listed.
 - `def look_at(forward: SIMD[.float32, 4], desired: SIMD[.float32, 4], max_angle: Float32) -> Tuple[SIMD[.float32, 4], Float32]`
 - `def rotate(v: SIMD[.float32, 4], axis: SIMD[.float32, 4], angle: Float32) -> Vec3`
 - `def two_bone(root: SIMD[.float32, 4], mid: SIMD[.float32, 4], end: SIMD[.float32, 4], target: SIMD[.float32, 4], pole: SIMD[.float32, 4]) -> TwoBone`
+
+### `procedural/ik_pose.mojo`
+- `def in_subtree(parent: List[Int], b: Int, top: Int) -> Bool`
+- `def rotate_subtree(mut pose: Pose, parent: List[Int], top: Int, pivot: SIMD[.float32, 4], r: Quat)`
+- `def shortest_arc(a: SIMD[.float32, 4], b: SIMD[.float32, 4]) -> Quat`
+- `def to_local(world: Pose, parent: List[Int]) -> Pose`
+- `def two_bone_pose(mut pose: Pose, parent: List[Int], root: Int, mid: Int, end: Int, target: SIMD[.float32, 4], pole: SIMD[.float32, 4]) -> TwoBone`
 
 ### `procedural/inertialize.mojo`
 - struct `Inertializer` — 3 methods
@@ -940,7 +947,7 @@ counted, not listed.
 - `def shape_penetrations(cs: ColliderSet, poses: List[Pose3], shape: QueryShape, pose: Pose3, f: QueryFilter) -> List[Penetration]`
 - `def sphere_cast(cs: ColliderSet, poses: List[Pose3], c: SIMD[.float32, 4], r: Float32, dir: SIMD[.float32, 4], max_t: Float32, f: QueryFilter) -> Hit`
 
-## nav (layer 3) — 6 modules, 44 public declarations
+## nav (layer 3) — 7 modules, 47 public declarations
 
 ### `nav/crowd.mojo`
 - trait `Avoidance` — 0 methods
@@ -968,6 +975,11 @@ counted, not listed.
 ### `nav/hpa.mojo`
 - struct `HierFunnel` : PathFinder — 1 methods
 - struct `HpaGraph` — 2 methods
+
+### `nav/nav_input.mojo`
+- `def nav_box(mut verts: List[SIMD[.float32, 4]], mut tris: List[Int], c: SIMD[.float32, 4], h: SIMD[.float32, 4])`
+- `def nav_quad(mut verts: List[SIMD[.float32, 4]], mut tris: List[Int], x0: Float32, z0: Float32, x1: Float32, z1: Float32, y: Float32)`
+- `def nav_tri(mut verts: List[SIMD[.float32, 4]], mut tris: List[Int], a: SIMD[.float32, 4], b: SIMD[.float32, 4], c: SIMD[.float32, 4])`
 
 ### `nav/navmesh.mojo`
 - struct `NavMesh` — 16 methods
