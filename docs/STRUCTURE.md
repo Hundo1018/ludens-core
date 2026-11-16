@@ -610,7 +610,7 @@ counted, not listed.
 - `def zeros(n: Int) -> List[Float32]`
 - `def zeros64(n: Int) -> List[Float64]`
 
-## procedural (layer 2) — 17 modules, 156 public declarations
+## procedural (layer 2) — 18 modules, 162 public declarations
 
 ### `procedural/anim.mojo`
 - struct `AnimClip` — 5 methods
@@ -707,6 +707,14 @@ counted, not listed.
 - `def maze(w: Int, h: Int, seed: Int) -> Grid`
 - `def turtle(s: String, step: Float32, angle: Float32) -> List[SIMD[.float32, 2]]`
 - `def wfc(w: Int, h: Int, adj: List[Bool], n: Int, seed: Int, max_restarts: Int = Int(20)) -> Grid`
+
+### `procedural/motion_match.mojo`
+- struct `MotionMatchDB` — 6 methods
+- struct `MotionMatcher` — 8 methods
+- struct `MotionSwitch` — 0 methods
+- struct `MotionTrack` — 2 methods
+- `def feature_dim(feet_count: Int, horizons: Int) -> Int`
+- `def raw_feature(t: MotionTrack, f: Int, horizons: List[Float32]) -> List[Float32]`
 
 ### `procedural/noise.mojo`
 - `def fbm2(x: Float32, y: Float32, seed: Int = Int(0), octaves: Int = Int(5), lacunarity: Float32 = Float32("2"), gain: Float32 = 0.5) -> Real`
