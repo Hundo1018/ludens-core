@@ -34,7 +34,7 @@ from physics.solver6 import ContactScene6
 from physics.solver_config import SolverConfig
 from gameplay.animator import AnimLibrary, Animators
 from gameplay.ragdoll import Ragdoll
-from gameplay.skin_link import animator_palette, pin_cloth_to_skin, fit_bone_boxes, fit_bone_capsules
+from gameplay.skin_link import animator_palette, pin_cloth_to_skin, fit_bone_boxes, fit_bone_capsules, fit_group_boxes
 
 
 def clip(angle: Real) raises -> AnimClip:
@@ -117,6 +117,25 @@ def main() raises:
     print("bone 0 box half", half[0][0], half[0][1], half[0][2], " offset", off[0][1], "  capsule radius", cr[0], " axis", ca[0][1], "..", cb[0][1])
     s.check(abs(half[0][0] - 0.2) < 1e-5 and abs(half[0][1] - 0.45) < 1e-5 and abs(off[0][1] - 0.45) < 1e-5, "bone 0 box: half (0.2, 0.45, 0.2) about y 0.45 in its frame")
     s.check(abs(cr[0] - 0.2) < 1e-5 and abs(ca[0][1] - 0.2) < 1e-5 and abs(cb[0][1] - 0.7) < 1e-5, "bone 0 capsule: radius 0.2 along y from 0.2 to 0.7")
+    # group fit (ludens-engine#74): both bones as one body in bone 0's frame; bone 1 alone matches fit_bone_boxes
+    var g1 = fit_group_boxes(bw, rest, idx, w, 1, [0, 0], [0])
+    s.check(abs(g1[0][0][1] - 1.0) < 1e-5 and abs(g1[1][0][1] - 1.0) < 1e-5 and abs(g1[0][0][0] - 0.2) < 1e-5,
+            "one body over both bones: half y 1.0 about y 1.0 in bone 0's frame (" + String(g1[0][0][1]) + ")")
+    var g2 = fit_group_boxes(bw, rest, idx, w, 1, [-1, 0], [1])
+    s.check(abs(g2[0][0][1] - half[1][1]) < 1e-6 and abs(g2[1][0][1] - off[1][1]) < 1e-6,
+            "a body of bone 1 alone, in its own frame, is fit_bone_boxes' bone 1 box")
+    var g3 = fit_group_boxes(bw, rest, idx, w, 1, [-1, -1], [0])
+    s.check(g3[0][0][0] == 0 and g3[0][0][1] == 0, "a body that owns no vertex gets a zero box")
+    var graised = 0
+    try:
+        _ = fit_group_boxes(bw, rest, idx, w, 1, [0, 2], [0])
+    except:
+        graised += 1
+    try:
+        _ = fit_group_boxes(bw, rest, idx, w, 1, [0, 0], [5])
+    except:
+        graised += 1
+    s.check(graised == 2, "a body index past the frame list and a frame bone that is not a joint raise")
     var sc = ContactScene6[QuatBody6]()
     var rd = Ragdoll(sc, bw, [-1, 0], half, off.copy(), [False, True])
     var cfg = SolverConfig()
