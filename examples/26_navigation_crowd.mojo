@@ -13,6 +13,7 @@ Run: pixi run mojo run -I build examples/26_navigation_crowd.mojo
 from geometry.vec import Real, Vec3
 from nav.heightfield import NavBakeConfig
 from nav.navmesh import bake_navmesh
+from nav.nav_input import nav_quad, nav_box
 from nav.path import PolyFunnel
 from nav.crowd import Crowd, CrowdParams, Orca
 
@@ -33,24 +34,18 @@ def _quad(mut v: List[Vec3], mut t: List[Int], x0: Real, z0: Real, x1: Real, z1:
 
 
 def _wall(mut v: List[Vec3], mut t: List[Int], x0: Real, z0: Real, x1: Real, z1: Real, h: Real):
-    """Box from the floor to height h; only its top and sides matter for the bake."""
-    _quad(v, t, x0, z0, x1, z1, h, h)
-    var n = len(v)
-    for c in range(8):
-        v.append(_v(x1 if c & 1 else x0, h if c & 2 else 0, z1 if c & 4 else z0))
-    var f = [0, 2, 4, 4, 2, 6, 1, 5, 3, 3, 5, 7, 0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7]
-    for k in range(len(f)):
-        t.append(n + f[k])
+    """Box from the floor to height h (nav.nav_input.nav_box)."""
+    nav_box(v, t, _v((x0 + x1) / 2, h / 2, (z0 + z1) / 2), _v((x1 - x0) / 2, h / 2, (z1 - z0) / 2))
 
 
 def main() raises:
     var v = List[Vec3]()
     var t = List[Int]()
-    _quad(v, t, 0, 0, 20, 20, 0, 0)  # floor
+    nav_quad(v, t, 0, 0, 20, 20, 0)  # floor
     _wall(v, t, 9.75, 0, 10.25, 8.5, 2.5)  # wall at x = 10 with a 3 m doorway at z 8.5..11.5
     _wall(v, t, 9.75, 11.5, 10.25, 20, 2.5)
     _quad(v, t, 20, 6, 26, 14, 0, 1.5)  # ramp up to x = 26
-    _quad(v, t, 26, 6, 32, 14, 1.5, 1.5)  # platform
+    nav_quad(v, t, 26, 6, 32, 14, 1.5)  # platform
     var cfg = NavBakeConfig(0.25, 0.1, 1.8, 0.3, 0.4, 45.0, 16)
     var mesh = bake_navmesh(v, t, cfg)
     print("navmesh:", mesh.poly_count(), "polygons,", mesh.link_count(), "links, walkable", mesh.walkable_area(), "m^2")
