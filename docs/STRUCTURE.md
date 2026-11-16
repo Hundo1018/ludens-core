@@ -1747,7 +1747,7 @@ counted, not listed.
 - `def apply_buoyancy_surface[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], waters: List[WaterVolume], water: W, t: Float32, gravity: SIMD[.float32, 4], dt: Float32, samples: Int = Int(8))`
 - `def float_body[W: WaterSurface, B: Body6](mut sc: ContactScene6[B], id: BodyId, half: SIMD[.float32, 4], water: W, t: Float32, density: Float32, gravity: SIMD[.float32, 4], drag: Float32 = 1, samples: Int = Int(4)) -> Real`
 
-## gameplay (layer 5) — 50 modules, 331 public declarations
+## gameplay (layer 5) — 50 modules, 332 public declarations
 
 ### `gameplay/abilities.mojo`
 - struct `Abilities` — 6 methods
@@ -2021,6 +2021,7 @@ counted, not listed.
 - `def animator_palette(anims: Animators, slot: Int, parent: List[Int], inverse_bind: List[Motor3]) -> List[Motor3]`
 - `def fit_bone_boxes(bind: Pose, rest: List[SIMD[.float32, 4]], idx: List[Int], w: List[Float32], k: Int, threshold: Float32 = 0.5) -> Tuple[List[SIMD[.float32, 4]], List[SIMD[.float32, 4]]]`
 - `def fit_bone_capsules(bind: Pose, rest: List[SIMD[.float32, 4]], idx: List[Int], w: List[Float32], k: Int, threshold: Float32 = 0.5) -> Tuple[List[SIMD[.float32, 4]], List[SIMD[.float32, 4]], List[Float32]]`
+- `def fit_group_boxes(bind: Pose, rest: List[SIMD[.float32, 4]], idx: List[Int], w: List[Float32], k: Int, body_of: List[Int], frame_of: List[Int], threshold: Float32 = 0.5) -> Tuple[List[SIMD[.float32, 4]], List[SIMD[.float32, 4]]]`
 - `def pin_cloth_to_skin(mut cloth: MeshCloth, cloth_vert: List[Int], skin_vert: List[Int], skinned: List[SIMD[.float32, 4]], dt: Float32)`
 - `def pin_fem_to_skin(mut body: FemBody, nodes: List[Int], skin_vert: List[Int], skinned: List[SIMD[.float32, 4]])`
 - `def pin_softbody_to_skin(mut body: SoftBody, pts: List[Int], skin_vert: List[Int], skinned: List[SIMD[.float32, 4]], dt: Float32)`
@@ -2099,7 +2100,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 6 modules, 159 public declarations
+## embed (layer 6) — 7 modules, 163 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2171,6 +2172,11 @@ counted, not listed.
 
 ### `embed/navigation.mojo`
 - struct `EmbedNav` — 2 methods
+
+### `embed/ragdoll.mojo`
+- struct `EmbedRagdoll` — 2 methods
+- struct `RagdollSpec` — 4 methods
+- aliases: `RAG_BOX`, `RAG_SPHERE`
 
 ### `embed/scene_io.mojo`
 - struct `BodyProps` — 1 methods
