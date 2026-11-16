@@ -63,6 +63,7 @@ comptime EVENT_ENDED = 2
 
 comptime _SAVE_MAGIC = 0x3057444C  # "LDW0" little-endian
 comptime _USER_MAGIC = 0x3055444C  # "LDU0": optional host user-data trailer
+comptime _FRAC_MAGIC = 0x3046444C  # "LDF0": optional fractured-object trailer (ROADMAP 17.93)
 comptime _FNV_OFFSET = UInt64(0xCBF29CE484222325)
 comptime _FNV_PRIME = UInt64(0x100000001B3)
 
@@ -217,6 +218,7 @@ struct EmbedWorld(Movable):
     var debt_dropped: Int  # frames whose excess time was dropped (FixedLoop's E22 rule)
     var fracture: FractureSet  # 17.90: fragments + bonds added by `add_fracture_box`
     var fracture_on: Bool
+    var frac_params: List[Float64]  # add_fracture_box's pos (3), half (3), stress, density, pieces, seed: to rebuild on load
     var frame_fracture: List[FractureRec]
     var water: FlipWater2  # 17.90: a 2D FLIP tank (xy plane) added by `add_water`
     var diffuse: DiffuseParticles
@@ -257,6 +259,7 @@ struct EmbedWorld(Movable):
         self.debt_dropped = 0
         self.fracture = FractureSet(Real(1000), 0)
         self.fracture_on = False
+        self.frac_params = List[Float64]()
         self.frame_fracture = List[FractureRec]()
         self.water = FlipWater2(2, 2, Real(1))
         self.diffuse = DiffuseParticles(UInt64(1), 1)
@@ -492,15 +495,11 @@ struct EmbedWorld(Movable):
             raise Error("add_fracture_box: pieces must be in [1, 4096]")
         if not (half[0] > 0 and half[1] > 0 and half[2] > 0) or not (stress > 0) or not (density > 0):
             raise Error("add_fracture_box: half extents, stress and density must be > 0")
-        var src = Polytope.box(0, 0, 0, Float64(half[0]), Float64(half[1]), Float64(half[2]))
-        var seeds = scatter_seeds(src.bounds(), pieces, seed, 0.0, 0.0, 0.0, 0.0)
-        var fs = FragmentSet(List[Polytope](), List[Int](), List[Int]())
-        voronoi_fracture(src, seeds, 0, 1e-9, fs)
-        self.fracture = FractureSet(density, 0)
-        var first = self.fracture.spawn(self.scene, fs, pos, Quat.identity(), Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0))
-        if self.fracture.fragments() == 0:
-            raise Error("add_fracture_box: no fragments produced")
-        _ = self.fracture.bond_neighbors(self.scene, first, stress)
+        var first = _build_fracture(self.scene, self.fracture, pos, half, pieces, seed, stress, density)
+        self.frac_params = List[Float64]()
+        for v in [Float64(pos[0]), Float64(pos[1]), Float64(pos[2]), Float64(half[0]), Float64(half[1]), Float64(half[2]),
+                  Float64(stress), Float64(density), Float64(pieces), Float64(seed)]:
+            self.frac_params.append(v)
         self.fracture_on = True
         return pack_body(self.fracture.bid[first])
 
@@ -744,7 +743,7 @@ struct EmbedWorld(Movable):
 
     def save(self) -> List[UInt8]:
         var out = List[UInt8]()
-        debug_assert(not self.fracture_on and not self.water_on, "save of a world with a fractured object or water is refused by the C-ABI")
+        debug_assert(not self.water_on, "save of a world with a water tank is refused by the C-ABI")
         _put(out, UInt64(_SAVE_MAGIC))
         _put(out, UInt64(self.tick))
         _put(out, UInt64(self.acc.to_bits()))
@@ -764,13 +763,34 @@ struct EmbedWorld(Movable):
                 _put(out, UInt64(i))
                 _put(out, UInt64(self.user_gen[i]))
                 _put(out, self.user[i])
+        # 17.93: the fractured object, when there is one: what rebuilds it (add_fracture_box's arguments) and what has
+        # changed since (which welds are live, how many each fragment still has), plus the body and joint indices that tie
+        # it to the scene above. A world without one saves -- and hashes -- exactly as before.
+        if self.fracture_on:
+            ref f = self.fracture
+            _put(out, UInt64(_FRAC_MAGIC))
+            for v in self.frac_params:
+                _put(out, UInt64(v.to_bits()))
+            _put(out, UInt64(f.fragments()))
+            _put(out, UInt64(len(f.bond_live)))
+            for i in range(f.fragments()):
+                _put(out, UInt64(f.body[i]))
+                _put(out, UInt64(f.bid[i].slot))
+                _put(out, UInt64(f.bid[i].gen))
+                _put(out, UInt64(f.nbond[i] + 1))  # nbond can be set to 1 by the budget; +1 keeps it unsigned
+                _put(out, UInt64(1 if f.alive[i] else 0))
+            for b in range(len(f.bond_live)):
+                _put(out, UInt64(f.bond_body_a[b] + 1))
+                _put(out, UInt64(f.bond_body_b[b] + 1))
+                _put(out, UInt64(f.bond_joint[b]))
+                _put(out, UInt64(1 if f.bond_live[b] else 0))
         return out^
 
     def load(mut self, data: List[UInt8]) raises:
         """Replace the simulation state with a `save` blob. Settings (dt,
         gravity, solver, systems) are the host's and stay as they are."""
-        if self.fracture_on or self.water_on:
-            raise Error("load: refused while the world has a fractured object or a water tank")
+        if self.water_on:
+            raise Error("load: refused while the world has a water tank")
         var pos = 0
         if _get(data, pos) != UInt64(_SAVE_MAGIC):
             raise Error("load: not a ludens world blob")
@@ -786,11 +806,17 @@ struct EmbedWorld(Movable):
         pos += n
         var user = List[UInt64]()
         var user_gen = List[UInt32]()
+        var frac_at = -1
+        var magic = UInt64(0)
         if pos < len(data):
-            if _get(data, pos) != UInt64(_USER_MAGIC):
+            magic = _get(data, pos)
+        if magic == UInt64(_FRAC_MAGIC):
+            frac_at = pos
+        elif magic != UInt64(0):
+            if magic != UInt64(_USER_MAGIC):
                 raise Error("load: unknown trailer")
             var m = Int(_get(data, pos))
-            if m < 0 or pos + 24 * m != len(data):
+            if m < 0 or pos + 24 * m > len(data):
                 raise Error("load: user-data length mismatch")
             for _ in range(m):
                 var i = Int(_get(data, pos))
@@ -803,8 +829,51 @@ struct EmbedWorld(Movable):
                     user_gen.append(0)
                 user[i] = u
                 user_gen[i] = g
+            if pos < len(data):
+                if _get(data, pos) != UInt64(_FRAC_MAGIC):
+                    raise Error("load: unknown trailer")
+                frac_at = pos
         var sc = scene_from_bytes(body^)
         sc.events_on = True
+        if frac_at >= 0:
+            var fp = frac_at
+            var params = List[Float64]()
+            for _ in range(10):
+                var bits = _get(data, fp)
+                params.append(Pointer(to=bits).unsafe_bitcast[Float64]()[])
+            var nfrag = Int(_get(data, fp))
+            var nbonds = Int(_get(data, fp))
+            if nfrag < 0 or nbonds < 0 or fp + 40 * nfrag + 32 * nbonds != len(data):
+                raise Error("load: fracture trailer length mismatch")
+            # rebuild the fragments and welds (shapes, volumes, bond topology) from the same arguments in a scratch
+            # scene, then point them at the loaded scene's bodies and joints and restore what changed since
+            var scratch = ContactScene6[QuatBody6]()
+            var pos3 = Vec3(Real(params[0]), Real(params[1]), Real(params[2]), 0)
+            var half3 = Vec3(Real(params[3]), Real(params[4]), Real(params[5]), 0)
+            var f = FractureSet(Real(params[7]), 0)
+            _ = _build_fracture(scratch, f, pos3, half3, Int(params[8]), Int(params[9]), Real(params[6]), Real(params[7]))
+            if f.fragments() != nfrag or len(f.bond_live) != nbonds:
+                raise Error("load: the fractured object rebuilt to a different shape")
+            for i in range(nfrag):
+                f.body[i] = Int(_get(data, fp))
+                var slot = Int(_get(data, fp))
+                var gen = UInt32(_get(data, fp))
+                f.bid[i] = BodyId(slot, gen)
+                f.nbond[i] = Int(_get(data, fp)) - 1
+                f.alive[i] = _get(data, fp) != 0
+            for b in range(nbonds):
+                f.bond_body_a[b] = Int(_get(data, fp)) - 1
+                f.bond_body_b[b] = Int(_get(data, fp)) - 1
+                f.bond_joint[b] = Int(_get(data, fp))
+                f.bond_live[b] = _get(data, fp) != 0
+            f.events.clear()
+            self.fracture = f^
+            self.frac_params = params^
+            self.fracture_on = True
+        else:
+            self.fracture = FractureSet(Real(1000), 0)
+            self.frac_params = List[Float64]()
+            self.fracture_on = False
         self.scene = sc^
         self.tick = tick
         self.acc = acc
@@ -817,6 +886,24 @@ struct EmbedWorld(Movable):
 
     def hash(self) -> UInt64:
         return fnv1a(self.save())
+
+
+def _build_fracture(
+    mut sc: ContactScene6[QuatBody6], mut f: FractureSet, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real,
+    density: Real,
+) raises -> Int:
+    """add_fracture_box's construction into `f`: Voronoi fragments of the box, welded along shared faces. Returns the
+    first fragment's index. Deterministic in its arguments, so load rebuilds the same fragments and welds."""
+    var src = Polytope.box(0, 0, 0, Float64(half[0]), Float64(half[1]), Float64(half[2]))
+    var seeds = scatter_seeds(src.bounds(), pieces, seed, 0.0, 0.0, 0.0, 0.0)
+    var fs = FragmentSet(List[Polytope](), List[Int](), List[Int]())
+    voronoi_fracture(src, seeds, 0, 1e-9, fs)
+    f = FractureSet(density, 0)
+    var first = f.spawn(sc, fs, pos, Quat.identity(), Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0))
+    if f.fragments() == 0:
+        raise Error("add_fracture_box: no fragments produced")
+    _ = f.bond_neighbors(sc, first, stress)
+    return first
 
 
 def _put(mut out: List[UInt8], v: UInt64):
