@@ -1342,6 +1342,9 @@ driven 2-link arm, 1 s: q -3.0983281 0.7116923  force 4.6576066
 --- tests/test_nav_world.mojo ---
   nav_world: samples 109 worst |dy| 0.125
 [PASS] nav_world - 6 / 6 checks
+--- tests/test_net_pose.mojo ---
+round trip: quantize_rotation 10000 / 10000 ; plain rounding off on 161 of 10000 rotations
+[PASS] net_pose - 5 / 5 checks
 --- tests/test_netcode.mojo ---
   netcode: rollback peer 0 181 rollbacks, 1094 re-simulated ticks, 477 mispredicted inputs
   netcode: snapshot 5488 bytes full, 1552 bytes per frame to all clients (delta), frames 249
