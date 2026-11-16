@@ -61,7 +61,7 @@
 | [可微模擬、批次世界與數值深化](#可微模擬批次世界與數值深化) | diffsim、diffsolver、tape、批次、稀疏線代 | 7 | 0 | 0 | 1 |
 | [GPU 計算](#gpu-計算) | GPU kernels 與單一 device context | 2 | 1 | 0 | 0 |
 | [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 11 | 0 | 0 | 0 |
-| [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 10 | 1 | 0 | 1 |
+| [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 2 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
 | [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 4 | 1 | 0 |
@@ -2710,6 +2710,7 @@
 | 17.68 | [攝影機 / 序列](#1768-攝影機--序列--wave-bheadless-資料--邏輯) | ✅ | B | 鏡頭資料與 rig、鏡頭混合與優先序、震動、視錐數學(模擬端用途)、序列 / 時間軸 |
 | 17.71 | [戰鬥物理](#1771-戰鬥物理--wave-b) | ✅ | B | 受擊 / 攻擊體積、近戰掃掠、hitscan 與穿透 / 跳彈、彈道投射物、爆炸、受擊反應 |
 | 17.74 | [載具家族](#1774-載具家族--wave-c) | 🔶 | C | 履帶車、水上載具、飛行器、懸浮 / 推進器陣列、機車 / 自行車、通用服務 |
+| 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | ✅ | B | `embed/ragdoll.mojo` 經 EmbedWorld 公開 API 建 / 移除布娃娃(`RagdollSpec`、`EmbedRagdoll`);`gameplay.skin_link.fit_group_boxes` 依關節群組擬合剛體 |
 
 ### 已完成條目的遺留待辦
 
@@ -2920,6 +2921,21 @@
 > **交付**:`gameplay/combat.mojo`(受擊 / 攻擊體積、去重、掃掠)、`gameplay/projectile.mojo`、`gameplay/explosion.mojo`。測試:普通(hitscan 打中指定骨、線性阻力彈道落點對解析解(相對誤差 ≤ 1e-3;二次阻力無閉式解,改對 RK4 細步參考解)、爆炸推動木箱)/ 整合(動畫事件開 hitbox → 命中 → 17.70 傷害 → 17.38 事件;knockback 經 17.67 累加器;ragdoll 受擊;爆炸炸開 17.5 牆;重播 / 回溯用 17.16 的位姿環;命中結果重播逐位相同)/ 極端(40 m/s 揮擊 vs 薄盾、剛好相切的接縫、掃掠途中目標 despawn、零長射線、投射物生在碰撞體內、1e5 投射物超預算、爆炸中心 == 物體質心(距離 1e-9 防護)、遮擋物在中間、友軍 / 自身過濾、hit-stop 與睡眠互動)。
 > **相依**:17.49、17.53、17.46、17.64、17.66、17.67、17.70、17.37、17.5、17.27、17.25、17.31、17.23、17.16(回溯為其邊界)。
 > **邊界**:傷害公式與數值屬 17.70;VFX / 貼花 / 音效以事件交宿主;網路命中登錄與延遲補償屬 17.16(本條只保證查詢可吃外部位姿);瞄準輔助與後座力的鏡頭效果屬 17.68;動畫選擇屬 17.64。
+
+#### 17.94 EmbedWorld 中的布娃娃
+
+> **來源**:ludens-engine#74。`gameplay.ragdoll.Ragdoll` 收原始 `ContactScene6`,而 `EmbedWorld` 擁有自己的場景,所以宿主世界放不進布娃娃;
+> ludens-playground 的 `knock_down` 手寫 6 個 `add_box` / `add_sphere` 與 5 個 `add_ball_joint`。
+>
+> **進度註(2026-11-16)**:`embed/ragdoll.mojo`:`RagdollSpec`(方塊 / 球、在人形自身座標的中心與半長、質量,以及兩剛體間的球關節與各自錨點)、
+> `EmbedRagdoll.build(world, spec, pos, yaw)`(依 yaw 繞 +Y 轉並放到地面位置,經 `add_box` / `add_sphere` / `teleport` / `add_ball_joint` 加入,
+> 記錄 `rest_pos` / `rest_rot`)與 `remove`。`gameplay.skin_link.fit_group_boxes`:剛體跨多個關節時,以關節 → 剛體對應與每剛體一個框架骨,
+> 用該群組關節擁有的頂點擬合方塊。`test_embed_ragdoll` 8/8(與手寫同一人形逐位相同 120 tick、2 s 後倒下且在地面上、關節錨點距 < 2 cm、
+> 移除與錯誤輸入),`test_skin_link` 10/10(群組擬合)。範例 28。
+>
+> **量測**:CesiumMan 以 playground 的 6 群組擬合時,剛體比手工版大且偏移:軀幹含右臂,中心橫移 0.23 m、半長 0.19 × 0.34 × 0.13;
+> 大腿群組含整條腿,長約 0.6 m;骨盆中心 y 0.744(手工 0.65)、頭 1.322(手工 1.22)。該人形保留手工尺寸,經 `RagdollSpec` 建立。
+> 由世界姿勢建蒙皮調色盤:`geometry.skinning.bind_palette` 已提供。
 
 #### 17.74 載具家族 — Wave C
 > **進度註(2026-10-27,水上舵升力)**:`gameplay/watercraft.mojo` `Rudder[W]`:以 `Wing` 實作,流體密度 1000,弦沿船前向 (1,0,0),升力參考沿船側向 (0,0,1),偏角 d 於 x-z 面旋轉弦與法線。位於水面以下才受力;水流取 `water.velocity`。`tests/test_force_elements.mojo` rudder 段 5 項事前寫定的預測(寫於測試區塊註解)全部通過,force_elements 19/19。量測(0.3 m²、船速 3 m/s、中心在水面下 1 m):d = ±10° 的側向力為 ∓1480.44 N,與 q A 2π d = 1480.44 N 相符(相對誤差 < 1e-4);d = 0 為 0 N;船靜止為 0 N;中心在水面上為 0。符號:正偏角(後緣朝 +z)的側向力朝 −z,與板把流體轉向時的反作用一致。未做:舵與船體的交互(尾流遮蔽)、螺旋槳後流。
@@ -4554,5 +4570,6 @@
 | 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
 | 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | 🔶 |
+| 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | 角色、載具、破壞與 gameplay 物理 | ✅ |
 | 17.84 | [數值 / 可微深化](#1784-數值--可微深化--wave-c) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.85 | [分級模擬:依因果可達性分配時間 / 空間解析度](#1785-分級模擬依因果可達性分配時間--空間解析度--wave-c架構) | ECS、排程、執行期與診斷 | ✅ |
