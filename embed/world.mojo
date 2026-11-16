@@ -64,6 +64,7 @@ comptime EVENT_ENDED = 2
 comptime _SAVE_MAGIC = 0x3057444C  # "LDW0" little-endian
 comptime _USER_MAGIC = 0x3055444C  # "LDU0": optional host user-data trailer
 comptime _FRAC_MAGIC = 0x3046444C  # "LDF0": optional fractured-object trailer (ROADMAP 17.93)
+comptime _WATER_MAGIC = 0x3048444C  # "LDH0": the world had a water tank, which save does not carry (17.95)
 comptime _FNV_OFFSET = UInt64(0xCBF29CE484222325)
 comptime _FNV_PRIME = UInt64(0x100000001B3)
 
@@ -743,7 +744,6 @@ struct EmbedWorld(Movable):
 
     def save(self) -> List[UInt8]:
         var out = List[UInt8]()
-        debug_assert(not self.water_on, "save of a world with a water tank is refused by the C-ABI")
         _put(out, UInt64(_SAVE_MAGIC))
         _put(out, UInt64(self.tick))
         _put(out, UInt64(self.acc.to_bits()))
@@ -763,6 +763,9 @@ struct EmbedWorld(Movable):
                 _put(out, UInt64(i))
                 _put(out, UInt64(self.user_gen[i]))
                 _put(out, self.user[i])
+        # 17.95: a water tank is not carried; the marker makes `load` refuse the blob instead of dropping the water
+        if self.water_on:
+            _put(out, UInt64(_WATER_MAGIC))
         # 17.93: the fractured object, when there is one: what rebuilds it (add_fracture_box's arguments) and what has
         # changed since (which welds are live, how many each fragment still has), plus the body and joint indices that tie
         # it to the scene above. A world without one saves -- and hashes -- exactly as before.
@@ -807,36 +810,36 @@ struct EmbedWorld(Movable):
         var user = List[UInt64]()
         var user_gen = List[UInt32]()
         var frac_at = -1
-        var magic = UInt64(0)
-        if pos < len(data):
-            magic = _get(data, pos)
-        if magic == UInt64(_FRAC_MAGIC):
-            frac_at = pos
-        elif magic != UInt64(0):
-            if magic != UInt64(_USER_MAGIC):
+        # trailers, each optional, in the order save writes them: user data, water marker, fracture
+        var stage = 0
+        while pos < len(data) and frac_at < 0:
+            var magic = _get(data, pos)
+            if magic == UInt64(_USER_MAGIC) and stage < 1:
+                stage = 1
+                var m = Int(_get(data, pos))
+                if m < 0 or pos + 24 * m > len(data):
+                    raise Error("load: user-data length mismatch")
+                for _ in range(m):
+                    var i = Int(_get(data, pos))
+                    var g = UInt32(_get(data, pos))
+                    var u = _get(data, pos)
+                    if i < 0 or i > (1 << 31):
+                        raise Error("load: bad user-data slot")
+                    while len(user) <= i:
+                        user.append(0)
+                        user_gen.append(0)
+                    user[i] = u
+                    user_gen[i] = g
+            elif magic == UInt64(_WATER_MAGIC):
+                raise Error("load: the blob was saved from a world with a water tank, which save does not carry (ROADMAP 17.95)")
+            elif magic == UInt64(_FRAC_MAGIC):
+                frac_at = pos - 8
+            else:
                 raise Error("load: unknown trailer")
-            var m = Int(_get(data, pos))
-            if m < 0 or pos + 24 * m > len(data):
-                raise Error("load: user-data length mismatch")
-            for _ in range(m):
-                var i = Int(_get(data, pos))
-                var g = UInt32(_get(data, pos))
-                var u = _get(data, pos)
-                if i < 0 or i > (1 << 31):
-                    raise Error("load: bad user-data slot")
-                while len(user) <= i:
-                    user.append(0)
-                    user_gen.append(0)
-                user[i] = u
-                user_gen[i] = g
-            if pos < len(data):
-                if _get(data, pos) != UInt64(_FRAC_MAGIC):
-                    raise Error("load: unknown trailer")
-                frac_at = pos
         var sc = scene_from_bytes(body^)
         sc.events_on = True
         if frac_at >= 0:
-            var fp = frac_at
+            var fp = frac_at + 8
             var params = List[Float64]()
             for _ in range(10):
                 var bits = _get(data, fp)
@@ -885,7 +888,35 @@ struct EmbedWorld(Movable):
         self.tick_events.clear()
 
     def hash(self) -> UInt64:
-        return fnv1a(self.save())
+        """FNV-1a of `save()`, plus, while a water tank is on, its particles and diffuse particles (which save does not
+        carry). Host settings (`save_excludes`) are not in it."""
+        var b = self.save()
+        if self.water_on:
+            for v in self.water.px:
+                _put(b, UInt64(Float64(v).to_bits()))
+            for v in self.water.py:
+                _put(b, UInt64(Float64(v).to_bits()))
+            for v in self.water.pu:
+                _put(b, UInt64(Float64(v).to_bits()))
+            for v in self.water.pv:
+                _put(b, UInt64(Float64(v).to_bits()))
+            for v in self.diffuse.x:
+                _put(b, UInt64(Float64(v).to_bits()))
+            for v in self.diffuse.y:
+                _put(b, UInt64(Float64(v).to_bits()))
+        return fnv1a(b)
+
+
+def save_excludes() -> List[String]:
+    """World state that save / load and hash do not carry (tests/test_save_coverage.mojo checks this list, ROADMAP 17.95).
+
+    gravity, solver, unit_scale: host settings. `load` keeps the host's (see its docstring), so a host that changes them
+    at run time sets them again after a load; two worlds that differ only in them hash the same.
+    host_material: host data, kept by the world across an in-place `load` and carried between modules by
+    `embed/transfer.mojo` (ROADMAP 17.91), not by `save`.
+    A water tank is not in the list: `save` marks it and `load` refuses the blob, and `hash` covers its particles."""
+    var out: List[String] = ["gravity", "solver", "unit_scale", "host_material"]
+    return out^
 
 
 def _build_fracture(
