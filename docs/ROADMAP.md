@@ -2568,7 +2568,7 @@
 - **11.1**([紀錄](ROADMAP_HISTORY.md#111-noise-家族---2026-07-22)):Simplex 跳過(專利 + 複雜),OpenSimplex2 留後續
 - **11.1**([紀錄](ROADMAP_HISTORY.md#111-noise-家族---2026-07-22)):SIMD 批次採樣留後續優化(目前為 scalar)
 - **17.3**([紀錄](ROADMAP_HISTORY.md#173-角色-ik--wave-b)):關節角度限制(膝只能單向、肩錐)
-- **17.3**([紀錄](ROADMAP_HISTORY.md#173-角色-ik--wave-b)):IK 結果轉回逐骨旋轉寫入 `Pose`
+- **17.3**([紀錄](ROADMAP_HISTORY.md#173-角色-ik--wave-b)):~~IK 結果轉回逐骨旋轉寫入 `Pose`~~ ✅ 2026-11-16 `procedural/ik_pose.mojo`:`two_bone_pose` 在世界姿勢上解 two_bone,寫回為 root 子樹與 mid 子樹各一次剛體旋轉(shortest arc);`to_local` 為 `to_world` 的反函數;`test_ik_pose` 19/19(腳踝到目標 < 1e-4 m、骨長不變、只有 hip / knee 的局部旋轉改變)。使用者:ludens-playground 的 foot IK(ludens-engine#76)
 - **17.3**([紀錄](ROADMAP_HISTORY.md#173-角色-ik--wave-b)):全身 IK 的質心 / 平衡約束
 - **17.6**([紀錄](ROADMAP_HISTORY.md#176-動畫圖深度--wave-b)):姿勢改用預配置緩衝(現每節點配置 `List`)
 - **17.6**([紀錄](ROADMAP_HISTORY.md#176-動畫圖深度--wave-b)):方向性(polar)2-D blend space
@@ -2980,6 +2980,8 @@
 > - Crowd(`nav/crowd.mojo`):`Crowd[A: Avoidance]`(均勻格鄰居、偏好速度含 5 % 右手偏置、`NavMesh.move_along` 逐格滑牆、可見性推進 corner、corner 看不見時冷卻式重新規劃、off-mesh 直線穿越);避讓 seam `Orca`(RVO2 LP 逐行移植)/ `SampledRvo` / `SocialForce`。`test_crowd`(52:對心交換 16、走廊對衝 12、單門 12、4 個重疊出生、off-mesh 跳躍,三變體全員到達、不離網、逐位決定論,重疊依場景設界)。`bench_crowd`(64 m 柱陣、目標 20 m 內、40 s):每 agent-tick ORCA 0.32 / 0.43 / 1.37 µs(N = 64 / 256 / 1024)、社會力 0.34 / 0.51 / 1.41 µs、取樣 RVO 2.7 / 6.3 / 15.0 µs;N = 1024 最深重疊 ORCA 34 mm、社會力 43 mm、取樣 RVO 512 mm;到達率 91–100 %。
 > - 3D 體積導航(`nav/volume.mojo`):三角形經同一個逐格裁切光柵器成為佔據體素,依 agent 半徑做可分離盒膨脹,補成 2 的冪立方體後以 summed-volume table O(1) 判斷節點是否均勻,建稀疏體素八叉樹;自由葉為圖節點,共面者相鄰。seam `VolumeFinder`:`SvoAStar`(portal 成本模型 + 視線平滑)vs `SmoothedVoxelAStar`(26 連通不切角 + 同一平滑);`line_of_sight` 是 3D Amanatides–Woo,過邊 / 角時所有碰到的體素都要空。`test_nav_volume`(19:無人機從窗戶進入建築、窗寬 < 直徑時無路、目標在牆內、空體積一個葉、60 個種子查詢兩變體可達性相同、所有線段有視線、長度差 15 % 內)。`bench_nav`:64 × 16 × 64 m(433 萬體素)建樹 271 ms、7.3 萬自由葉;每查詢 SVO 1.4 ms(展開 1705)vs 稠密體素 246 ms(展開 12.7 萬),同長度。
 > - 階層式長程尋路(`nav/hpa.mojo`):HPA*,cluster = navmesh tile;portal 圖(portal 中點 + off-mesh 端點,同一凸多邊形上的兩點以直線相連)、tile 邊界上的 entrance、每個 entrance 在其 tile 內一次 Dijkstra 得到抽象邊;查詢在抽象圖上 A*,再以粗路徑經過的 tile 為遮罩跑 `PolyFunnel`。依 `mesh.version` 重建。`test_nav_parity` 把它列為第四個變體(400 個查詢含挖洞後 100 個:可達性一致、長度界相同、長查詢只細搜粗路徑上的 tile)。`bench_nav`(128 m 迷宮、1089 tiles、100 個長查詢):抽象圖建置 3.6 ms(2305 entrances);每查詢 HierFunnel 171 µs vs 平面 `PolyFunnel` 123 µs —— 在這個尺度上**更慢**,量到的好處是局部性:只細搜 1089 個 tile 中的 32 個(串流世界只需載入這些 tile 的細 navmesh)。
+> **2026-11-16 補充**:`nav/nav_input.mojo` 公開 `nav_tri`、`nav_quad`、`nav_box`(以方塊與地板組 bake 輸入;原本 ludens-engine `game/arena.mojo` 的私有 `_tri` / `_nav_box` 與 ludens-playground `app/nav_boxes.mojo` 各寫一份)。原本兩份的側面 8 個三角形朝內,只有頂底朝外;新版全部朝外(垂直面不論朝向都不可走,bake 結果不變)。`test_nav_input` 7/7。
+>
 > **遺留待辦**:連結的增量重建(incremental update 的主要剩餘成本)、navmesh 邊界作為 ORCA 靜態障礙線(恢復牆邊的無碰撞保證)、學習式避讓權重(可微 ORCA)、HPA 抽象圖只重建髒 tile(目前 version 變動即全量重建,3.6 ms)、與 17.8 world partition 串流接線(HPA 的 cluster 改用 partition cell)。
 > **現況(開工前)**:無(舊「明確不做」,已被 [[no-tech-exclusion-principle]] 推翻)。
 > **缺口**:navmesh bake(voxel → region → contour → 三角化)、A* / funnel(string-pulling)、動態障礙挖洞、crowd + 區域避讓(RVO / ORCA)、off-mesh link、tile 重烘。

@@ -24,7 +24,8 @@ from gameplay.character import CharacterController
 from procedural.fsm import StateMachine
 from procedural.anim import AnimClip
 from procedural.anim_graph import Pose, BlendSpace1D, sample_phase, layer, root_motion, strip_root
-from procedural.ik import foot_plant, two_bone
+from procedural.ik import foot_plant
+from procedural.ik_pose import two_bone_pose
 from collision.world_query import QueryFilter
 
 comptime DT: Real = 1.0 / 60.0
@@ -130,8 +131,13 @@ def main() raises:
         if hit.hit:
             var fp = foot_plant(foot + Vec3(0, 0.08, 0, 0), 0.08, hit.point[1], hit.normal, 0.3, 0.5)
             var hip = foot + Vec3(0, 0.9, 0, 0)
-            var leg = two_bone(hip, hip + Vec3(0, -0.45, 0.05, 0), foot + Vec3(0, 0.08, 0, 0), fp.ankle, hip + Vec3(0, 0, 1, 0))
-            ankle_y = leg.end[1]
+            # the leg as a world pose (hip, knee, ankle); two_bone_pose writes the solution back as bone rotations
+            var leg = Pose(3)
+            leg.set(0, hip, Quat.identity())
+            leg.set(1, hip + Vec3(0, -0.45, 0.05, 0), Quat.identity())
+            leg.set(2, foot + Vec3(0, 0.08, 0, 0), Quat.identity())
+            _ = two_bone_pose(leg, [-1, 0, 1], 0, 1, 2, fp.ankle, hip + Vec3(0, 0, 1, 0))
+            ankle_y = leg.p(2)[1]
         if frame % 30 == 0:
             print(
                 "t", t, " state", "moving" if fsm.is_in(moving) else "idle",
