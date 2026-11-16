@@ -67,6 +67,65 @@ comptime _FNV_OFFSET = UInt64(0xCBF29CE484222325)
 comptime _FNV_PRIME = UInt64(0x100000001B3)
 
 
+@no_inline
+def teleport_rotation(rot: Quat) -> Quat:
+    """The rotation `teleport` stores for `rot`: scaled by 1 / |rot| with exactly the arithmetic `teleport` and
+    `teleport_many` use (they call this), so a host can predict what `state()` returns after a teleport.
+    `rot` must be non-zero (teleport raises otherwise). Not inlined: one compiled body for every caller, so the
+    compiler cannot contract the sum of squares into fused multiply-adds at one call site and not at another (inlined,
+    11 % of 10 000 random rotations came out different in the last bits)."""
+    var n2 = rot.x * rot.x + rot.y * rot.y + rot.z * rot.z + rot.w * rot.w
+    var s = 1 / n2 ** 0.5
+    return Quat(rot.x * s, rot.y * s, rot.z * s, rot.w * s)
+
+
+def _round_rot(q: Quat, scale: Real) -> List[Int]:
+    var r = List[Int]()
+    r.append(Int(round(q.x * scale)))
+    r.append(Int(round(q.y * scale)))
+    r.append(Int(round(q.z * scale)))
+    r.append(Int(round(q.w * scale)))
+    return r^
+
+
+def dequantize_rotation(r: List[Int], scale: Real = 1000000.0) -> Quat:
+    """Four integers back to a quaternion (each divided by `scale`)."""
+    return Quat(Real(r[0]) / scale, Real(r[1]) / scale, Real(r[2]) / scale, Real(r[3]) / scale)
+
+
+def quantize_rotation(rot: Quat, scale: Real = 1000000.0) -> List[Int]:
+    """A rotation as four integers (times `scale`, rounded) that survive a network round trip unchanged: on the
+    receiving side dequantize_rotation, teleport, state().rot and rounding again give the same integers (ludens-engine
+    #75: a plain rounding came back off by one on 2 of 160 integers). Found by iterating that map, which settles in one
+    or two steps; when it cycles instead (one integer flipping by 1 forever: 4 of 10 000 random rotations), the
+    integers within 1 of the last step are searched for a fixed point, the one nearest to it first."""
+    var r = _round_rot(rot, scale)
+    for _ in range(8):
+        var n = _round_rot(teleport_rotation(dequantize_rotation(r, scale)), scale)
+        if _same4(n, r):
+            return r^
+        r = n^
+    var best = r.copy()
+    var best_d = 5
+    for code in range(81):
+        var c = code
+        var cand = List[Int]()
+        var d = 0
+        for k in range(4):
+            var off = c % 3 - 1
+            c //= 3
+            cand.append(r[k] + off)
+            d += abs(off)
+        if d < best_d and _same4(_round_rot(teleport_rotation(dequantize_rotation(cand, scale)), scale), cand):
+            best = cand^
+            best_d = d
+    return best^
+
+
+def _same4(a: List[Int], b: List[Int]) -> Bool:
+    return a[0] == b[0] and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
+
+
 def pack_body(id: BodyId) -> Int64:
     return Int64(id.slot) | (Int64(id.gen) << 32)
 
@@ -525,8 +584,7 @@ struct EmbedWorld(Movable):
         var n2 = rot.x * rot.x + rot.y * rot.y + rot.z * rot.z + rot.w * rot.w
         if n2 < 1e-12:
             raise Error("teleport: quaternion must be non-zero")
-        var s = 1 / n2 ** 0.5
-        self.scene.teleport(self._id(h), Pose6(pos, Quat(rot.x * s, rot.y * s, rot.z * s, rot.w * s)))
+        self.scene.teleport(self._id(h), Pose6(pos, teleport_rotation(rot)))
 
     def teleport_many(mut self, hs: List[Int64], pos: List[Vec3], rot: List[Quat]) raises:
         """`teleport` for many bodies at once (ROADMAP 17.78): every input
@@ -540,9 +598,8 @@ struct EmbedWorld(Movable):
             var n2 = r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w
             if n2 < 1e-12:
                 raise Error("teleport_many: quaternion must be non-zero")
-            var s = 1 / n2 ** 0.5
             ids.append(self._id(hs[k]))
-            poses.append(Pose6(pos[k], Quat(r.x * s, r.y * s, r.z * s, r.w * s)))
+            poses.append(Pose6(pos[k], teleport_rotation(r)))
         self.scene.teleport_many(ids, poses)
 
     def state(self, h: Int64) raises -> BodyState:
