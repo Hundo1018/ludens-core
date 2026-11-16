@@ -891,6 +891,8 @@ sphere collision: gradient -0.021412198 1.1984232 RevReal -0.021412198 1.1984232
 [PASS] hvp - 4 / 4 checks
 --- tests/test_ik.mojo ---
 [PASS] ik - 27 / 27 checks
+--- tests/test_ik_pose.mojo ---
+[PASS] ik_pose - 19 / 19 checks
 --- tests/test_impact_report.mojo ---
   drop e = 0.0 : began impulse 5.163334  want (1+e) m v + m g dt = 5.1633334  approach 5.0  v 5.0
   drop e = 0.5 : began impulse 7.663334  want (1+e) m v + m g dt = 7.6633334  approach 5.0  v 5.0
@@ -1327,6 +1329,8 @@ driven 2-link arm, 1 s: q -3.0983281 0.7116923  force 4.6576066
 [PASS] narrowphase - 12 / 12 checks
 --- tests/test_nav.mojo ---
 [PASS] nav - 44 / 44 checks
+--- tests/test_nav_input.mojo ---
+[PASS] nav_input - 7 / 7 checks
 --- tests/test_nav_parity.mojo ---
   nav_parity: found 131 of 400 | octile/funnel mean 1.0628282 worst 1.3730338
 [PASS] nav_parity - 6 / 6 checks
