@@ -62,7 +62,7 @@
 | [GPU 計算](#gpu-計算) | GPU kernels 與單一 device context | 2 | 1 | 0 | 0 |
 | [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 11 | 0 | 0 | 0 |
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 1 | 0 | 1 |
-| [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 2 | 0 | 0 |
+| [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
 | [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 4 | 4 | 1 | 0 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
@@ -2989,7 +2989,7 @@
 | 17.70 | [規則框架](#1770-規則框架--wave-c) | 🔶 | C | 屬性集、Gameplay tags、效果、技能、傷害管線、資料驅動 |
 | 17.72 | [流程服務](#1772-流程服務--wave-c) | ✅ | C | 流程狀態堆疊、全域旗標 / 黑板、任務 / 目標圖、對話 / 敘事狀態、關卡切換協定、檢查點 / 重生 |
 | 17.73 | [營運邊界](#1773-營運邊界--wave-c) | ✅ | C | 對外 outbox、遙測分流、成就 / 統計計數、本地化鍵、入站資料決定論、黑盒記錄器 |
-| 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | 🔶 | C | 可在 teleport → state 往返後不變的量化旋轉(`quantize_rotation`)已完成;含破碎集的 save / load 未做 |
+| 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | ✅ | C | 可在 teleport → state 往返後不變的量化旋轉(`quantize_rotation`);含破碎物件的 `EmbedWorld.save` / `load` |
 
 ### 待辦與部分完成條目
 
@@ -3004,7 +3004,12 @@
 > `tests/test_net_pose.mojo` 5/5:10 000 / 10 000 個量化旋轉經 EmbedWorld teleport → state → 取整後不變(直接取整則 156 個不變不成立),
 > `teleport_rotation` 與 `state().rot` 逐位相同 10 000 / 10 000。gate 453/453,既有 golden 段落一行未變。
 >
-> **未做**:`save` / `load` 納入破碎集(碎片、鍵結、存活旗標、預算),讓破碎世界可直接作 `NetSim` 狀態並供客戶端步進(rollback)。
+> **進度註(2026-11-16,第二步)**:`EmbedWorld.save` 在有破碎物件時附加 `LDF0` 尾段:`add_fracture_box` 的引數(位置、半長、應力、密度、塊數、seed)、
+> 每碎片的場景剛體索引與 `BodyId`、剩餘焊接數、存活旗標,每焊接的兩端剛體與關節索引、是否存活;`load` 以相同引數在暫存場景重建碎片與焊接拓樸
+> (Voronoi 由 seed 決定),再指回載入場景的剛體與關節並恢復上述狀態。沒有破碎物件的世界存檔位元組不變;舊存檔可讀。`load` 不再拒絕破碎物件
+> (仍拒絕水槽);C-ABI 的 `ld_world_save` / `load` 仍拒絕(凍結清單不動)。`tests/test_fracture_save.mojo` 9/9:40 塊牆在破裂中途(tick 30,
+> 已 52 個事件、66 條焊接存活)存檔,載入新世界後與未中斷的世界同步走 120 tick,所有剛體狀態逐位相同、其後 28 個破裂事件相同、存活焊接 38 條相同、
+> 兩邊存檔位元組相同;存 → 載 → 存位元組相同;載入無破碎物件的存檔會清掉現有破碎物件;截斷的尾段 raise 且世界不變。
 
 > **進度註(2026-11-06,多軸卡車,#98 的一項)**:`VehicleConfig` 本來就接受 8 個輪子、軸 0..3,驅動力矩分給有驅動的軸;缺的是用到它的預設。`gameplay/vehicle_truck.mojo` 的 `truck_config(mass, wheelbase, axle_gap, track)`:6x4,前軸轉向無驅動,後兩軸驅動,柴油扭矩曲線(`TorqueCurve.diesel_truck()`:1200–1600 rpm 為 1800 Nm,2600 rpm 前收斂)與六檔;軸位置由質心均分三軸載重算出(b = (wheelbase - axle_gap) / 3,a = 2 b + axle_gap)。`tests/test_vehicle_truck.mojo`(integration,6/6):8 t 卡車停放後六輪載重和對重量 78400 N 相差 0.01 N,三軸各 26133 N(偏差 6.7e-7);全油門 8 s 前進 92.8 m、19.05 m/s、偏航 0.0 rad(第一版沿用轎車的 300 Nm 曲線只有 6.4 m/s、25.7 m);驅動力矩只在後軸,後兩軸各 1555 N m。**修了一個錯**:驅動兩條軸而其中沒有軸 0(如 6x4 的軸 1 和 2)時,`_drive_torques` 對每條非軸 0 的軸都給 `1 - front_bias`(0.6),總共是引擎扭矩的 1.2 倍(輪上總和 7742 N m 對引擎 6452 N m);現在只有包含軸 0 的兩軸組合才用 `front_bias`,其餘平分。轎車的 `test_vehicle` / `test_vehicle_drive` / `test_vehicle_kinds` golden 逐位不變。6 m/s 起、油門 0.08、轉向 0.5 x 最大轉角的穩態半徑 27.9 m,對自行車模型 25.2 m(L = 5.1 m)差 11 %(油門 0.3 時速度升高、半徑 32.0 m,差 27 %,是不足轉向)。**半拖車**:`semi_trailer_config` 單軸無驅動拖車(兩輪在後,前端經 `hitch` 球關節由牽引車承載)。`tests/test_vehicle_semitrailer.mojo`(integration,5/5):靜置時牽引車輪 126975 N + 拖車輪 69022 N = 195997 N,對合計重量 196000 N 相差 0.002 %(拖車輪承擔其 118 kN 中的 69 kN);全油門 0.7 拖 10 s 達 11.4 m/s,兩車偏航差 1.7e-7 rad,掛接點最大間距 2.0 mm,拖車兩輪全程著地;6 s 轉向(0.5)牽引車轉 -0.480 rad、拖車 -0.429 rad(同號、拖車落後),掛接點間距 1.1 mm。第一版把掛點放在牽引車箱內,兩個箱子重疊,碰撞把牽引車推後 7.8 m、拖車飛到 3.9 m 高;改到牽引車箱後端外 0.1 m 後正常。**軸間差速**:`DriveConfig.axle_diff_kind`(預設 `DIFF_OPEN` = 原本的 `front_bias` / 平分,轎車 golden 逐位不變)、`axle_diff_preload` / `axle_diff_lock` / `axle_diff_max`,兩條驅動軸之間用 `split_axle`,較慢的軸多分扭矩。`test_vehicle_truck` 8 → 10 檢查:軸 2 比軸 1 快 8 rad/s、1 檔全油門時,open 為 23247 / 23247 N m,限滑為 24947 / 21547,鎖死為 46494 / 0(`split_axle` 的鎖死語意:全部轉給較慢者);三種的總和相同(未憑空產生扭矩)。**第五輪盤**:`fifth_wheel(sc, tractor, trailer, point, max_pitch, max_roll)` 用 D6 關節(錨點鎖死、繞牽引車上軸的偏航自由、俯仰 ±0.15 rad、側傾 ±0.10 rad)。`tests/test_fifth_wheel.mojo`(integration,5/5):12 t 拖車前端掛在靜止牽引車上、下方無支撐,球形 `hitch` 5 s 內擺到相對俯仰 0.755 rad,第五輪盤停在 0.1502 rad(限位 0.15)、側傾 0.0、掛點間距 1.0 mm;無重力下同一初始角速度 0.8 rad/s 1 s 後的相對偏航與球形掛接 0.20884581 對 0.20884585 rad;俯仰限位關掉(改為自由)時俯仰到 2.0 rad,測試失敗;限位 ≤ 0 時 raise。**未做**:載重變化下的懸吊。#98 仍開著。
 #### 17.14 導航
@@ -4569,7 +4574,7 @@
 | 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ⬜ |
 | 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
-| 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | 🔶 |
+| 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | 角色、載具、破壞與 gameplay 物理 | ✅ |
 | 17.84 | [數值 / 可微深化](#1784-數值--可微深化--wave-c) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.85 | [分級模擬:依因果可達性分配時間 / 空間解析度](#1785-分級模擬依因果可達性分配時間--空間解析度--wave-c架構) | ECS、排程、執行期與診斷 | ✅ |

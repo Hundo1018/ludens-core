@@ -799,6 +799,10 @@ recorder: bag at 240 20  at 130 18  first divergence -1  after editing tick 100 
   one cut: 1000 pieces, volume error 3.26405569239796e-14
   snapshot: bonds broken after restore 14 vs 14 , live 15 vs 15
 [PASS] fracture - 89 / 89 checks
+--- tests/test_fracture_save.mojo ---
+saved at tick 30: 81952 bytes, 52 fracture events so far, 66 welds live
+after 120 more ticks: events 20 / 20 live welds 46 / 46
+[PASS] fracture_save - 9 / 9 checks
 --- tests/test_fsi.mojo ---
   settling sphere: velocity -0.002730783  mean fluid 3.9152066e-05  relative -0.0027699352  Stokes-Hasimoto -0.0027770284  ratio 0.99744576  max spin 4.278299e-06
   sphere over a static plate (top at x = 7 mm): centre x 9.970107 mm  velocity -1.0913936e-11
