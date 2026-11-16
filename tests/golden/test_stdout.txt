@@ -1210,6 +1210,8 @@ in-between at 0.75: 0.0  checks True True True True True
 RBF: 0 / 60 / 120 / 90 deg -> -9.313226e-10 0.3 0.99999994 0.74081665
 squash (1, 0.5, 1) about y = 1: heights 0.5 1.25 1.5
 [PASS] morph_ext - 12 / 12 checks
+--- tests/test_motion_match.mojo ---
+[PASS] motion_match - 14 / 14 checks
 --- tests/test_motor_parity.mojo ---
 [PASS] motor_parity - 285 / 285 checks
 --- tests/test_motor_transform.mojo ---
