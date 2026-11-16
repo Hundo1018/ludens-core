@@ -60,7 +60,7 @@
 | [軟體、布料、連續體與流體](#軟體布料連續體與流體) | softbody、cloth、FEM / MPM / SPH / PBF、LBM、繩索 | 16 | 5 | 1 | 1 |
 | [可微模擬、批次世界與數值深化](#可微模擬批次世界與數值深化) | diffsim、diffsolver、tape、批次、稀疏線代 | 7 | 0 | 0 | 1 |
 | [GPU 計算](#gpu-計算) | GPU kernels 與單一 device context | 2 | 1 | 0 | 0 |
-| [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 10 | 0 | 0 | 0 |
+| [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 11 | 0 | 0 | 0 |
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 10 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 5 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
@@ -2560,6 +2560,16 @@
 | 17.64 | [動畫執行期](#1764-動畫執行期--wave-b) | ✅ | B | Animator 狀態圖、clip 事件與同步標記、慣性化轉場(inertialization)、無配置求值、進 ECS / Runtime 的組裝、動畫狀態入快照 / 回放 |
 | 17.65 | [形變資料](#1765-形變資料--wave-cheadless-資料--邏輯) | ✅ | C | N 影響蒙皮、綁定資料、Morph targets / blend shapes、修正形狀(pose-space deformation)、縮放 / 擠壓伸展通道、蒙皮 → 模擬耦合 |
 | 17.69 | [PCG](#1769-pcg--wave-c) | ✅ | C | 點分佈、地形生成、結構 / 關卡、2D Voronoi / Delaunay、等值面抽取、決定論契約 |
+| 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | ✅ | B | `procedural/motion_match.mojo`:由角色的 clip 建軌跡特徵(腳、髖、未來軌跡,於面向座標系)、逐欄縮放、`MotionMatchDB` 與逐代理人 `MotionMatcher`(查詢間隔、交錯、保留比例、切換事件) |
+
+#### 17.92 Motion matching 控制器
+
+> **進度註(2026-11-16)**:`anim_graph.MotionDB` 只存列、做最近鄰;特徵與控制器原本寫在 ludens-playground(`app/motion_match.mojo`、`app/town_motion.mojo`,
+> 共 420 行;ludens-engine#81)。`procedural/motion_match.mojo`:`MotionTrack`(每幀髖位置、地面面向、腳位置,由呼叫端從自己的骨架填入)、`raw_feature`
+> (每腳相對髖位置與速度、髖速度、各時距的髖位置與面向,皆在該幀面向座標系;中央差分、clip 端點夾住、不跨 clip)、`MotionMatchDB`(逐欄除以均方根,全 0 欄維持 1)、
+> `MotionMatcher`(clip 速率播放並循環、`query_ticks` 交錯查詢 `(ticks + a) % query_ticks == 0`、以自身速度取代髖速度與軌跡、平方距離低於 `keep_ratio` 倍且換 clip 或跳超過
+> `switch_frames` 幀才切換;`step` 回傳切換事件,供 `inertialize.Inertializer` 跨切換混合)。`tests/test_motion_match.mojo` 14/14:整條軌跡旋轉 0.7 rad 並平移後特徵差 < 1e-4(f32)、
+> 每列的探針找回自己、縮放為均方根、以快走速度移動的代理人在其查詢 tick 10 切到快走、`keep_ratio` 0 不切換、交錯首次查詢 tick 為 4 − a、錯誤輸入皆 raise。範例 27。
 
 ### 已完成條目的遺留待辦
 
@@ -4528,5 +4538,6 @@
 | 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 嵌入、腳本與平台 | 🔶 |
 | 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ⬜ |
 | 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
+| 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
 | 17.84 | [數值 / 可微深化](#1784-數值--可微深化--wave-c) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.85 | [分級模擬:依因果可達性分配時間 / 空間解析度](#1785-分級模擬依因果可達性分配時間--空間解析度--wave-c架構) | ECS、排程、執行期與診斷 | ✅ |
