@@ -1662,7 +1662,7 @@ counted, not listed.
 
 ### `physics/solver6.mojo`
 - struct `ContactReport` — 0 methods
-- struct `ContactScene6` — 110 methods
+- struct `ContactScene6` — 111 methods
 - `def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R)`
 - `def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W)`
 - aliases: `FORCE_MODE_ACCELERATION`, `FORCE_MODE_FORCE`, `FORCE_MODE_IMPULSE`, `FORCE_MODE_VELOCITY_CHANGE`
@@ -2100,13 +2100,16 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 7 modules, 174 public declarations
+## embed (layer 6) — 7 modules, 186 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
 - `def ld_body_add_box(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, hx: Float32, hy: Float32, hz: Float32, mass: Float32, is_static: Int32) -> Int64`
 - `def ld_body_add_capsule(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, half_len: Float32, mass: Float32, is_static: Int32) -> Int64`
+- `def ld_body_add_heightfield(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], heights: Optional[Pointer[Float32, MutAnyOrigin]], nx: Int32, nz: Int32, cell: Float32, ox: Float32, oz: Float32) -> Int64`
+- `def ld_body_add_hull(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, verts_xyz: Optional[Pointer[Float32, MutAnyOrigin]], nverts: Int64, mass: Float32, is_static: Int32) -> Int64`
 - `def ld_body_add_sphere(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, mass: Float32, is_static: Int32) -> Int64`
+- `def ld_body_add_trimesh(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, verts_xyz: Optional[Pointer[Float32, MutAnyOrigin]], nverts: Int64, tris: Optional[Pointer[Int32, MutAnyOrigin]], nidx: Int64) -> Int64`
 - `def ld_body_alive(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
 - `def ld_body_apply_impulse(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, jx: Float32, jy: Float32, jz: Float32) -> Int32`
 - `def ld_body_get_material(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, dst: Optional[Pointer[UInt32, MutAnyOrigin]]) -> Int32`
@@ -2126,6 +2129,10 @@ counted, not listed.
 - `def ld_joint_add_hinge(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32, ax: Float32, ay: Float32, az: Float32) -> Int64`
 - `def ld_joint_add_weld(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32) -> Int64`
 - `def ld_joint_remove(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64) -> Int32`
+- `def ld_joint_set_break(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64, force: Float32, torque: Float32) -> Int32`
+- `def ld_joint_set_limits(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64, lo: Float32, hi: Float32) -> Int32`
+- `def ld_joint_set_motor(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64, mode: Int32, target: Float32, max_force: Float32, hertz: Float32, zeta: Float32) -> Int32`
+- `def ld_joint_set_spring(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64, hertz: Float32, zeta: Float32, rest: Float32) -> Int32`
 - `def ld_material_set_friction(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], material: Int32, mu: Float32) -> Int32`
 - `def ld_material_set_softness(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], material: Int32, hertz: Float32, zeta: Float32) -> Int32`
 - `def ld_nav_bake(verts_xyz: Optional[Pointer[Float32, MutAnyOrigin]], nverts: Int64, tris: Optional[Pointer[Int32, MutAnyOrigin]], nidx: Int64, cfg7: Optional[Pointer[Float32, MutAnyOrigin]], out_nav: Optional[Pointer[Pointer[NoneType, MutUntrackedOrigin], MutAnyOrigin]]) -> Int32`
@@ -2161,6 +2168,8 @@ counted, not listed.
 - `def ld_world_joint_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_last_error(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_load(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], data: Optional[Pointer[UInt8, MutAnyOrigin]], n: Int64) -> Int32`
+- `def ld_world_overlap_box(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], cx: Float32, cy: Float32, cz: Float32, hx: Float32, hy: Float32, hz: Float32, qx: Float32, qy: Float32, qz: Float32, qw: Float32, mask: UInt32, dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_world_overlap_sphere(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], cx: Float32, cy: Float32, cz: Float32, r: Float32, mask: UInt32, dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_raycast(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], ox: Float32, oy: Float32, oz: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32, out_body: Optional[Pointer[Int64, MutAnyOrigin]], out_hit7: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
 - `def ld_world_raycast_mask(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], ox: Float32, oy: Float32, oz: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32, mask: UInt32, out_body: Optional[Pointer[Int64, MutAnyOrigin]], out_hit7: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
 - `def ld_world_remove_system(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], id: Int64) -> Int32`
@@ -2173,6 +2182,8 @@ counted, not listed.
 - `def ld_world_step(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], frame_dt: Float64) -> Int32`
 - `def ld_world_step_ticks(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], n: Int32) -> Int32`
 - `def ld_world_subscribe_contacts(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], kind_mask: Int32, f: def(Optional[Pointer[NoneType, MutUntrackedOrigin]], Pointer[Int64, MutAnyOrigin], Optional[Pointer[NoneType, MutUntrackedOrigin]]) abi("C") thin -> Int32, user: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
+- `def ld_world_sweep_box(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, hx: Float32, hy: Float32, hz: Float32, qx: Float32, qy: Float32, qz: Float32, qw: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32, mask: UInt32, out_body: Optional[Pointer[Int64, MutAnyOrigin]], out_hit8: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
+- `def ld_world_sweep_sphere(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32, mask: UInt32, out_body: Optional[Pointer[Int64, MutAnyOrigin]], out_hit8: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
 - `def ld_world_tick(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_transfer_load(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], registered: Optional[Pointer[UInt8, MutAnyOrigin]], data: Optional[Pointer[UInt8, MutAnyOrigin]], n: Int64) -> Int32`
 - `def ld_world_transfer_save(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], registered: Optional[Pointer[UInt8, MutAnyOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
@@ -2194,7 +2205,7 @@ counted, not listed.
 - struct `SceneChange` — 0 methods
 - struct `SceneDoc` — 0 methods
 - struct `SceneField` — 0 methods
-- struct `SceneJoint` — 0 methods
+- struct `SceneJoint` — 5 methods
 - struct `SceneMaterial` — 0 methods
 - `def add_body_record(mut world: EmbedWorld, s: SceneBody) -> Int64`
 - `def body_equal(a: SceneBody, b: SceneBody) -> Bool`
@@ -2235,9 +2246,10 @@ counted, not listed.
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 49 methods
+- struct `EmbedWorld` — 60 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
+- struct `SweepResult` — 0 methods
 - struct `TickEvent` — 0 methods
 - `def dequantize_rotation(r: List[Int], scale: Float32 = 1.0E+6) -> Quat`
 - `def fnv1a(data: List[UInt8]) -> UInt64`
