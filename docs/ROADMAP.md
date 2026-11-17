@@ -64,7 +64,7 @@
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 1 | 0 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 5 | 4 | 2 | 0 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 5 | 5 | 2 | 0 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
 
 ## 原則與決策
@@ -3705,6 +3705,7 @@
 | 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 🔶 | B | 編輯器程式碼熱重載走「舊模組存、新模組載」:`embed/transfer.mojo` 的移交 blob(版本、純量寬度、設定雜湊、宿主材質、已註冊名稱、校驗和 + `save`)在載入前逐項檢查並回具名狀態碼,失敗時世界不變;兩個獨立建置之間移交後逐位相同(原生與 wasm64 皆已量測),C-ABI 0.7 提供 `ld_world_transfer_*`。 |
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | ✅ | B | `save_excludes()` 列出 `save` / `hash` 不帶的狀態與理由(重力、求解器、單位比例為宿主設定;宿主材質 id 由 17.91 移交);帶水的世界 `save` 寫入標記、`load` 拒絕;`hash` 涵蓋水粒子;`test_save_coverage` 逐項量測 |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | ⬜ | B | 保留 FMA 的效能,同時讓同一算式在每個呼叫點、每個建置得到相同位元:明確的 `fma` 呼叫 + 關閉隱式合併,量測速度與位元一致性 |
+| 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 🔶 | B | `EmbedWorld` 加入實體與 `ChildOf` 階層、事件冒泡與群組、正規化的換關卡;core 能力逐項開放到宿主入口(入口、存檔 / 雜湊、`scene_io`、C-ABI),以 `scripts/capability_table.py` 量測 |
 
 ### 待辦與部分完成條目
 
@@ -4143,6 +4144,22 @@
 > 2. 熱點算式改寫為明確 `fma`(由程式決定合併位置),其餘關閉合併;在有 FMA 的目標上量 benchmark,與「全開合併」「全關 FMA」三者比較。
 > 3. 位元一致性:同一算式在內聯與不內聯、x86-64(有 / 無 FMA)、aarch64、wasm64 之間逐位比較;wasm 沒有 FMA 指令時,明確 `fma` 需軟體實作,量其成本。
 > **驗收**:速度表(三種設定 × 代表性 bench);逐位相同的平台矩陣;若可行,`flag-policy` 加入對應旗標的檢查。
+
+#### 17.97 宿主入口:實體、ChildOf 階層、換關卡與能力開放
+
+> **來源**:ludens-playground 的引擎稽核反思(2026-11-16 / 17)。範例的 frontier 世界沒有用到 ECS;遊戲碼 8 處直接取用 `world.scene`;
+> 繩子、布料在世界之外;沒有換關卡。設計筆記 `docs/design/17.97-hierarchy-levels.md`(決定:`EmbedWorld` 加入實體、換關卡正規化、
+> 允許動態剛體互為父子)。
+> **能力開放**:`scripts/capability_table.py` 列出 core 中遊戲會用到的能力,並搜尋程式碼判斷每項是否有 `EmbedWorld` 入口、C-ABI、
+> 存檔 / 雜湊測試、`scene_io` 列、範例。2026-11-17 的量測:33 項中 `EmbedWorld` 11、C-ABI 6、存檔 / 雜湊測試 6、`scene_io` 7、範例 15。
+> 補齊順序:(1) C-ABI 追上 `EmbedWorld`;(2) 範例需要且常用的(繩、布料、角色控制、世界分區、重疊 / 掃掠查詢、凸殼 / 網格 / 高度場、
+> 關節限制與馬達);(3) 3D 水與剛體耦合;(4) 其餘。每項以四欄(入口、存檔 / 雜湊、`scene_io`、C-ABI)為完成條件。
+> **進度註(2026-11-17,補齊第 1 步)**:C-ABI 0.8 追上 `EmbedWorld`:`ld_body_add_capsule`、`ld_body_set_kinematic`、
+> `ld_material_set_friction` / `_softness`、`ld_joint_add_ball` / `_distance` / `_hinge` / `_weld`、`ld_joint_remove`、`ld_world_joint_count`;
+> Rust / C# 綁定 65 → 75 個函式,Python `World` / `Body` 包裝。同一場景(膠囊、運動學方塊、材質、四種關節、120 tick 後移除焊接再 60 tick)
+> C 宿主、Python 與 Mojo 雜湊相同;只在 C 端改鉸鏈軸則比對失敗。`test_capi` 105/105、`test_python_binding` 15/15。
+> 對照表(`scripts/capability_table.py`):C-ABI 6 → 10;查詢的存檔與 `scene_io` 欄標「不適用」。
+> **未做**:實體、`ChildOf`、事件冒泡、群組、換關卡(設計筆記的工作切片 1–5)。
 
 ## 工程、測試、效能與工具鏈
 
@@ -4601,6 +4618,7 @@
 | 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | 嵌入、腳本與平台 | ✅ |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 嵌入、腳本與平台 | ⬜ |
+| 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 嵌入、腳本與平台 | 🔶 |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
 | 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | 角色、載具、破壞與 gameplay 物理 | ✅ |
