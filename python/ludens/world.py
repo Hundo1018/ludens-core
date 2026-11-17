@@ -87,6 +87,11 @@ def abi_version():
     return (v >> 16, v & 0xFFFF)
 
 
+def _bh(b):
+    """A Body or a raw handle."""
+    return int(b.handle) if isinstance(b, Body) else int(b)
+
+
 def _f3(v, name):
     try:
         x, y, z = v
@@ -147,6 +152,10 @@ class Body:
     def set_layer(self, category, mask=0xFFFFFFFF):
         """Collision layer: category bits and the categories it collides with."""
         self.world._check(C.lib.ld_body_set_layer(self.world._h, self.handle, int(category), int(mask)))
+
+    def set_kinematic(self):
+        """Moved by its velocity, unaffected by forces (ABI 0.8)."""
+        self.world._check(C.lib.ld_body_set_kinematic(self.world._h, self.handle))
 
     @property
     def user(self):
@@ -259,6 +268,42 @@ class World:
 
     def add_sphere(self, pos, radius, mass=1.0, static=False):
         return Body(self, self._check(C.lib.ld_body_add_sphere(self._h, *_f3(pos, "pos"), float(radius), float(mass), int(bool(static)))))
+
+    def add_capsule(self, pos, radius, half_length, mass=1.0, static=False):
+        """A capsule whose axis is the body's local y; half_length is half the cylinder part (ABI 0.8)."""
+        return Body(self, self._check(C.lib.ld_body_add_capsule(self._h, *_f3(pos, "pos"), float(radius), float(half_length),
+                                                                float(mass), int(bool(static)))))
+
+    def set_material_friction(self, material, mu):
+        """Friction of surface material `material` (ids 0..65535) for mesh / heightfield triangles (ABI 0.8)."""
+        self._check(C.lib.ld_material_set_friction(self._h, int(material), float(mu)))
+
+    def set_material_softness(self, material, hertz, zeta):
+        """Contact stiffness of surface material `material` (hertz > 0, zeta >= 0; ABI 0.8)."""
+        self._check(C.lib.ld_material_set_softness(self._h, int(material), float(hertz), float(zeta)))
+
+    def add_ball_joint(self, a, b, anchor_a, anchor_b):
+        """Anchors (each in its body's frame) held together. Returns the joint index (ABI 0.8)."""
+        return self._check(C.lib.ld_joint_add_ball(self._h, _bh(a), _bh(b), *_f3(anchor_a, "anchor_a"), *_f3(anchor_b, "anchor_b")))
+
+    def add_distance_joint(self, a, b, anchor_a, anchor_b, rest):
+        return self._check(C.lib.ld_joint_add_distance(self._h, _bh(a), _bh(b), *_f3(anchor_a, "anchor_a"),
+                                                       *_f3(anchor_b, "anchor_b"), float(rest)))
+
+    def add_hinge_joint(self, a, b, anchor_a, anchor_b, axis):
+        return self._check(C.lib.ld_joint_add_hinge(self._h, _bh(a), _bh(b), *_f3(anchor_a, "anchor_a"),
+                                                    *_f3(anchor_b, "anchor_b"), *_f3(axis, "axis")))
+
+    def add_weld_joint(self, a, b, anchor_a, anchor_b):
+        return self._check(C.lib.ld_joint_add_weld(self._h, _bh(a), _bh(b), *_f3(anchor_a, "anchor_a"), *_f3(anchor_b, "anchor_b")))
+
+    def remove_joint(self, joint):
+        self._check(C.lib.ld_joint_remove(self._h, int(joint)))
+
+    @property
+    def joint_count(self):
+        """Joint slots ever added, removed ones included (indices never shift)."""
+        return self._check(C.lib.ld_world_joint_count(self._h))
 
     def body(self, handle):
         return Body(self, int(handle))

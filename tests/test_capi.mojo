@@ -93,6 +93,33 @@ struct Native:
         self.events += len(self.w.tick_events)
 
 
+def native_abi8() raises -> UInt64:
+    """tests/capi/host.c's 0.8 block against EmbedWorld: capsule, kinematic, surface materials, four joints, one removed."""
+    var w = EmbedWorld(1.0 / 60.0, _v(0, -9.8, 0))
+    _ = w.add_box(_v(0, -0.5, 0), _v(20, 0.5, 20), 0, True)
+    w.set_material_friction(0, 0.25)
+    w.set_material_softness(0, 30, 0.5)
+    _ = w.add_capsule(_v(0, 2, 0), 0.25, 0.5, 1, False)
+    var kin = w.add_box(_v(3, 0.5, 0), _v(0.5, 0.5, 0.5), 1, False)
+    w.set_kinematic(kin)
+    w.set_velocity(kin, _v(-1, 0, 0), _v(0, 0, 0))
+    var ja = w.add_box(_v(-2, 3, 0), _v(0.25, 0.25, 0.25), 0, True)
+    var jb = w.add_box(_v(-2, 2, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var jc = w.add_box(_v(-2, 1, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var jd = w.add_box(_v(-1, 1, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var je = w.add_box(_v(-1, 2, 0), _v(0.25, 0.25, 0.25), 1, False)
+    _ = w.add_ball_joint(ja, jb, _v(0, -0.5, 0), _v(0, 0.5, 0))
+    _ = w.add_distance_joint(jb, jc, _v(0, -0.25, 0), _v(0, 0.25, 0), 0.5)
+    _ = w.add_hinge_joint(jc, jd, _v(0.5, 0, 0), _v(-0.5, 0, 0), _v(0, 0, 1))
+    var weld = w.add_weld_joint(jd, je, _v(0, 0.5, 0), _v(0, -0.5, 0))
+    for _ in range(120):
+        w.physics_tick()
+    w.remove_joint(weld)
+    for _ in range(60):
+        w.physics_tick()
+    return w.hash()
+
+
 def _sh(sp: PythonObject, cmd: PythonObject) raises -> String:
     var r = sp.run(cmd, capture_output=True, text=True)
     if Int(py=r.returncode) != 0:
@@ -262,6 +289,17 @@ def main() raises:
     s.eqi(Int(get(kv, "thread_refused", 6)), LD_ERR_ARG, "bind_thread flag other than 0 / 1 -> LD_ERR_ARG")
     s.check(get(kv, "mask_ray", 0) == "1" and get(kv, "mask_ray", 1) == "1" and get(kv, "mask_ray", 3) == "0", "raycast mask: all -> near layer 1 box, mask 2 -> far box, mask 4 -> miss")
     s.check(get(kv, "user", 0) == "1" and get(kv, "user", 2) == "1" and Int(get(kv, "user", 4)) == LD_ERR_STALE, "user value set, read back, found; an unknown value -> LD_ERR_STALE")
+    # 0.8 (17.97): what EmbedWorld already had, from C
+    var h8 = String(bi.str(bi.int(get(kv, "abi8", 0), 16)))
+    s.check(h8 == String(native_abi8()), "0.8: capsule, kinematic, materials, ball / distance / hinge / weld joints, one removed: C host hash == native (" + h8 + ")")
+    s.check(get(kv, "abi8", 2) == "0" and get(kv, "abi8", 3) == "1" and get(kv, "abi8", 4) == "2" and get(kv, "abi8", 5) == "3" and get(kv, "abi8", 7) == "4",
+            "0.8: joints get indices 0..3 in order; ld_world_joint_count counts the removed one too")
+    s.check(get(kv, "abi8", 9) == "0" and get(kv, "abi8", 10) == "0" and get(kv, "abi8", 11) == "0" and get(kv, "abi8", 12) == "0" and get(kv, "abi8", 14) == "1",
+            "0.8: material friction / softness, set_kinematic, joint_remove return LD_OK; the capsule handle is valid")
+    s.check(Int(get(kv, "abi8_err", 0)) == LD_ERR_STALE and Int(get(kv, "abi8_err", 1)) == LD_ERR_ARG and Int(get(kv, "abi8_err", 2)) == LD_ERR_ARG
+            and Int(get(kv, "abi8_err", 3)) == LD_ERR_ARG and Int(get(kv, "abi8_err", 4)) == LD_ERR_STALE
+            and Int(get(kv, "abi8_err", 5)) == LD_ERR_ARG and Int(get(kv, "abi8_err", 6)) == LD_ERR_ARG,
+            "0.8 errors: joint to a removed body -> STALE; negative rest, negative radius, unknown joint, bad material id, negative stiffness -> ARG; kinematic on a removed body -> STALE")
 
     # --- navigation parity
     var vs = List[Vec3]()

@@ -876,7 +876,7 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
 [PASS] camera_seq - 14 / 14 checks
 --- tests/test_capi.mojo ---
   gen_bindings: up to date (65 functions);  rust host hash 6b01fd3e329effc5  c host hash 6b01fd3e329effc5
-[PASS] capi - 101 / 101 checks
+[PASS] capi - 105 / 105 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61832 bytes ( 506 per frame incl. keyframes )
   draw_frame(100): 18 commands = 5 body points + 13 contact arrows
@@ -1661,7 +1661,7 @@ falloff: health 960 975 990  total 75  events 3
   lead: direction [0.9949875, 0.0, 0.1, 0.0]  closest approach 0.00075149536 m;  outrun: [0.0, 0.0, 0.0, 0.0]
 [PASS] projectile_pen - 9 / 9 checks
 --- tests/test_python_binding.mojo ---
-[PASS] python_binding - 14 / 14 checks
+[PASS] python_binding - 15 / 15 checks
 --- tests/test_queries.mojo ---
 [PASS] queries - 28 / 28 checks
 --- tests/test_query_ext.mojo ---

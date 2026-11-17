@@ -43,7 +43,7 @@ def raises(exc_type, fn):
 # ---------------------------------------------------------------- isolation
 check(not os.path.realpath(ludens.__file__).startswith(FORBIDDEN), "ludens imported from the venv, not the repo: " + ludens.__file__)
 check(os.path.dirname(ludens.library_path) == os.path.dirname(ludens.__file__), "libludens.so loaded from the installed package")
-check(ludens.abi_version() == (0, 7), "abi_version == (0, 7)")
+check(ludens.abi_version() == (0, 8), "abi_version == (0, 8)")
 
 
 # ------------------------------------------------- parity scenario (test_capi)
@@ -393,6 +393,35 @@ with ludens.World(dt=1 / 60, gravity=(0, -9.81, 0)) as mw:
         seen += mw.events_ex()
     check(any(e.material_a == 9 or e.material_b == 9 for e in seen), "events_ex carries the body's material id")
     check(any(e.normal_impulse > 0 for e in seen), "events_ex carries a normal impulse")
+
+# ---------------------------------------- 0.8 (17.97): the abi8 scene of test_capi / test_python_binding
+with ludens.World(dt=1 / 60, gravity=(0, -9.8, 0)) as jw:
+    jw.add_box((0, -0.5, 0), (20, 0.5, 20), mass=0, static=True)
+    jw.set_material_friction(0, 0.25)
+    jw.set_material_softness(0, 30, 0.5)
+    cap = jw.add_capsule((0, 2, 0), 0.25, 0.5, mass=1)
+    kin = jw.add_box((3, 0.5, 0), (0.5, 0.5, 0.5), mass=1)
+    kin.set_kinematic()
+    kin.set_velocity((-1, 0, 0))
+    ja = jw.add_box((-2, 3, 0), (0.25, 0.25, 0.25), mass=0, static=True)
+    jb = jw.add_box((-2, 2, 0), (0.25, 0.25, 0.25), mass=1)
+    jc = jw.add_box((-2, 1, 0), (0.25, 0.25, 0.25), mass=1)
+    jd = jw.add_box((-1, 1, 0), (0.25, 0.25, 0.25), mass=1)
+    je = jw.add_box((-1, 2, 0), (0.25, 0.25, 0.25), mass=1)
+    idx = [jw.add_ball_joint(ja, jb, (0, -0.5, 0), (0, 0.5, 0)),
+           jw.add_distance_joint(jb, jc, (0, -0.25, 0), (0, 0.25, 0), 0.5),
+           jw.add_hinge_joint(jc, jd, (0.5, 0, 0), (-0.5, 0, 0), (0, 0, 1)),
+           jw.add_weld_joint(jd, je, (0, 0.5, 0), (0, -0.5, 0))]
+    jw.step_ticks(120)
+    jw.remove_joint(idx[3])
+    jw.step_ticks(60)
+    check(idx == [0, 1, 2, 3] and jw.joint_count == 4, "joints get indices 0..3; joint_count counts the removed one")
+    print("abi8_hash", jw.hash())
+    je.remove()
+    check(raises(ludens.StaleBodyError, lambda: jw.add_ball_joint(je, ja, (0, 0, 0), (0, 0, 0))) is not None,
+          "a joint to a removed body raises StaleBodyError")
+    check(raises(ludens.ArgumentError, lambda: jw.add_distance_joint(ja, jb, (0, 0, 0), (0, 0, 0), -1)) is not None,
+          "a negative rest length raises ArgumentError")
 
 # ---------------------------------------------------------------- isolation again
 maps = open("/proc/self/maps").read().splitlines()

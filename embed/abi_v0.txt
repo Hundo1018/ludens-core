@@ -95,3 +95,13 @@ int64_t ld_world_get_bubble_events(ld_world* w, ld_bubble_event* out, int64_t ca
 int64_t ld_world_transfer_size(ld_world* w, const uint8_t* registered);
 int64_t ld_world_transfer_save(ld_world* w, const uint8_t* registered, uint8_t* buf, int64_t cap);
 int32_t ld_world_transfer_load(ld_world* w, const uint8_t* registered, const uint8_t* data, int64_t n);
+ld_body ld_body_add_capsule(ld_world* w, float px, float py, float pz, float r, float half_len, float mass, int32_t is_static);
+int32_t ld_body_set_kinematic(ld_world* w, ld_body b);
+int32_t ld_material_set_friction(ld_world* w, int32_t material, float mu);
+int32_t ld_material_set_softness(ld_world* w, int32_t material, float hertz, float zeta);
+int64_t ld_joint_add_ball(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+int64_t ld_joint_add_distance(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz, float rest);
+int64_t ld_joint_add_hinge(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz, float ax, float ay, float az);
+int64_t ld_joint_add_weld(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+int32_t ld_joint_remove(ld_world* w, int64_t joint);
+int64_t ld_world_joint_count(ld_world* w);
