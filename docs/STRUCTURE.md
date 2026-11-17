@@ -2100,11 +2100,12 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 7 modules, 164 public declarations
+## embed (layer 6) — 7 modules, 174 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
 - `def ld_body_add_box(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, hx: Float32, hy: Float32, hz: Float32, mass: Float32, is_static: Int32) -> Int64`
+- `def ld_body_add_capsule(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, half_len: Float32, mass: Float32, is_static: Int32) -> Int64`
 - `def ld_body_add_sphere(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], px: Float32, py: Float32, pz: Float32, r: Float32, mass: Float32, is_static: Int32) -> Int64`
 - `def ld_body_alive(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
 - `def ld_body_apply_impulse(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, jx: Float32, jy: Float32, jz: Float32) -> Int32`
@@ -2112,6 +2113,7 @@ counted, not listed.
 - `def ld_body_get_state(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, out13: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
 - `def ld_body_get_user(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, dst: Optional[Pointer[UInt64, MutAnyOrigin]]) -> Int32`
 - `def ld_body_remove(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
+- `def ld_body_set_kinematic(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64) -> Int32`
 - `def ld_body_set_layer(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, category: UInt32, mask: UInt32) -> Int32`
 - `def ld_body_set_material(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, material: UInt32) -> Int32`
 - `def ld_body_set_user(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, user: UInt64) -> Int32`
@@ -2119,6 +2121,13 @@ counted, not listed.
 - `def ld_body_teleport(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], b: Int64, px: Float32, py: Float32, pz: Float32, qx: Float32, qy: Float32, qz: Float32, qw: Float32) -> Int32`
 - `def ld_counter_count() -> Int64`
 - `def ld_counter_name(id: Int32, buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
+- `def ld_joint_add_ball(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32) -> Int64`
+- `def ld_joint_add_distance(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32, rest: Float32) -> Int64`
+- `def ld_joint_add_hinge(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32, ax: Float32, ay: Float32, az: Float32) -> Int64`
+- `def ld_joint_add_weld(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32, lbz: Float32) -> Int64`
+- `def ld_joint_remove(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], j: Int64) -> Int32`
+- `def ld_material_set_friction(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], material: Int32, mu: Float32) -> Int32`
+- `def ld_material_set_softness(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], material: Int32, hertz: Float32, zeta: Float32) -> Int32`
 - `def ld_nav_bake(verts_xyz: Optional[Pointer[Float32, MutAnyOrigin]], nverts: Int64, tris: Optional[Pointer[Int32, MutAnyOrigin]], nidx: Int64, cfg7: Optional[Pointer[Float32, MutAnyOrigin]], out_nav: Optional[Pointer[Pointer[NoneType, MutUntrackedOrigin], MutAnyOrigin]]) -> Int32`
 - `def ld_nav_destroy(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int32`
 - `def ld_nav_find_path(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], sx: Float32, sy: Float32, sz: Float32, gx: Float32, gy: Float32, gz: Float32, out_xyz: Optional[Pointer[Float32, MutAnyOrigin]], cap: Int64) -> Int64`
@@ -2149,6 +2158,7 @@ counted, not listed.
 - `def ld_world_get_fracture_events(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_get_fragments(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[Int64, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_hash(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], dst: Optional[Pointer[UInt64, MutAnyOrigin]]) -> Int32`
+- `def ld_world_joint_count(h: Optional[Pointer[NoneType, MutUntrackedOrigin]]) -> Int64`
 - `def ld_world_last_error(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], buf: Optional[Pointer[UInt8, MutAnyOrigin]], cap: Int64) -> Int64`
 - `def ld_world_load(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], data: Optional[Pointer[UInt8, MutAnyOrigin]], n: Int64) -> Int32`
 - `def ld_world_raycast(h: Optional[Pointer[NoneType, MutUntrackedOrigin]], ox: Float32, oy: Float32, oz: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32, out_body: Optional[Pointer[Int64, MutAnyOrigin]], out_hit7: Optional[Pointer[Float32, MutAnyOrigin]]) -> Int32`
