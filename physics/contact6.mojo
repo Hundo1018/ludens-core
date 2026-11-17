@@ -34,6 +34,27 @@ comptime _STICK_V: Real = 0.01
 comptime _ADH_GAP: Real = 0.01
 comptime _BLOCK_EPS: Real = 1e-4  # 17.50 block solver diagonal regularisation (relative)
 
+# Per-step contact features as a compile-time bit set (ROADMAP 17.98): the
+# sweeps read `BodySet` once per call and run a kernel specialised for the set
+# bits, so `solve_contact`'s per-pair, per-iteration body has no test for a
+# feature that is off. Each bit only removes code that the run-time flag
+# skipped anyway, so every flag combination is bit-identical to before.
+comptime CF_MODEL = 1  # `bset.any_contact_model`: static friction, rolling, per-body softness, adhesion
+comptime CF_ELLIPTIC = 2  # `bset.cone == 1`: elliptic friction cone
+comptime CF_BLOCK = 4  # `bset.block`: block normal solve of multi-point manifolds
+
+
+def contact_features[B: Body6](bset: BodySet[B]) -> Int:
+    """The `CF_*` bits of the run-time flags in `bset`."""
+    var f = 0
+    if bset.any_contact_model:
+        f |= CF_MODEL
+    if bset.cone == 1:
+        f |= CF_ELLIPTIC
+    if bset.block:
+        f |= CF_BLOCK
+    return f
+
 
 @fieldwise_init
 struct ContactConstraint(Copyable, ImplicitlyCopyable, Movable):
@@ -630,12 +651,15 @@ def soft_sweep[B: Body6](
     the soft push-out speed (m/s, `SolverConfig.max_push_speed`). Separation is
     re-derived per point from the CURRENT poses via body-frame anchors, so
     rotation shows up as differential depth (restoring torque)."""
-    for _ in range(iters):
-        for c in range(lo, hi):
-            solve_contact(bset,
-                pairs, c, h, bias_rate, mass_scale, impulse_scale,
-                use_bias, mu, max_push,
-            )
+    var f = contact_features(bset)
+    comptime for F in range(8):
+        if f == F:
+            for _ in range(iters):
+                for c in range(lo, hi):
+                    solve_contact[F=F](bset,
+                        pairs, c, h, bias_rate, mass_scale, impulse_scale,
+                        use_bias, mu, max_push,
+                    )
 
 
 def sweep_colored[B: Body6](
@@ -660,22 +684,25 @@ def sweep_colored[B: Body6](
     solves in parallel — Jacobi within the color, Gauss-Seidel across
     colors. The schedule is fixed and same-color writes are disjoint, so
     par=True is bit-identical to par=False (and to any `workers` count)."""
-    for _ in range(iters):
-        for col in range(len(clo)):
-            if par and chi[col] - clo[col] >= 8:
-                solve_color_parallel(
-                    bset, pairs, clo[col], chi[col], h, bias_rate,
-                    mass_scale, impulse_scale, use_bias, mu, workers, dispatch, max_push,
-                )
-            else:
-                for c in range(clo[col], chi[col]):
-                    solve_contact(bset,
-                        pairs, c, h, bias_rate, mass_scale,
-                        impulse_scale, use_bias, mu, max_push,
-                    )
+    var f = contact_features(bset)
+    comptime for F in range(8):
+        if f == F:
+            for _ in range(iters):
+                for col in range(len(clo)):
+                    if par and chi[col] - clo[col] >= 8:
+                        solve_color_parallel[F=F](
+                            bset, pairs, clo[col], chi[col], h, bias_rate,
+                            mass_scale, impulse_scale, use_bias, mu, workers, dispatch, max_push,
+                        )
+                    else:
+                        for c in range(clo[col], chi[col]):
+                            solve_contact[F=F](bset,
+                                pairs, c, h, bias_rate, mass_scale,
+                                impulse_scale, use_bias, mu, max_push,
+                            )
 
 
-def solve_contact[B: Body6](
+def solve_contact[B: Body6, F: Int](
     mut bset: BodySet[B],
     mut pairs: List[ContactConstraint],
     c: Int,
@@ -688,7 +715,11 @@ def solve_contact[B: Body6](
     max_push: Real = 4,
 ):
     """One pair's normal + friction solve (the body of `_soft_sweep`,
-    extracted so the colored sweep can schedule it per pair)."""
+    extracted so the colored sweep can schedule it per pair). `F` is
+    `contact_features(bset)`, fixed by the caller (the `CF_*` bits)."""
+    comptime MODEL = (F & CF_MODEL) != 0
+    comptime ELL = (F & CF_ELLIPTIC) != 0
+    comptime BLOCK = (F & CF_BLOCK) != 0
     var pr = pairs[c]
     if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
         return
@@ -707,9 +738,8 @@ def solve_contact[B: Body6](
         bset.friction_combine[pr.a],
         bset.friction_combine[pr.b],
     )
-    var model = bset.any_contact_model
     var pair_ms = pair_mu
-    if model:
+    comptime if MODEL:
         pair_ms = combine(
             bset.eff_static(pr.a, mu),
             bset.eff_static(pr.b, mu),
@@ -719,7 +749,6 @@ def solve_contact[B: Body6](
     if pr.mu_override >= 0:
         pair_mu = pr.mu_override
         pair_ms = pr.mu_override
-    var ell = bset.cone == 1
     # ROADMAP 17.50 per-body contact softness: the softer side's (lower
     # hertz) hertz / zeta replace the step's for this pair; the same
     # formulas as `ContactScene6.step`, so equal values are bit-identical.
@@ -727,7 +756,7 @@ def solve_contact[B: Body6](
     var p_ms = mass_scale
     var p_isc = impulse_scale
     var adh = Real(0)
-    if model:
+    comptime if MODEL:
         var ha = bset.contact_hertz[pr.a]
         var hb = bset.contact_hertz[pr.b]
         if ha > 0 or hb > 0:
@@ -758,7 +787,9 @@ def solve_contact[B: Body6](
     # ROADMAP 17.50 block solver: all of a manifold's normal impulses at
     # once (a small LCP), then friction per point; one point, adhesion or
     # a singular block stays on the per-point Gauss-Seidel.
-    var blk = bset.block and pr.m.count > 1 and adh == 0
+    var blk = False
+    comptime if BLOCK:
+        blk = pr.m.count > 1 and adh == 0
     if blk:
         blk = _block_normal(bset, pr, n, h, p_bias, p_ms, use_bias, max_push)
     for k in range(pr.m.count):
@@ -819,12 +850,15 @@ def solve_contact[B: Body6](
         # an adhesive point's normal impulse may be negative; it gives no grip
         var lam = pr.acc[k] if pr.acc[k] > 0 else Real(0)
         var cap = pair_mu * lam
-        if model and (pr.stick >> k) & 1 == 1:
-            cap = pair_ms * lam
+        comptime if MODEL:
+            if (pr.stick >> k) & 1 == 1:
+                cap = pair_ms * lam
         # ROADMAP 17.50 elliptic cone: solve both axes unclamped, then
         # project the pair onto the disk |(t1, t2)| <= cap. Below the cap
         # it takes the pyramid's exact steps; cap 0 stays on the pyramid.
-        var disk = ell and cap > 0
+        var disk = False
+        comptime if ELL:
+            disk = cap > 0
         for ti in range(2):
             var t = tb[0] if ti == 0 else tb[1]
             var vat = Vec3(0, 0, 0, 0)
@@ -887,7 +921,7 @@ def solve_contact[B: Body6](
                     bset.bodies[pr.a].apply_impulse(-jt * _cs(bset, pr.a), pwa)
                 if bset.is_dynamic(pr.b):
                     bset.bodies[pr.b].apply_impulse(jt * _cs(bset, pr.b), pwb)
-    if model:
+    comptime if MODEL:
         _solve_rolling(bset, pr, n)
     pairs[c] = pr
 
@@ -1192,7 +1226,7 @@ def restitution_pass[B: Body6](
             pairs[c] = pr
 
 
-struct _ColorTask[B: Body6](Task):
+struct _ColorTask[B: Body6, F: Int](Task):
     """One same-colour pair per item: no two share a dynamic body."""
 
     var bset: Pointer[BodySet[Self.B], MutUntrackedOrigin]
@@ -1223,13 +1257,13 @@ struct _ColorTask[B: Body6](Task):
         self.max_push = max_push
 
     def run(self, k: Int):
-        solve_contact(
+        solve_contact[F=Self.F](
             self.bset[], self.pairs2[], self.lo + k, self.h, self.bias_rate, self.mass_scale,
             self.impulse_scale, self.use_bias, self.mu, self.max_push,
         )
 
 
-def solve_color_parallel[B: Body6](
+def solve_color_parallel[B: Body6, F: Int](
     mut bset: BodySet[B],
     mut pairs2: List[ContactConstraint],
     lo: Int,
@@ -1248,7 +1282,7 @@ def solve_color_parallel[B: Body6](
     (ROADMAP 17.75). Same-color pairs share no dynamic body, so the writes
     are disjoint and the result is bit-identical to solving the color
     serially, whoever runs the items."""
-    var task = _ColorTask[B](bset, pairs2, lo, h, bias_rate, mass_scale, impulse_scale, use_bias, mu, max_push)
+    var task = _ColorTask[B, F](bset, pairs2, lo, h, bias_rate, mass_scale, impulse_scale, use_bias, mu, max_push)
     dispatch_for(dispatch, task, hi - lo, workers)
 
 

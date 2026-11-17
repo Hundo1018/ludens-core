@@ -1,9 +1,9 @@
 """Dimension-generic vector math built on SIMD.
 
-`WorldType` is the world's scalar dtype; `Vec2`/`Vec3` are SIMD vectors. We keep
-the *actual* SIMD width equal to the dimension (2 or 3) and NEVER use SIMD
-`reduce_*` for reductions — on width-3 it silently drops the third lane in this
-nightly. Reductions are done with an explicit `comptime for` over the lanes.
+`WorldType` is the world's scalar dtype; `Vec2` is `SIMD[WorldType, 2]` and `Vec3`
+is `SIMD[WorldType, 4]` with lane 3 always zero (16.3: SIMD widths are powers of
+two). Reductions use SIMD `reduce_add` over every lane, which is correct because
+the pad lane is zero (see `Vec3` and `dot` below).
 
 Width-generic helpers infer the width with `[w: SIMDLength, //]` (SIMD's width
 parameter is `SIMDLength`, not `Int`, so plain `Int` would not infer from a value).

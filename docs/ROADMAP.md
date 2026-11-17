@@ -65,7 +65,7 @@
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 1 | 0 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
 | [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 5 | 5 | 2 | 0 |
-| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 1 | 0 | 0 |
+| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 2 | 0 | 0 |
 
 ## 原則與決策
 
@@ -4194,6 +4194,7 @@
 | 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 🔶 | A | 基準結果的機器可讀輸出、比較工具、確定性閘門、牆鐘閘門、漸近斜率閘門、影格預算表 |
 | 17.87 | [Hook 與文件生成](#1787-hook-與文件生成--wave-a工程) | ✅ | A | git hook(commit-msg / pre-commit / pre-push)、Claude Code hook(PreToolUse / PostToolUse)、`docs/STRUCTURE.md` 由架構索引產生、分層表與 ROADMAP 子系統表的同步檢查 |
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | ✅ | A | 精確鎖定 1.2.0 / 26.7.0、`match` / `if case` / `Defaultable` 採用、golden 逐段歸因、函式型參數結構體的編譯器問題與 `Tween` 改寫 |
+| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 🔶 | B | 執行期旗標每步分派一次到編譯期特化的核心;求解器 seam 改為 policy trait;`QuatBody6[I]`、`EmbedWorld[B, BP]`;固定大小值;每項 golden 逐段不變 |
 
 ### 已完成條目的遺留待辦
 
@@ -4469,6 +4470,27 @@
 > **遺留**:1.2.0 對 `match` 與浮點捨入的敏感度(`mass_props`)只由 `test_compound` 的逐位元檢查守住,其他鏈的轉換靠 golden 不變(歸因見上);
 > `portability` 仍為非阻擋式(`continue-on-error`)。
 
+#### 17.98 編譯期參數化(位元不變)
+
+> **來源**:2026-11-17 對 core / engine 的參數化稽核(Mojo 1.2.0 探針,core PR #138)。
+> 規則:每一項各一個 PR,golden 各段逐位元不變;熱路徑附 `icount` 或 benchmark 數字。改變結果的整併(關節 / 形狀分桶、SIMD 四元數)不在這裡。
+> **項目與決定**(每項先量測;沒有可量到的收益或與現有結構不合者記下理由不做):
+> 1. 接觸旗標 ✅:`solve_contact[B, F]`,`F` 為 `CF_MODEL | CF_ELLIPTIC | CF_BLOCK` 位元集;`soft_sweep` / `sweep_colored` 每次呼叫讀一次
+>    `contact_features(bset)`,以 `comptime for F in range(8)` 分派到特化核心。`icount` 588 794 458 → 572 961 309 條指令(−2.69 %;
+>    散佈 1.82e-04 / 3.42e-05)。上界量法:三個旗標寫死為 `False` 得 572 969 892,特化版與上界在散佈(1.96e4)內相等。
+>    `physics/constraints.mojo` 的錐旗標每次 Newton 求解讀一次、成本由稠密 LU 主導,不改。
+> 2. 求解器 seam 改 policy trait:由第 1 項涵蓋。`friction_cone` / `contact_solver` 經 `bset.cone` / `bset.block` 已在第 1 項編譯期特化;
+>    `impulse_estimator` 每個子步讀一次(`solver6.mojo` `IMPULSE_LAST_SUBSTEP` 分支)、`broadphase` 每步讀一次,改成 trait 不會移除任何逐對分支。
+> 3. `QuatBody6[I: SpinIntegrator]`:不做。`SpinIntegrator.step(pose, wb, inertia, dt)` 一次推進速度與姿態;`QuatBody6` 分兩段
+>    (`integrate_force`,約束,`integrate_pose`)且在世界座標,要接上須另立兩段式 trait,只有一個實作、沒有呼叫端選別的。
+> 4. `EmbedWorldOf[BP: BroadPhase]`,`EmbedWorld = EmbedWorldOf[]`(見其 PR)。物體型別不參數化:`physics.fracture` 建 `QuatBody6`
+>    碎片、`embed.scene_io` 寫其欄位。水世界改 `Optional`:不做,`FlipWater2(2, 2, 1)` 的配置量不到可量的程度。
+> 5. 固定大小值:`quantize_rotation` 不改,是引擎網路程式使用的公開 API(回傳 `List[Int]`);`hull_faces_d` 的呼叫端緩衝待量測
+>    (每個 hull 對另外還建兩個 `ConvexPoly`)。
+> 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
+>    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
+> 7. 2D / 3D 合併:`FlipWater[D]`、`MacFluid[D]`、`LevelSetWater[D]`,待做。
+
 ## 編號索引
 
 所有編號依數字排序。已完成者的完整紀錄在 [ROADMAP_HISTORY.md](ROADMAP_HISTORY.md)。
@@ -4633,6 +4655,7 @@
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | 嵌入、腳本與平台 | ✅ |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 嵌入、腳本與平台 | ⬜ |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 嵌入、腳本與平台 | 🔶 |
+| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | 🔶 |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
 | 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | 角色、載具、破壞與 gameplay 物理 | ✅ |
