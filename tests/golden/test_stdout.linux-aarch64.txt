@@ -1736,7 +1736,7 @@ rigid in air, 0.3 s: v 0.13973516 0.18008679 1.8094296e-08  w_z 3.792167  max im
 [PASS] rigid_params - 32 / 32 checks
 --- tests/test_rolling_sphere.mojo ---
   sphere v0=3 mu=0.5: vx(1.5 s) = 2.1428554  vx(4 s) = 2.1428554  omega*r(4 s) = 2.1428554  y(4 s) = 0.49972457
-  capsule: vx = 2.0338998  want 2.0338984  omega*r = 2.0338998  y = 0.29965672
+  capsule: vx = 2.0338895  want 2.0338984  omega*r = 2.0338895  y = 0.29965532
   spin-only: vx = 1.1428576  omega*r = 1.1428576
   ball on dynamic slab: relative vx = 2.1429055  omega*r = 2.1429057  height above slab centre = 0.6996724
 [PASS] rolling_sphere - 11 / 11 checks
@@ -1784,7 +1784,7 @@ errors: rules_table: line 1: unknown key 'colour' | rules_table: line 1: unknown
   same box on an analytic box floor: y 0.24970748
   20 boxes in an SDF bowl after 5 s: max speed 0.0  lowest centre above the surface 0.1720231
   ray down onto the SDF plane from y = 5: t 4.99995
-  8 m/s sphere: lowest y 0.29972798  capsule lying: y 0.29988843
+  8 m/s sphere: lowest y 0.29972798  capsule lying: y 0.29989746
 [PASS] sdf_shape - 12 / 12 checks
 --- tests/test_sediment.mojo ---
 Stokes rate 1086.7925 /s  settling speed 0.0056145834 m/s   grain vy after 0.1 s -0.0056145834
@@ -1828,7 +1828,7 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571476
   sphere rest y: 0.29972830414772034 (radius 0.3)
   sphere e=0.8 apex: 0.5816709518432617 (analytic 0.64)
   sphere-sphere: v1 1.4999990463256836 v2 1.5000009536743164 sum 3.0
-  capsule rest y: 0.19965361058712006 axis up-component: -1.5497208e-05
+  capsule rest y: 0.19965344667434692 axis up-component: -1.513958e-05
   sphere-on-box: y 0.7993004322052002 x -1.899321432574652e-05
 [PASS] shapes6 - 10 / 10 checks
 --- tests/test_sim_cache.mojo ---
