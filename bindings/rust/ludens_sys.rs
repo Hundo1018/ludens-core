@@ -3,7 +3,7 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub const LD_ABI_MAJOR: u32 = 0;
-pub const LD_ABI_MINOR: u32 = 8;
+pub const LD_ABI_MINOR: u32 = 9;
 pub const LD_OK: i32 = 0;
 pub const LD_ERR_HANDLE: i32 = -1;
 pub const LD_ERR_ARG: i32 = -2;
@@ -172,4 +172,15 @@ extern "C" {
     pub fn ld_joint_add_weld(w: *mut ld_world, a: ld_body, b: ld_body, lax: f32, lay: f32, laz: f32, lbx: f32, lby: f32, lbz: f32) -> i64;
     pub fn ld_joint_remove(w: *mut ld_world, joint: i64) -> i32;
     pub fn ld_world_joint_count(w: *mut ld_world) -> i64;
+    pub fn ld_world_overlap_sphere(w: *mut ld_world, cx: f32, cy: f32, cz: f32, r: f32, mask: u32, out: *mut ld_body, cap: i64) -> i64;
+    pub fn ld_world_overlap_box(w: *mut ld_world, cx: f32, cy: f32, cz: f32, hx: f32, hy: f32, hz: f32, qx: f32, qy: f32, qz: f32, qw: f32, mask: u32, out: *mut ld_body, cap: i64) -> i64;
+    pub fn ld_world_sweep_sphere(w: *mut ld_world, px: f32, py: f32, pz: f32, r: f32, dx: f32, dy: f32, dz: f32, max_t: f32, mask: u32, out_body: *mut ld_body, out_hit8: *mut f32) -> i32;
+    pub fn ld_world_sweep_box(w: *mut ld_world, px: f32, py: f32, pz: f32, hx: f32, hy: f32, hz: f32, qx: f32, qy: f32, qz: f32, qw: f32, dx: f32, dy: f32, dz: f32, max_t: f32, mask: u32, out_body: *mut ld_body, out_hit8: *mut f32) -> i32;
+    pub fn ld_body_add_hull(w: *mut ld_world, px: f32, py: f32, pz: f32, verts_xyz: *const f32, nverts: i64, mass: f32, is_static: i32) -> ld_body;
+    pub fn ld_body_add_trimesh(w: *mut ld_world, px: f32, py: f32, pz: f32, verts_xyz: *const f32, nverts: i64, tris: *const i32, nidx: i64) -> ld_body;
+    pub fn ld_body_add_heightfield(w: *mut ld_world, heights: *const f32, nx: i32, nz: i32, cell: f32, ox: f32, oz: f32) -> ld_body;
+    pub fn ld_joint_set_limits(w: *mut ld_world, joint: i64, lo: f32, hi: f32) -> i32;
+    pub fn ld_joint_set_motor(w: *mut ld_world, joint: i64, mode: i32, target: f32, max_force: f32, hertz: f32, zeta: f32) -> i32;
+    pub fn ld_joint_set_spring(w: *mut ld_world, joint: i64, hertz: f32, zeta: f32, rest: f32) -> i32;
+    pub fn ld_joint_set_break(w: *mut ld_world, joint: i64, force: f32, torque: f32) -> i32;
 }

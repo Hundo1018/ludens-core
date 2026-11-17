@@ -1,4 +1,4 @@
-/* ludens-core embedding API (ROADMAP 12.1), ABI v0.8.
+/* ludens-core embedding API (ROADMAP 12.1), ABI v0.9.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):
@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #define LD_ABI_MAJOR 0
-#define LD_ABI_MINOR 8
+#define LD_ABI_MINOR 9
 
 #define LD_OK 0
 #define LD_ERR_HANDLE (-1)   /* null or destroyed world / navmesh handle */
@@ -243,6 +243,25 @@ int64_t ld_joint_add_hinge(ld_world* w, ld_body a, ld_body b, float lax, float l
 int64_t ld_joint_add_weld(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz);
 int32_t ld_joint_remove(ld_world* w, int64_t joint);
 int64_t ld_world_joint_count(ld_world* w);
+
+/* ---- 0.9 (ROADMAP 17.97): what the scene already had. Overlap queries write the bodies found into `out` (slot
+ * order) and return how many; with out == NULL they only count, and a cap below the count -> LD_ERR_BUFFER. Sweeps
+ * return 1 on a hit (out_hit8 = t, point xyz, normal xyz, start_solid 0 / 1), 0 on none. A hull's body origin is the
+ * centre of mass of the hull of verts_xyz (given around px, py, pz). Triangle meshes and heightfields are static;
+ * heightfield sample (i, k) is heights[k * nx + i] at (ox + i cell, h, oz + k cell); it reads nx * nz floats. Joint limits keep a hinge angle in
+ * [lo, hi] (rad); motor mode 0 off, 1 velocity, 2 position; a spring of hertz / zeta toward rest; a break threshold
+ * releases the joint (force N, torque N m). Setting a limit, motor or spring wakes the joint's bodies. */
+int64_t ld_world_overlap_sphere(ld_world* w, float cx, float cy, float cz, float r, uint32_t mask, ld_body* out, int64_t cap);
+int64_t ld_world_overlap_box(ld_world* w, float cx, float cy, float cz, float hx, float hy, float hz, float qx, float qy, float qz, float qw, uint32_t mask, ld_body* out, int64_t cap);
+int32_t ld_world_sweep_sphere(ld_world* w, float px, float py, float pz, float r, float dx, float dy, float dz, float max_t, uint32_t mask, ld_body* out_body, float* out_hit8);
+int32_t ld_world_sweep_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, float qx, float qy, float qz, float qw, float dx, float dy, float dz, float max_t, uint32_t mask, ld_body* out_body, float* out_hit8);
+ld_body ld_body_add_hull(ld_world* w, float px, float py, float pz, const float* verts_xyz, int64_t nverts, float mass, int32_t is_static);
+ld_body ld_body_add_trimesh(ld_world* w, float px, float py, float pz, const float* verts_xyz, int64_t nverts, const int32_t* tris, int64_t nidx);
+ld_body ld_body_add_heightfield(ld_world* w, const float* heights, int32_t nx, int32_t nz, float cell, float ox, float oz);
+int32_t ld_joint_set_limits(ld_world* w, int64_t joint, float lo, float hi);
+int32_t ld_joint_set_motor(ld_world* w, int64_t joint, int32_t mode, float target, float max_force, float hertz, float zeta);
+int32_t ld_joint_set_spring(ld_world* w, int64_t joint, float hertz, float zeta, float rest);
+int32_t ld_joint_set_break(ld_world* w, int64_t joint, float force, float torque);
 
 #ifdef __cplusplus
 }

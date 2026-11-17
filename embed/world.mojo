@@ -43,7 +43,7 @@ from physics.mass_props import hull_mass
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
-comptime ABI_MINOR = 8
+comptime ABI_MINOR = 9
 
 # Status codes (negative = error). Frozen for v0.x: values never change.
 comptime LD_OK = 0

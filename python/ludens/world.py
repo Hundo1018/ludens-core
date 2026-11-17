@@ -300,6 +300,68 @@ class World:
     def remove_joint(self, joint):
         self._check(C.lib.ld_joint_remove(self._h, int(joint)))
 
+    def set_joint_limits(self, joint, lo, hi):
+        """Hinge angle kept in [lo, hi] rad (ABI 0.9)."""
+        self._check(C.lib.ld_joint_set_limits(self._h, int(joint), float(lo), float(hi)))
+
+    def set_joint_motor(self, joint, mode, target, max_force, hertz=5.0, zeta=1.0):
+        """mode 0 off, 1 velocity, 2 position (ABI 0.9)."""
+        self._check(C.lib.ld_joint_set_motor(self._h, int(joint), int(mode), float(target), float(max_force), float(hertz), float(zeta)))
+
+    def set_joint_spring(self, joint, hertz, zeta, rest):
+        self._check(C.lib.ld_joint_set_spring(self._h, int(joint), float(hertz), float(zeta), float(rest)))
+
+    def set_joint_break(self, joint, force, torque):
+        self._check(C.lib.ld_joint_set_break(self._h, int(joint), float(force), float(torque)))
+
+    def add_hull(self, pos, verts, mass=1.0, static=False):
+        """A convex body from the hull of verts (around pos); its origin is the hull's centre of mass (ABI 0.9)."""
+        flat = [float(c) for v in verts for c in _f3(v, "vertex")]
+        arr = (c_float * len(flat))(*flat)
+        return Body(self, self._check(C.lib.ld_body_add_hull(self._h, *_f3(pos, "pos"), arr, len(flat) // 3, float(mass), int(bool(static)))))
+
+    def add_trimesh(self, pos, verts, tris):
+        """A static triangle mesh: verts around pos, tris three indices per triangle (ABI 0.9)."""
+        flat = [float(c) for v in verts for c in _f3(v, "vertex")]
+        va = (c_float * len(flat))(*flat)
+        ta = (c_int32 * len(tris))(*[int(i) for i in tris])
+        return Body(self, self._check(C.lib.ld_body_add_trimesh(self._h, *_f3(pos, "pos"), va, len(flat) // 3, ta, len(tris))))
+
+    def add_heightfield(self, heights, nx, nz, cell, origin=(0.0, 0.0)):
+        """A static heightfield, heights row-major by z (ABI 0.9)."""
+        ha = (c_float * len(heights))(*[float(h) for h in heights])
+        return Body(self, self._check(C.lib.ld_body_add_heightfield(self._h, ha, int(nx), int(nz), float(cell), float(origin[0]), float(origin[1]))))
+
+    def _overlap(self, fn, args):
+        n = self._check(fn(self._h, *args, None, 0))
+        out = (c_int64 * max(n, 1))()
+        n = self._check(fn(self._h, *args, out, n))
+        return [Body(self, out[i]) for i in range(n)]
+
+    def overlap_sphere(self, center, radius, mask=0xFFFFFFFF):
+        """Bodies overlapping the sphere, in slot order (ABI 0.9)."""
+        return self._overlap(C.lib.ld_world_overlap_sphere, (*_f3(center, "center"), float(radius), int(mask)))
+
+    def overlap_box(self, center, half, rotation=(0.0, 0.0, 0.0, 1.0), mask=0xFFFFFFFF):
+        return self._overlap(C.lib.ld_world_overlap_box, (*_f3(center, "center"), *_f3(half, "half"), *[float(c) for c in rotation], int(mask)))
+
+    def _sweep(self, rc, body, hit):
+        if rc == 0:
+            return None
+        return Body(self, body.value), hit[0], (hit[1], hit[2], hit[3]), (hit[4], hit[5], hit[6]), hit[7] != 0
+
+    def sweep_sphere(self, pos, radius, direction, max_t, mask=0xFFFFFFFF):
+        """None, or (body, t, point, normal, start_solid) for the first body the moving sphere touches (ABI 0.9)."""
+        body, hit = c_int64(-1), (c_float * 8)()
+        rc = self._check(C.lib.ld_world_sweep_sphere(self._h, *_f3(pos, "pos"), float(radius), *_f3(direction, "direction"), float(max_t), int(mask), byref(body), hit))
+        return self._sweep(rc, body, hit)
+
+    def sweep_box(self, pos, half, rotation, direction, max_t, mask=0xFFFFFFFF):
+        body, hit = c_int64(-1), (c_float * 8)()
+        rc = self._check(C.lib.ld_world_sweep_box(self._h, *_f3(pos, "pos"), *_f3(half, "half"), *[float(c) for c in rotation],
+                                                  *_f3(direction, "direction"), float(max_t), int(mask), byref(body), hit))
+        return self._sweep(rc, body, hit)
+
     @property
     def joint_count(self):
         """Joint slots ever added, removed ones included (indices never shift)."""

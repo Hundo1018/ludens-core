@@ -64,7 +64,7 @@ namespace Ludens
     {
         public const string Lib = "ludens";
         public const uint LD_ABI_MAJOR = 0;
-        public const uint LD_ABI_MINOR = 8;
+        public const uint LD_ABI_MINOR = 9;
         public const int LD_OK = 0;
         public const int LD_ERR_HANDLE = -1;
         public const int LD_ERR_ARG = -2;
@@ -241,5 +241,27 @@ namespace Ludens
         public static extern int ld_joint_remove(ld_world* w, long joint);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern long ld_world_joint_count(ld_world* w);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_overlap_sphere(ld_world* w, float cx, float cy, float cz, float r, uint mask, long* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_overlap_box(ld_world* w, float cx, float cy, float cz, float hx, float hy, float hz, float qx, float qy, float qz, float qw, uint mask, long* @out, long cap);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_world_sweep_sphere(ld_world* w, float px, float py, float pz, float r, float dx, float dy, float dz, float max_t, uint mask, long* out_body, float* out_hit8);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_world_sweep_box(ld_world* w, float px, float py, float pz, float hx, float hy, float hz, float qx, float qy, float qz, float qw, float dx, float dy, float dz, float max_t, uint mask, long* out_body, float* out_hit8);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_body_add_hull(ld_world* w, float px, float py, float pz, float* verts_xyz, long nverts, float mass, int is_static);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_body_add_trimesh(ld_world* w, float px, float py, float pz, float* verts_xyz, long nverts, int* tris, long nidx);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_body_add_heightfield(ld_world* w, float* heights, int nx, int nz, float cell, float ox, float oz);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_joint_set_limits(ld_world* w, long joint, float lo, float hi);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_joint_set_motor(ld_world* w, long joint, int mode, float target, float max_force, float hertz, float zeta);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_joint_set_spring(ld_world* w, long joint, float hertz, float zeta, float rest);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_joint_set_break(ld_world* w, long joint, float force, float torque);
     }
 }

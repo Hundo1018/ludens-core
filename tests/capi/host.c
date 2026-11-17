@@ -424,6 +424,68 @@ int main(void) {
         ld_world_destroy(j8);
     }
 
+    /* -- 0.9 (17.97): queries, hull, triangle mesh, heightfield, joint limits / motor / spring / break (native_abi9) */
+    {
+        ld_world* q9 = NULL;
+        ld_world_create(1.0 / 60.0, 0.0f, -9.8f, 0.0f, &q9);
+        ld_body_add_box(q9, 0.0f, -0.5f, 0.0f, 20.0f, 0.5f, 20.0f, 0.0f, 1);
+        float cube[24];
+        for (int i = 0; i < 8; i++) {
+            cube[3 * i] = -0.5f + (float)(i & 1);
+            cube[3 * i + 1] = -0.5f + (float)((i >> 1) & 1);
+            cube[3 * i + 2] = -0.5f + (float)((i >> 2) & 1);
+        }
+        ld_body hull = ld_body_add_hull(q9, 0.0f, 2.0f, 0.0f, cube, 8, 1.0f, 0);
+        float ramp[12] = {-1.0f, 0.0f, -1.0f, 1.0f, 0.5f, -1.0f, 1.0f, 0.5f, 1.0f, -1.0f, 0.0f, 1.0f};
+        int32_t rtris[6] = {0, 2, 1, 0, 3, 2};
+        ld_body mesh = ld_body_add_trimesh(q9, 4.0f, 0.01f, 0.0f, ramp, 4, rtris, 6);
+        float bump[9] = {0.0f, 0.25f, 0.0f, 0.25f, 0.5f, 0.25f, 0.0f, 0.25f, 0.0f};
+        ld_body hf = ld_body_add_heightfield(q9, bump, 3, 3, 1.0f, -6.0f, -1.0f);
+        ld_body rider = ld_body_add_sphere(q9, 4.0f, 2.0f, 0.0f, 0.25f, 1.0f, 0);
+        ld_body pivot = ld_body_add_box(q9, -3.0f, 5.0f, 0.0f, 0.1f, 0.1f, 0.1f, 0.0f, 1);
+        ld_body arm = ld_body_add_box(q9, -2.0f, 5.0f, 0.0f, 0.5f, 0.1f, 0.1f, 1.0f, 0);
+        int64_t hj = ld_joint_add_hinge(q9, pivot, arm, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        int32_t lim = ld_joint_set_limits(q9, hj, -0.25f, 0.25f);
+        int32_t spr = ld_joint_set_spring(q9, hj, 2.0f, 0.5f, 0.0f);
+        ld_body axle = ld_body_add_box(q9, 6.0f, 3.0f, -1.0f, 0.1f, 0.1f, 0.1f, 0.0f, 1);
+        ld_body wheel = ld_body_add_box(q9, 6.0f, 3.0f, 0.0f, 0.5f, 0.5f, 0.1f, 1.0f, 0);
+        int64_t mj = ld_joint_add_hinge(q9, axle, wheel, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        int32_t mot = ld_joint_set_motor(q9, mj, 1, 2.0f, 100.0f, 5.0f, 1.0f);
+        ld_body hook = ld_body_add_box(q9, 8.0f, 5.0f, 0.0f, 0.1f, 0.1f, 0.1f, 0.0f, 1);
+        ld_body load = ld_body_add_box(q9, 8.0f, 4.0f, 0.0f, 0.25f, 0.25f, 0.25f, 50.0f, 0);
+        int64_t bj = ld_joint_add_ball(q9, hook, load, 0.0f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f);
+        int32_t brk = ld_joint_set_break(q9, bj, 100.0f, 100.0f);
+        ld_world_step_ticks(q9, 120);
+        uint64_t h9 = 0;
+        ld_world_hash(q9, &h9);
+        int64_t nfound = ld_world_overlap_sphere(q9, 0.0f, 0.5f, 0.0f, 0.75f, 0xFFFFFFFFu, NULL, 0);
+        ld_body found[8];
+        int64_t got = ld_world_overlap_sphere(q9, 0.0f, 0.5f, 0.0f, 0.75f, 0xFFFFFFFFu, found, 8);
+        int has_hull = 0;
+        for (int64_t i = 0; i < got; i++) has_hull |= found[i] == hull;
+        int64_t small = ld_world_overlap_sphere(q9, 0.0f, 0.5f, 0.0f, 0.75f, 0xFFFFFFFFu, found, 0);
+        ld_body sb = -1;
+        float hit8[8];
+        int32_t sw = ld_world_sweep_sphere(q9, -10.0f, 5.0f, 0.0f, 0.5f, 0.0f, -1.0f, 0.0f, 10.0f, 0xFFFFFFFFu, &sb, hit8);
+        float qid[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        int64_t ob = ld_world_overlap_box(q9, 4.0f, 0.3f, 0.0f, 1.0f, 0.3f, 1.0f, qid[0], qid[1], qid[2], qid[3], 0xFFFFFFFFu, found, 8);
+        int has_mesh = 0;
+        for (int64_t i = 0; i < ob; i++) has_mesh |= found[i] == mesh;
+        printf("abi9 %llx set %d %d %d %d count %lld %lld %d small %lld sweep %d %.4f mesh %d hf %d\n", (unsigned long long)h9,
+               lim, spr, mot, brk, (long long)nfound, (long long)got, has_hull, (long long)small, sw, hit8[0], has_mesh, hf >= 0);
+        float flat4[12] = {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f};
+        int32_t badtri[3] = {0, 1, 9};
+        printf("abi9_err %lld %lld %lld %d %d %lld\n",
+               (long long)ld_body_add_hull(q9, 0.0f, 9.0f, 0.0f, flat4, 4, 1.0f, 0),
+               (long long)ld_body_add_trimesh(q9, 0.0f, 0.0f, 0.0f, ramp, 4, badtri, 3),
+               (long long)ld_body_add_heightfield(q9, bump, 1, 3, 1.0f, 0.0f, 0.0f),
+               ld_joint_set_limits(q9, 99, 0.0f, 1.0f),
+               ld_world_sweep_box(q9, 0.0f, 9.0f, 0.0f, 0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0xFFFFFFFFu, NULL, NULL),
+               (long long)ld_world_overlap_sphere(q9, 0.0f, 0.0f, 0.0f, -1.0f, 0xFFFFFFFFu, NULL, 0));
+        (void)rider;
+        ld_world_destroy(q9);
+    }
+
     /* -- navigation: 10 x 10 m floor, wall across x = 0 from z = -5 to z = 3 */
     float verts[] = {-5, 0, -5, 5, 0, -5, 5, 0, 5, -5, 0, 5,
                      -0.2f, 0, -5, 0.2f, 0, -5, 0.2f, 0, 3, -0.2f, 0, 3,
