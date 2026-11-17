@@ -3524,7 +3524,7 @@ def _solve_islands_parallel[BB: Body6, PBP: BroadPhase](
     _ = len(times)  # keep `times` alive past the fan-out (untracked pointer)
 
 
-def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W):
+def write_state[W: StateWriter, BP: BroadPhase](sc: ContactScene6[QuatBody6, BP], mut out: W):
     """Full snapshot of everything dynamical (audit F5/F20): rigid body
     state, the per-collider payload each shape kind needs to reconstruct
     (`ColliderSet`'s side tables), joints, soft bodies, the cross-frame
@@ -3903,7 +3903,7 @@ def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W):
             out.wi(Int(sc.bset.ccd_mode[i]))
 
 
-def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R) raises:
+def read_state[R: StateReader, BP: BroadPhase](mut sc: ContactScene6[QuatBody6, BP], mut r: R) raises:
     """The `write_state` counterpart -- see its docstring for the field
     order and why this is a free function scoped to `ContactScene6
     [QuatBody6]` rather than a generic method. `sc` must be a freshly
