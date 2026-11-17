@@ -43,7 +43,7 @@ def raises(exc_type, fn):
 # ---------------------------------------------------------------- isolation
 check(not os.path.realpath(ludens.__file__).startswith(FORBIDDEN), "ludens imported from the venv, not the repo: " + ludens.__file__)
 check(os.path.dirname(ludens.library_path) == os.path.dirname(ludens.__file__), "libludens.so loaded from the installed package")
-check(ludens.abi_version() == (0, 8), "abi_version == (0, 8)")
+check(ludens.abi_version() == (0, 9), "abi_version == (0, 9)")
 
 
 # ------------------------------------------------- parity scenario (test_capi)
@@ -423,7 +423,26 @@ with ludens.World(dt=1 / 60, gravity=(0, -9.8, 0)) as jw:
     check(raises(ludens.ArgumentError, lambda: jw.add_distance_joint(ja, jb, (0, 0, 0), (0, 0, 0), -1)) is not None,
           "a negative rest length raises ArgumentError")
 
-# ---------------------------------------------------------------- isolation again
+# ---------------------------------------- 0.9 (17.97): queries, hull, mesh, heightfield, joint ext
+with ludens.World(dt=1 / 60, gravity=(0, -9.8, 0)) as qw:
+    qw.add_box((0, -0.5, 0), (20, 0.5, 20), mass=0, static=True)
+    cube = [(-0.5 + (i & 1), -0.5 + ((i >> 1) & 1), -0.5 + ((i >> 2) & 1)) for i in range(8)]
+    hb = qw.add_hull((0, 2, 0), cube, mass=1)
+    qw.add_trimesh((4, 0.01, 0), [(-1, 0, -1), (1, 0.5, -1), (1, 0.5, 1), (-1, 0, 1)], [0, 2, 1, 0, 3, 2])
+    qw.add_heightfield([0, 0.25, 0, 0.25, 0.5, 0.25, 0, 0.25, 0], 3, 3, 1.0, origin=(-6, -1))
+    pv = qw.add_box((-3, 5, 0), (0.1, 0.1, 0.1), mass=0, static=True)
+    arm = qw.add_box((-2, 5, 0), (0.5, 0.1, 0.1), mass=1)
+    hj = qw.add_hinge_joint(pv, arm, (0, 0, 0), (-1, 0, 0), (0, 0, 1))
+    qw.set_joint_limits(hj, -0.25, 0.25)
+    qw.set_joint_spring(hj, 2, 0.5, 0)
+    qw.step_ticks(120)
+    found = qw.overlap_sphere((0, 0.5, 0), 0.75)
+    check(any(b.handle == hb.handle for b in found), "overlap_sphere finds the settled hull")
+    hit = qw.sweep_sphere((-10, 5, 0), 0.5, (0, -1, 0), 10)
+    check(hit is not None and abs(hit[1] - 4.5) < 1e-3, "sweep_sphere down from y 5 hits the ground at t 4.5")
+    check(raises(ludens.ArgumentError, lambda: qw.set_joint_limits(99, 0, 1)) is not None, "limits on an unknown joint raise ArgumentError")
+
+# ---------------------------------------------------------------- isolation again# ---------------------------------------------------------------- isolation again
 maps = open("/proc/self/maps").read().splitlines()
 leaked = sorted({l.split()[-1] for l in maps if l.split()[-1].startswith(FORBIDDEN)})
 check(not leaked, "no shared library mapped from the repository: %s" % leaked[:3])

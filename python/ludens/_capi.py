@@ -22,7 +22,7 @@ from ctypes import (
 )
 
 ABI_MAJOR = 0
-ABI_MINOR = 8
+ABI_MINOR = 9
 
 LD_OK = 0
 LD_ERR_HANDLE = -1
@@ -168,6 +168,18 @@ PROTOTYPES = {
     "ld_joint_add_weld": (c_int64, [_W, c_int64, c_int64, _F, _F, _F, _F, _F, _F]),
     "ld_joint_remove": (c_int32, [_W, c_int64]),
     "ld_world_joint_count": (c_int64, [_W]),
+    # 0.9 (17.97)
+    "ld_world_overlap_sphere": (c_int64, [_W, _F, _F, _F, _F, c_uint32, POINTER(c_int64), c_int64]),
+    "ld_world_overlap_box": (c_int64, [_W, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, c_uint32, POINTER(c_int64), c_int64]),
+    "ld_world_sweep_sphere": (c_int32, [_W, _F, _F, _F, _F, _F, _F, _F, _F, c_uint32, POINTER(c_int64), POINTER(_F)]),
+    "ld_world_sweep_box": (c_int32, [_W, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, _F, c_uint32, POINTER(c_int64), POINTER(_F)]),
+    "ld_body_add_hull": (c_int64, [_W, _F, _F, _F, POINTER(_F), c_int64, _F, c_int32]),
+    "ld_body_add_trimesh": (c_int64, [_W, _F, _F, _F, POINTER(_F), c_int64, POINTER(c_int32), c_int64]),
+    "ld_body_add_heightfield": (c_int64, [_W, POINTER(_F), c_int32, c_int32, _F, _F, _F]),
+    "ld_joint_set_limits": (c_int32, [_W, c_int64, _F, _F]),
+    "ld_joint_set_motor": (c_int32, [_W, c_int64, c_int32, _F, _F, _F, _F]),
+    "ld_joint_set_spring": (c_int32, [_W, c_int64, _F, _F, _F]),
+    "ld_joint_set_break": (c_int32, [_W, c_int64, _F, _F]),
     "ld_world_raycast_mask": (c_int32, [_W, _F, _F, _F, _F, _F, _F, _F, c_uint32, POINTER(c_int64), POINTER(c_float)]),
     "ld_body_set_user": (c_int32, [_W, c_int64, c_uint64]),
     "ld_body_get_user": (c_int32, [_W, c_int64, POINTER(c_uint64)]),

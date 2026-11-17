@@ -120,6 +120,40 @@ def native_abi8() raises -> UInt64:
     return w.hash()
 
 
+def native_abi9() raises -> UInt64:
+    """The 0.9 block of tests/capi/host.c against EmbedWorld."""
+    var w = EmbedWorld(1.0 / 60.0, _v(0, -9.8, 0))
+    _ = w.add_box(_v(0, -0.5, 0), _v(20, 0.5, 20), 0, True)
+    var cube = List[Vec3]()
+    for i in range(8):
+        cube.append(_v(-0.5 + Real(i & 1), -0.5 + Real((i >> 1) & 1), -0.5 + Real((i >> 2) & 1)))
+    _ = w.add_hull(_v(0, 2, 0), cube, 1, False)
+    var ramp = List[Vec3]()
+    for q in [_v(-1, 0, -1), _v(1, 0.5, -1), _v(1, 0.5, 1), _v(-1, 0, 1)]:
+        ramp.append(q)
+    var rtris: List[Int] = [0, 2, 1, 0, 3, 2]
+    _ = w.add_trimesh(_v(4, 0.01, 0), ramp, rtris)
+    var bump: List[Real] = [0, 0.25, 0, 0.25, 0.5, 0.25, 0, 0.25, 0]
+    _ = w.add_heightfield(bump, 3, 3, 1, -6, -1)
+    _ = w.add_sphere(_v(4, 2, 0), 0.25, 1, False)
+    var pivot = w.add_box(_v(-3, 5, 0), _v(0.1, 0.1, 0.1), 0, True)
+    var arm = w.add_box(_v(-2, 5, 0), _v(0.5, 0.1, 0.1), 1, False)
+    var hj = w.add_hinge_joint(pivot, arm, _v(0, 0, 0), _v(-1, 0, 0), _v(0, 0, 1))
+    w.set_joint_limits(hj, -0.25, 0.25)
+    w.set_joint_spring(hj, 2, 0.5, 0)
+    var axle = w.add_box(_v(6, 3, -1), _v(0.1, 0.1, 0.1), 0, True)
+    var wheel = w.add_box(_v(6, 3, 0), _v(0.5, 0.5, 0.1), 1, False)
+    var mj = w.add_hinge_joint(axle, wheel, _v(0, 0, 1), _v(0, 0, 0), _v(0, 0, 1))
+    w.set_joint_motor(mj, 1, 2, 100, 5, 1)
+    var hook = w.add_box(_v(8, 5, 0), _v(0.1, 0.1, 0.1), 0, True)
+    var load = w.add_box(_v(8, 4, 0), _v(0.25, 0.25, 0.25), 50, False)
+    var bj = w.add_ball_joint(hook, load, _v(0, -0.5, 0), _v(0, 0.5, 0))
+    w.set_joint_break(bj, 100, 100)
+    for _ in range(120):
+        w.physics_tick()
+    return w.hash()
+
+
 def _sh(sp: PythonObject, cmd: PythonObject) raises -> String:
     var r = sp.run(cmd, capture_output=True, text=True)
     if Int(py=r.returncode) != 0:
@@ -308,6 +342,20 @@ def main() raises:
             and Int(get(kv, "abi8_err", 3)) == LD_ERR_ARG and Int(get(kv, "abi8_err", 4)) == LD_ERR_STALE
             and Int(get(kv, "abi8_err", 5)) == LD_ERR_ARG and Int(get(kv, "abi8_err", 6)) == LD_ERR_ARG,
             "0.8 errors: joint to a removed body -> STALE; negative rest, negative radius, unknown joint, bad material id, negative stiffness -> ARG; kinematic on a removed body -> STALE")
+    # 0.9 (17.97): what the scene already had, from C
+    var h9 = String(bi.str(bi.int(get(kv, "abi9", 0), 16)))
+    s.check(h9 == String(native_abi9()), "0.9: hull, mesh, heightfield, limited / sprung hinge, motor, breakable joint: C host hash == native (" + h9 + ")")
+    s.check(get(kv, "abi9", 2) == "0" and get(kv, "abi9", 3) == "0" and get(kv, "abi9", 4) == "0" and get(kv, "abi9", 5) == "0",
+            "0.9: set_limits / set_spring / set_motor / set_break return LD_OK")
+    s.check(Int(get(kv, "abi9", 7)) >= 2 and get(kv, "abi9", 7) == get(kv, "abi9", 8) and get(kv, "abi9", 9) == "1" and Int(get(kv, "abi9", 11)) == LD_ERR_BUFFER,
+            "0.9 overlap_sphere: a null buffer counts, a big one gets the same count and the hull, cap 0 -> LD_ERR_BUFFER")
+    s.check(get(kv, "abi9", 13) == "1" and abs(Float64(get(kv, "abi9", 14)) - 4.5) < 1e-3 and get(kv, "abi9", 16) == "1" and get(kv, "abi9", 18) == "1",
+            "0.9: a sphere swept down from y 5 hits the ground at t 4.5; overlap_box finds the mesh ramp; the heightfield handle is valid")
+    s.check(Int(get(kv, "abi9_err", 0)) == LD_ERR_ARG and Int(get(kv, "abi9_err", 1)) == LD_ERR_ARG and Int(get(kv, "abi9_err", 2)) == LD_ERR_ARG
+            and Int(get(kv, "abi9_err", 3)) == LD_ERR_ARG and Int(get(kv, "abi9_err", 4)) == LD_ERR_ARG and Int(get(kv, "abi9_err", 5)) == LD_ERR_ARG,
+            "0.9 errors: flat hull, index past the vertices, nx below 2, unknown joint, zero quaternion, negative radius -> LD_ERR_ARG ("
+            + get(kv, "abi9_err", 0) + " " + get(kv, "abi9_err", 1) + " " + get(kv, "abi9_err", 2) + " " + get(kv, "abi9_err", 3) + " "
+            + get(kv, "abi9_err", 4) + " " + get(kv, "abi9_err", 5) + ")")
 
     # --- navigation parity
     var vs = List[Vec3]()

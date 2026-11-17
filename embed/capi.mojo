@@ -33,6 +33,7 @@ from nav.heightfield import NavBakeConfig
 from embed.world import (
     EmbedWorld,
     TickEvent,
+    SweepResult,
     pack_body,
     ABI_MAJOR,
     ABI_MINOR,
@@ -1559,3 +1560,215 @@ def ld_world_joint_count(h: Optional[Handle]) abi("C") -> Int64:
     if not o:
         return Int64(_why(h))
     return Int64(o.value()[].w.joint_count())
+
+
+# ------------------------------------------- 0.9: what the scene already had (17.97, step 2 batch A)
+
+
+def _write_handles(p: WPtr, hs: List[Int64], dst: Optional[I64Ptr], cap: Int64, what: String) -> Int64:
+    """Count only when `dst` is null; LD_ERR_BUFFER when `cap` is short."""
+    if not dst:
+        return Int64(len(hs))
+    if Int(cap) < len(hs):
+        return Int64(_fail(p, LD_ERR_BUFFER, what + ": capacity below the number of bodies found"))
+    for i in range(len(hs)):
+        dst.value()[unsafe_offset=i] = hs[i]
+    return Int64(len(hs))
+
+
+def _q(x: Float32, y: Float32, z: Float32, w: Float32) -> Quat:
+    return Quat(Real(x), Real(y), Real(z), Real(w))
+
+
+@export
+def ld_world_overlap_sphere(
+    h: Optional[Handle], cx: Float32, cy: Float32, cz: Float32, r: Float32, mask: UInt32, dst: Optional[I64Ptr], cap: Int64
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return _write_handles(p, p[].w.overlap_sphere(_v(cx, cy, cz), Real(r), mask), dst, cap, "ld_world_overlap_sphere")
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_world_overlap_box(
+    h: Optional[Handle], cx: Float32, cy: Float32, cz: Float32, hx: Float32, hy: Float32, hz: Float32,
+    qx: Float32, qy: Float32, qz: Float32, qw: Float32, mask: UInt32, dst: Optional[I64Ptr], cap: Int64,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        var hs = p[].w.overlap_box(_v(cx, cy, cz), _v(hx, hy, hz), _q(qx, qy, qz, qw), mask)
+        return _write_handles(p, hs, dst, cap, "ld_world_overlap_box")
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+def _write_sweep(r: SweepResult, out_body: Optional[I64Ptr], out_hit8: Optional[F32Ptr]) -> Int32:
+    if r.body < 0:
+        return Int32(0)
+    if case .Some(ob) = out_body:
+        ob[] = r.body
+    if case .Some(oh) = out_hit8:
+        oh[unsafe_offset=0] = Float32(r.t)
+        for k in range(3):
+            oh[unsafe_offset=1 + k] = Float32(r.point[k])
+            oh[unsafe_offset=4 + k] = Float32(r.normal[k])
+        oh[unsafe_offset=7] = Float32(1) if r.start_solid else Float32(0)
+    return Int32(1)
+
+
+@export
+def ld_world_sweep_sphere(
+    h: Optional[Handle], px: Float32, py: Float32, pz: Float32, r: Float32, dx: Float32, dy: Float32, dz: Float32,
+    max_t: Float32, mask: UInt32, out_body: Optional[I64Ptr], out_hit8: Optional[F32Ptr],
+) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        return _write_sweep(p[].w.sweep_sphere(_v(px, py, pz), Real(r), _v(dx, dy, dz), Real(max_t), mask), out_body, out_hit8)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_world_sweep_box(
+    h: Optional[Handle], px: Float32, py: Float32, pz: Float32, hx: Float32, hy: Float32, hz: Float32,
+    qx: Float32, qy: Float32, qz: Float32, qw: Float32, dx: Float32, dy: Float32, dz: Float32, max_t: Float32,
+    mask: UInt32, out_body: Optional[I64Ptr], out_hit8: Optional[F32Ptr],
+) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        var r = p[].w.sweep_box(_v(px, py, pz), _v(hx, hy, hz), _q(qx, qy, qz, qw), _v(dx, dy, dz), Real(max_t), mask)
+        return _write_sweep(r, out_body, out_hit8)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+def _vec_list(xyz: Optional[F32Ptr], n: Int64) -> List[Vec3]:
+    var out = List[Vec3](capacity=Int(n))
+    if case .Some(a) = xyz:
+        for i in range(Int(n)):
+            out.append(_v(a[unsafe_offset=3 * i], a[unsafe_offset=3 * i + 1], a[unsafe_offset=3 * i + 2]))
+    return out^
+
+
+@export
+def ld_body_add_hull(
+    h: Optional[Handle], px: Float32, py: Float32, pz: Float32, verts_xyz: Optional[F32Ptr], nverts: Int64,
+    mass: Float32, is_static: Int32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    if not verts_xyz or nverts < 0:
+        return Int64(_fail(p, LD_ERR_ARG, "ld_body_add_hull: vertices are null"))
+    try:
+        return p[].w.add_hull(_v(px, py, pz), _vec_list(verts_xyz, nverts), Real(mass), is_static != 0)
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_body_add_trimesh(
+    h: Optional[Handle], px: Float32, py: Float32, pz: Float32, verts_xyz: Optional[F32Ptr], nverts: Int64,
+    tris: Optional[I32Ptr], nidx: Int64,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    if not verts_xyz or not tris or nverts < 0 or nidx < 0:
+        return Int64(_fail(p, LD_ERR_ARG, "ld_body_add_trimesh: vertices or indices are null"))
+    var ts = List[Int](capacity=Int(nidx))
+    for i in range(Int(nidx)):
+        ts.append(Int(tris.value()[unsafe_offset=i]))
+    try:
+        return p[].w.add_trimesh(_v(px, py, pz), _vec_list(verts_xyz, nverts), ts)
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_body_add_heightfield(
+    h: Optional[Handle], heights: Optional[F32Ptr], nx: Int32, nz: Int32, cell: Float32, ox: Float32, oz: Float32
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    if not heights or nx < 2 or nz < 2:
+        return Int64(_fail(p, LD_ERR_ARG, "ld_body_add_heightfield: need heights and nx, nz >= 2"))
+    var hs = List[Real](capacity=Int(nx) * Int(nz))
+    for i in range(Int(nx) * Int(nz)):
+        hs.append(Real(heights.value()[unsafe_offset=i]))
+    try:
+        return p[].w.add_heightfield(hs, Int(nx), Int(nz), Real(cell), Real(ox), Real(oz))
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_joint_set_limits(h: Optional[Handle], j: Int64, lo: Float32, hi: Float32) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_joint_limits(Int(j), Real(lo), Real(hi))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_joint_set_motor(
+    h: Optional[Handle], j: Int64, mode: Int32, target: Float32, max_force: Float32, hertz: Float32, zeta: Float32
+) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_joint_motor(Int(j), Int(mode), Real(target), Real(max_force), Real(hertz), Real(zeta))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_joint_set_spring(h: Optional[Handle], j: Int64, hertz: Float32, zeta: Float32, rest: Float32) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_joint_spring(Int(j), Real(hertz), Real(zeta), Real(rest))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_joint_set_break(h: Optional[Handle], j: Int64, force: Float32, torque: Float32) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_joint_break(Int(j), Real(force), Real(torque))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
