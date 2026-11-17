@@ -1656,6 +1656,20 @@ replay: scripted run equals live True  posts one frame later differ True
   tick 60: save checkpoint 1008 bytes, full checkpoint (scene snapshot) 2729 bytes
   coins at tick 60 11  at tick 120 21
 [PASS] save_checkpoint - 6 / 6 checks
+--- tests/test_save_coverage.mojo ---
+velocity : hash differs | save -> load restores
+gravity : hash same | save -> load loses
+solver : hash same | save -> load loses
+unit_scale : hash same | save -> load loses
+material_friction : hash differs | save -> load restores
+material_softness : hash differs | save -> load restores
+layer : hash differs | save -> load restores
+kinematic : hash differs | save -> load restores
+host_material : hash same | save -> load loses
+user : hash differs | save -> load restores
+joint : hash differs | save -> load restores
+water : hash differs after one more tick
+[PASS] save_coverage - 14 / 14 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
 --- tests/test_scene_joints.mojo ---
