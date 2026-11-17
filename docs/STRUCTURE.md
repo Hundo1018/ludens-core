@@ -1161,7 +1161,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 92 modules, 509 public declarations
+## physics (layer 4) — 92 modules, 513 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1273,6 +1273,7 @@ counted, not listed.
 - `def anchor_world[B: Body6](bset: BodySet[B], i: Int, r: SIMD[.float32, 4], o: SIMD[.float32, 4], e: SIMD[.float32, 4] = SIMD(Float32("0"), Float32("0"), Float32("0"), Float32("0"), __list_literal__=NoneType(None)), toward: SIMD[.float32, 4] = SIMD(Float32("0"), Float32("0"), Float32("0"), Float32("0"), __list_literal__=NoneType(None))) -> Vec3`
 - `def apply_rules[B: Body6](bset: BodySet[B], rules: List[ContactRule], mut pairs: List[ContactConstraint])`
 - `def cache_index(cache: List[ContactConstraint]) -> Dict[Int, Int]`
+- `def contact_features[B: Body6](bset: BodySet[B]) -> Int`
 - `def contact_island[B: Body6](bset: BodySet[B], pr: ContactConstraint) -> Int`
 - `def island_color(label: Int) -> SIMD[.float32, 4]`
 - `def make_contact[B: Body6](bset: BodySet[B], colliders: ColliderSet, cache: List[ContactConstraint], cidx: Dict[Int, Int], rc: RawContact, warm: Bool, match_scale: Float32 = Float32("1")) -> ContactConstraint`
@@ -1281,12 +1282,12 @@ counted, not listed.
 - `def round_core[B: Body6](bset: BodySet[B], colliders: ColliderSet, i: Int, p: SIMD[.float32, 4], n: SIMD[.float32, 4] = SIMD(Float32("0"), Float32("0"), Float32("0"), Float32("0"), __list_literal__=NoneType(None)), child: Int = Int(-1)) -> Optional[SIMD[.float32, 4]]`
 - `def round_reach[B: Body6](bset: BodySet[B], colliders: ColliderSet, i: Int, n: SIMD[.float32, 4], child: Int = Int(-1)) -> Real`
 - `def soft_sweep[B: Body6](mut bset: BodySet[B], mut pairs: List[ContactConstraint], lo: Int, hi: Int, h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, iters: Int, mu: Float32, max_push: Float32 = Float32("4"))`
-- `def solve_color_parallel[B: Body6](mut bset: BodySet[B], mut pairs2: List[ContactConstraint], lo: Int, hi: Int, h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, mu: Float32, workers: Int = Int(0), dispatch: Dispatch = Dispatch.parallel(), max_push: Float32 = Float32("4"))`
-- `def solve_contact[B: Body6](mut bset: BodySet[B], mut pairs: List[ContactConstraint], c: Int, h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, mu: Float32, max_push: Float32 = Float32("4"))`
+- `def solve_color_parallel[B: Body6, F: Int](mut bset: BodySet[B], mut pairs2: List[ContactConstraint], lo: Int, hi: Int, h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, mu: Float32, workers: Int = Int(0), dispatch: Dispatch = Dispatch.parallel(), max_push: Float32 = Float32("4"))`
+- `def solve_contact[B: Body6, F: Int](mut bset: BodySet[B], mut pairs: List[ContactConstraint], c: Int, h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, mu: Float32, max_push: Float32 = Float32("4"))`
 - `def solve_point[B: Body6](mut bset: BodySet[B], ia: Int, ib: Int, n: SIMD[.float32, 4], p: SIMD[.float32, 4], depth: Float32, dt: Float32, acc: Float32) -> Real`
 - `def sweep_colored[B: Body6](mut bset: BodySet[B], mut pairs: List[ContactConstraint], clo: List[Int], chi: List[Int], h: Float32, bias_rate: Float32, mass_scale: Float32, impulse_scale: Float32, use_bias: Bool, iters: Int, mu: Float32, par: Bool, workers: Int = Int(0), dispatch: Dispatch = Dispatch.parallel(), max_push: Float32 = Float32("4"))`
 - `def warm_start_contacts[B: Body6](mut bset: BodySet[B], pairs: List[ContactConstraint], lo: Int, hi: Int)`
-- aliases: `RULE_CONVEYOR`, `RULE_FRICTION`, `RULE_ONE_WAY`
+- aliases: `CF_BLOCK`, `CF_ELLIPTIC`, `CF_MODEL`, `RULE_CONVEYOR`, `RULE_FRICTION`, `RULE_ONE_WAY`
 
 ### `physics/continuum.mojo`
 - trait `ContinuumSolver` — 0 methods
