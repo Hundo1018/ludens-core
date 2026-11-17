@@ -1521,7 +1521,7 @@ iterations over 100 steps: Jacobi PCG 10622  MGPCG 400
 [PASS] material_contact - 6 / 6 checks
 --- tests/test_materials.mojo ---
   slide distances -- multiply: 3.803211212158203  min: 3.7539875507354736  average: 1.912536382675171  max: 1.0121043920516968
-[PASS] materials - 15 / 15 checks
+[PASS] materials - 16 / 16 checks
 --- tests/test_mesh_reduce.mojo ---
 sliding on 0.25 m heightfield: manifolds per box off 38.0  on 1.0   up-facing off 38.0  on 1.0   rest y 0.29999322 0.29922262   travel 0.4040018 0.4049832
 V valley: manifolds off 22  on 3   rest x -0.10976712 -0.109771006

@@ -152,4 +152,24 @@ def main() raises:
     s.check(bounced_once and max_y_after_bounce > 0.6, "default restitution_combine (MAX) still bounces, matching today's hardcoded max()")
     _ = floor_r
 
+    # the combine setters validate their input (they were unchecked writes into the per-body arrays)
+    var bad = 0
+    try:
+        scr.set_friction_combine(9999, COMBINE_MAX)
+    except:
+        bad += 1
+    try:
+        scr.set_restitution_combine(-1, COMBINE_MAX)
+    except:
+        bad += 1
+    try:
+        scr.set_friction_combine(0, 7)
+    except:
+        bad += 1
+    try:
+        scr.set_restitution_combine(0, -1)
+    except:
+        bad += 1
+    s.check(bad == 4, "set_*_combine: an out-of-range body and an unknown mode raise")
+
     s.finish()

@@ -584,7 +584,7 @@ lattice: 50 / 50  ring: 12
 --- tests/test_embed_ragdoll.mojo ---
 [PASS] embed_ragdoll - 8 / 8 checks
 --- tests/test_embed_scene_native.mojo ---
-[PASS] embed_scene_native - 17 / 17 checks
+[PASS] embed_scene_native - 18 / 18 checks
 --- tests/test_embed_touching.mojo ---
 [PASS] embed_touching - 6 / 6 checks
 --- tests/test_entity_change_undo.mojo ---
@@ -1195,7 +1195,7 @@ iterations over 100 steps: Jacobi PCG 10623  MGPCG 400
 [PASS] material_contact - 6 / 6 checks
 --- tests/test_materials.mojo ---
   slide distances -- multiply: 3.803211212158203  min: 3.7539873123168945  average: 1.912537693977356  max: 1.0121033191680908
-[PASS] materials - 15 / 15 checks
+[PASS] materials - 16 / 16 checks
 --- tests/test_mesh_bake.mojo ---
   bumpy: largest original-vertex distance to the baked surface 0.02160774916410446
 [PASS] mesh_bake - 24 / 24 checks

@@ -17,6 +17,7 @@ from std.math import atan2, sqrt
 from harness.runner import Suite
 from geometry.vec import Real, Vec3
 from geometry.quat import Quat
+from diag.counters import GAMELOOP_DEBT_DROPPED
 from embed.world import EmbedWorld
 
 
@@ -200,4 +201,12 @@ def main() raises:
         errs += 1
     s.check(errs == 7 and len(xw.bodies()) == n0,
             "negative radius, zero direction, zero quaternion, flat hull, bad index, wrong height count, unknown joint raise; nothing added")
+
+    # frame debt: a frame longer than max_steps ticks drops the excess and counts it where hosts can read it
+    var dw = EmbedWorld(1.0 / 60.0, Vec3(0, -9.8, 0, 0), 4)
+    var due_ok = dw.ticks_due(3.0 / 60.0)
+    var before = dw.scene.counters.get(GAMELOOP_DEBT_DROPPED)
+    var due_long = dw.ticks_due(1.0)
+    s.check(due_ok == 3 and before == 0 and due_long == 4 and dw.scene.counters.get(GAMELOOP_DEBT_DROPPED) == 1,
+            "a 1 s frame with max_steps 4 runs 4 ticks and bumps gameloop_debt_dropped once; a 3-tick frame does not")
     s.finish()

@@ -82,6 +82,8 @@ icount = "python3 scripts/icount.py"
 rules-icount = "python3 scripts/rules_icount.py"
 # Which CPU target / optimisation factors change simulation bits (scripts/fp_probe.py; ROADMAP 17.76).
 fp-probe = "python3 scripts/fp_probe.py"
+# The C-ABI library vs a native Mojo program on an FMA CPU: same world hash for box / capsule / hull (17.96).
+fma-parity = { cmd = "python3 scripts/fma_parity_probe.py", depends-on = ["build"] }
 alloc-probe = "python3 scripts/alloc_probe.py"
 # Write .vdb files (tests/test_vdb_file.mojo) and read them with OpenVDB's own Python module (ROADMAP 17.63).
 vdb-check = { cmd = "mojo run -D ASSERT=all -I build tests/test_vdb_file.mojo && pixi exec --spec openvdb --spec python=3.12 -- python scripts/vdb_check.py build/vdb", depends-on = ["build"] }
