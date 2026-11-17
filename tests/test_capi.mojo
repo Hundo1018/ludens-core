@@ -170,8 +170,16 @@ def main() raises:
     var lib = tmp + "/libludens.so"
     var host = tmp + "/host"
 
-    # the reference target on x86-64 (17.89 / #75); other architectures compile for the host
-    var cpu = Python.list("--target-cpu", "x86-64") if String(Python.import_module("platform").machine()) == "x86_64" else Python.list()
+    # the library is compiled for the CPU this test is (scripts/run_tests.sh): LUDENS_TARGET_CPU if set, x86-64 on
+    # x86_64 (17.89 / #75), neoverse-n1 on linux-aarch64, the host otherwise; another target rounds differently and
+    # the C-vs-native hashes below differ (seen on the arm runner: 0.8 scene)
+    var plat = Python.import_module("platform")
+    var cpu_name = String(Python.import_module("os").environ.get("LUDENS_TARGET_CPU", ""))
+    if cpu_name == "" and String(plat.machine()) == "x86_64":
+        cpu_name = "x86-64"
+    elif cpu_name == "" and String(plat.system()) == "Linux" and String(plat.machine()) == "aarch64":
+        cpu_name = "neoverse-n1"
+    var cpu = Python.list("--target-cpu", cpu_name) if cpu_name != "" else Python.list()
     var build_cmd = Python.list("mojo", "build", "--emit", "shared-lib")
     build_cmd.extend(cpu)
     build_cmd.extend(Python.list("-I", "build", "-o", lib, "embed/capi.mojo"))
