@@ -386,6 +386,44 @@ int main(void) {
     ld_world_destroy(w2);
     ld_world_destroy(w3);
 
+    /* -- 0.8 (17.97): capsule, kinematic body, surface materials, the four joint kinds (test_capi's native_abi8) */
+    {
+        ld_world* j8 = NULL;
+        ld_world_create(1.0 / 60.0, 0.0f, -9.8f, 0.0f, &j8);
+        ld_body_add_box(j8, 0.0f, -0.5f, 0.0f, 20.0f, 0.5f, 20.0f, 0.0f, 1);
+        int32_t mf = ld_material_set_friction(j8, 0, 0.25f);
+        int32_t ms = ld_material_set_softness(j8, 0, 30.0f, 0.5f);
+        ld_body cap = ld_body_add_capsule(j8, 0.0f, 2.0f, 0.0f, 0.25f, 0.5f, 1.0f, 0);
+        ld_body kin = ld_body_add_box(j8, 3.0f, 0.5f, 0.0f, 0.5f, 0.5f, 0.5f, 1.0f, 0);
+        int32_t kr = ld_body_set_kinematic(j8, kin);
+        ld_body_set_velocity(j8, kin, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        ld_body ja = ld_body_add_box(j8, -2.0f, 3.0f, 0.0f, 0.25f, 0.25f, 0.25f, 0.0f, 1);
+        ld_body jb = ld_body_add_box(j8, -2.0f, 2.0f, 0.0f, 0.25f, 0.25f, 0.25f, 1.0f, 0);
+        ld_body jc = ld_body_add_box(j8, -2.0f, 1.0f, 0.0f, 0.25f, 0.25f, 0.25f, 1.0f, 0);
+        ld_body jd = ld_body_add_box(j8, -1.0f, 1.0f, 0.0f, 0.25f, 0.25f, 0.25f, 1.0f, 0);
+        ld_body je = ld_body_add_box(j8, -1.0f, 2.0f, 0.0f, 0.25f, 0.25f, 0.25f, 1.0f, 0);
+        int64_t j_ball = ld_joint_add_ball(j8, ja, jb, 0.0f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f);
+        int64_t j_dist = ld_joint_add_distance(j8, jb, jc, 0.0f, -0.25f, 0.0f, 0.0f, 0.25f, 0.0f, 0.5f);
+        int64_t j_hinge = ld_joint_add_hinge(j8, jc, jd, 0.5f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        int64_t j_weld = ld_joint_add_weld(j8, jd, je, 0.0f, 0.5f, 0.0f, 0.0f, -0.5f, 0.0f);
+        ld_world_step_ticks(j8, 120);
+        int32_t jr = ld_joint_remove(j8, j_weld);
+        ld_world_step_ticks(j8, 60);
+        uint64_t h8 = 0;
+        ld_world_hash(j8, &h8);
+        printf("abi8 %llx joints %lld %lld %lld %lld count %lld ok %d %d %d %d cap %d\n", (unsigned long long)h8,
+               (long long)j_ball, (long long)j_dist, (long long)j_hinge, (long long)j_weld,
+               (long long)ld_world_joint_count(j8), mf, ms, kr, jr, cap >= 0);
+        ld_body_remove(j8, je);
+        printf("abi8_err %lld %lld %lld %d %d %d %d\n",
+               (long long)ld_joint_add_ball(j8, je, ja, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f),
+               (long long)ld_joint_add_distance(j8, ja, jb, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f),
+               (long long)ld_body_add_capsule(j8, 0.0f, 5.0f, 0.0f, -1.0f, 0.5f, 1.0f, 0),
+               ld_joint_remove(j8, 99), ld_body_set_kinematic(j8, je), ld_material_set_friction(j8, 70000, 0.5f),
+               ld_material_set_softness(j8, 0, -1.0f, 0.5f));
+        ld_world_destroy(j8);
+    }
+
     /* -- navigation: 10 x 10 m floor, wall across x = 0 from z = -5 to z = 3 */
     float verts[] = {-5, 0, -5, 5, 0, -5, 5, 0, 5, -5, 0, 5,
                      -0.2f, 0, -5, 0.2f, 0, -5, 0.2f, 0, 3, -0.2f, 0, 3,

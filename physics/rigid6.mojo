@@ -68,6 +68,8 @@ struct Inertia3(Copyable, ImplicitlyCopyable, Movable, Deinitable):
         return Self(mass, i, i, i)
 
     @staticmethod
+    @no_inline  # one compiled copy: inlined with literal arguments, the sums fold without FMA while a caller with run-time
+    # arguments (the C-ABI library) fuses them on FMA targets, and the inertia differs by 1 ulp (17.96; test_capi 0.8)
     def capsule(mass: Real, r: Real, hl: Real) -> Self:
         """Solid capsule, axis = local Y (cylinder + two hemispheres; the
         standard engine formula, mass split by volume)."""

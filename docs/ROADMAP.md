@@ -4154,6 +4154,11 @@
 > 存檔 / 雜湊測試、`scene_io` 列、範例。2026-11-17 的量測:33 項中 `EmbedWorld` 11、C-ABI 6、存檔 / 雜湊測試 6、`scene_io` 7、範例 15。
 > 補齊順序:(1) C-ABI 追上 `EmbedWorld`;(2) 範例需要且常用的(繩、布料、角色控制、世界分區、重疊 / 掃掠查詢、凸殼 / 網格 / 高度場、
 > 關節限制與馬達);(3) 3D 水與剛體耦合;(4) 其餘。每項以四欄(入口、存檔 / 雜湊、`scene_io`、C-ABI)為完成條件。
+> **進度註(2026-11-17,補齊第 1 步)**:C-ABI 0.8 追上 `EmbedWorld`:`ld_body_add_capsule`、`ld_body_set_kinematic`、
+> `ld_material_set_friction` / `_softness`、`ld_joint_add_ball` / `_distance` / `_hinge` / `_weld`、`ld_joint_remove`、`ld_world_joint_count`;
+> Rust / C# 綁定 65 → 75 個函式,Python `World` / `Body` 包裝。同一場景(膠囊、運動學方塊、材質、四種關節、120 tick 後移除焊接再 60 tick)
+> C 宿主、Python 與 Mojo 雜湊相同;只在 C 端改鉸鏈軸則比對失敗。`test_capi` 105/105、`test_python_binding` 15/15。
+> 對照表(`scripts/capability_table.py`):C-ABI 6 → 10;查詢的存檔與 `scene_io` 欄標「不適用」。
 > **未做**:實體、`ChildOf`、事件冒泡、群組、換關卡(設計筆記的工作切片 1–5)。
 
 ## 工程、測試、效能與工具鏈

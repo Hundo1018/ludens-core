@@ -3,7 +3,7 @@
 #![allow(non_camel_case_types, dead_code)]
 
 pub const LD_ABI_MAJOR: u32 = 0;
-pub const LD_ABI_MINOR: u32 = 7;
+pub const LD_ABI_MINOR: u32 = 8;
 pub const LD_OK: i32 = 0;
 pub const LD_ERR_HANDLE: i32 = -1;
 pub const LD_ERR_ARG: i32 = -2;
@@ -162,4 +162,14 @@ extern "C" {
     pub fn ld_world_transfer_size(w: *mut ld_world, registered: *const u8) -> i64;
     pub fn ld_world_transfer_save(w: *mut ld_world, registered: *const u8, buf: *mut u8, cap: i64) -> i64;
     pub fn ld_world_transfer_load(w: *mut ld_world, registered: *const u8, data: *const u8, n: i64) -> i32;
+    pub fn ld_body_add_capsule(w: *mut ld_world, px: f32, py: f32, pz: f32, r: f32, half_len: f32, mass: f32, is_static: i32) -> ld_body;
+    pub fn ld_body_set_kinematic(w: *mut ld_world, b: ld_body) -> i32;
+    pub fn ld_material_set_friction(w: *mut ld_world, material: i32, mu: f32) -> i32;
+    pub fn ld_material_set_softness(w: *mut ld_world, material: i32, hertz: f32, zeta: f32) -> i32;
+    pub fn ld_joint_add_ball(w: *mut ld_world, a: ld_body, b: ld_body, lax: f32, lay: f32, laz: f32, lbx: f32, lby: f32, lbz: f32) -> i64;
+    pub fn ld_joint_add_distance(w: *mut ld_world, a: ld_body, b: ld_body, lax: f32, lay: f32, laz: f32, lbx: f32, lby: f32, lbz: f32, rest: f32) -> i64;
+    pub fn ld_joint_add_hinge(w: *mut ld_world, a: ld_body, b: ld_body, lax: f32, lay: f32, laz: f32, lbx: f32, lby: f32, lbz: f32, ax: f32, ay: f32, az: f32) -> i64;
+    pub fn ld_joint_add_weld(w: *mut ld_world, a: ld_body, b: ld_body, lax: f32, lay: f32, laz: f32, lbx: f32, lby: f32, lbz: f32) -> i64;
+    pub fn ld_joint_remove(w: *mut ld_world, joint: i64) -> i32;
+    pub fn ld_world_joint_count(w: *mut ld_world) -> i64;
 }

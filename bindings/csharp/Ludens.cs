@@ -64,7 +64,7 @@ namespace Ludens
     {
         public const string Lib = "ludens";
         public const uint LD_ABI_MAJOR = 0;
-        public const uint LD_ABI_MINOR = 7;
+        public const uint LD_ABI_MINOR = 8;
         public const int LD_OK = 0;
         public const int LD_ERR_HANDLE = -1;
         public const int LD_ERR_ARG = -2;
@@ -221,5 +221,25 @@ namespace Ludens
         public static extern long ld_world_transfer_save(ld_world* w, byte* registered, byte* buf, long cap);
         [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int ld_world_transfer_load(ld_world* w, byte* registered, byte* data, long n);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_body_add_capsule(ld_world* w, float px, float py, float pz, float r, float half_len, float mass, int is_static);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_body_set_kinematic(ld_world* w, long b);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_material_set_friction(ld_world* w, int material, float mu);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_material_set_softness(ld_world* w, int material, float hertz, float zeta);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_joint_add_ball(ld_world* w, long a, long b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_joint_add_distance(ld_world* w, long a, long b, float lax, float lay, float laz, float lbx, float lby, float lbz, float rest);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_joint_add_hinge(ld_world* w, long a, long b, float lax, float lay, float laz, float lbx, float lby, float lbz, float ax, float ay, float az);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_joint_add_weld(ld_world* w, long a, long b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int ld_joint_remove(ld_world* w, long joint);
+        [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern long ld_world_joint_count(ld_world* w);
     }
 }

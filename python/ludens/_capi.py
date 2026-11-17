@@ -22,7 +22,7 @@ from ctypes import (
 )
 
 ABI_MAJOR = 0
-ABI_MINOR = 7
+ABI_MINOR = 8
 
 LD_OK = 0
 LD_ERR_HANDLE = -1
@@ -157,6 +157,17 @@ PROTOTYPES = {
     # 0.4 (17.78): host mapping
     "ld_world_bind_thread": (c_int32, [_W, c_int32]),
     "ld_body_set_layer": (c_int32, [_W, c_int64, c_uint32, c_uint32]),
+    # 0.8 (17.97)
+    "ld_body_add_capsule": (c_int64, [_W, _F, _F, _F, _F, _F, _F, c_int32]),
+    "ld_body_set_kinematic": (c_int32, [_W, c_int64]),
+    "ld_material_set_friction": (c_int32, [_W, c_int32, _F]),
+    "ld_material_set_softness": (c_int32, [_W, c_int32, _F, _F]),
+    "ld_joint_add_ball": (c_int64, [_W, c_int64, c_int64, _F, _F, _F, _F, _F, _F]),
+    "ld_joint_add_distance": (c_int64, [_W, c_int64, c_int64, _F, _F, _F, _F, _F, _F, _F]),
+    "ld_joint_add_hinge": (c_int64, [_W, c_int64, c_int64, _F, _F, _F, _F, _F, _F, _F, _F, _F]),
+    "ld_joint_add_weld": (c_int64, [_W, c_int64, c_int64, _F, _F, _F, _F, _F, _F]),
+    "ld_joint_remove": (c_int32, [_W, c_int64]),
+    "ld_world_joint_count": (c_int64, [_W]),
     "ld_world_raycast_mask": (c_int32, [_W, _F, _F, _F, _F, _F, _F, _F, c_uint32, POINTER(c_int64), POINTER(c_float)]),
     "ld_body_set_user": (c_int32, [_W, c_int64, c_uint64]),
     "ld_body_get_user": (c_int32, [_W, c_int64, POINTER(c_uint64)]),

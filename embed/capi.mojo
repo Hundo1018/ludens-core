@@ -1409,3 +1409,153 @@ def ld_world_find_user(h: Optional[Handle], user: UInt64) abi("C") -> Int64:
     if r < 0:
         return Int64(_fail(p, LD_ERR_STALE, "ld_world_find_user: no body carries this value"))
     return r
+
+
+# ------------------------------------------- 0.8: what EmbedWorld already had
+
+# ROADMAP 17.97 (the capability table): capsules, kinematic bodies, surface materials and the four joint kinds were
+# reachable from Mojo hosts through EmbedWorld but not from C. Each function below is one EmbedWorld call.
+
+
+@export
+def ld_body_add_capsule(
+    h: Optional[Handle], px: Float32, py: Float32, pz: Float32, r: Float32, half_len: Float32, mass: Float32,
+    is_static: Int32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return p[].w.add_capsule(_v(px, py, pz), Real(r), Real(half_len), Real(mass), is_static != 0)
+    except e:
+        return Int64(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_body_set_kinematic(h: Optional[Handle], b: Int64) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_kinematic(b)
+        return Int32(LD_OK)
+    except e:
+        return Int32(_body_err(p, b, e))
+
+
+@export
+def ld_material_set_friction(h: Optional[Handle], material: Int32, mu: Float32) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_material_friction(Int(material), Real(mu))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_material_set_softness(h: Optional[Handle], material: Int32, hertz: Float32, zeta: Float32) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    try:
+        p[].w.set_material_softness(Int(material), Real(hertz), Real(zeta))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+def _joint_err(p: WPtr, a: Int64, b: Int64, e: Error) -> Int:
+    if not p[].w.is_alive(a) or not p[].w.is_alive(b):
+        return _fail(p, LD_ERR_STALE, String(e))
+    return _fail(p, LD_ERR_ARG, String(e))
+
+
+@export
+def ld_joint_add_ball(
+    h: Optional[Handle], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32,
+    lbz: Float32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(p[].w.add_ball_joint(a, b, _v(lax, lay, laz), _v(lbx, lby, lbz)))
+    except e:
+        return Int64(_joint_err(p, a, b, e))
+
+
+@export
+def ld_joint_add_distance(
+    h: Optional[Handle], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32,
+    lbz: Float32, rest: Float32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(p[].w.add_distance_joint(a, b, _v(lax, lay, laz), _v(lbx, lby, lbz), Real(rest)))
+    except e:
+        return Int64(_joint_err(p, a, b, e))
+
+
+@export
+def ld_joint_add_hinge(
+    h: Optional[Handle], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32,
+    lbz: Float32, ax: Float32, ay: Float32, az: Float32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(p[].w.add_hinge_joint(a, b, _v(lax, lay, laz), _v(lbx, lby, lbz), _v(ax, ay, az)))
+    except e:
+        return Int64(_joint_err(p, a, b, e))
+
+
+@export
+def ld_joint_add_weld(
+    h: Optional[Handle], a: Int64, b: Int64, lax: Float32, lay: Float32, laz: Float32, lbx: Float32, lby: Float32,
+    lbz: Float32,
+) abi("C") -> Int64:
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    var p = o.value()
+    try:
+        return Int64(p[].w.add_weld_joint(a, b, _v(lax, lay, laz), _v(lbx, lby, lbz)))
+    except e:
+        return Int64(_joint_err(p, a, b, e))
+
+
+@export
+def ld_joint_remove(h: Optional[Handle], j: Int64) abi("C") -> Int32:
+    var o = _world(h)
+    if not o:
+        return Int32(_why(h))
+    var p = o.value()
+    if j < 0 or j >= Int64(p[].w.joint_count()):
+        return Int32(_fail(p, LD_ERR_ARG, "ld_joint_remove: no joint with this index"))
+    try:
+        p[].w.remove_joint(Int(j))
+        return Int32(LD_OK)
+    except e:
+        return Int32(_fail(p, LD_ERR_ARG, String(e)))
+
+
+@export
+def ld_world_joint_count(h: Optional[Handle]) abi("C") -> Int64:
+    """Joint slots ever added, removed ones included (indices never shift)."""
+    var o = _world(h)
+    if not o:
+        return Int64(_why(h))
+    return Int64(o.value()[].w.joint_count())

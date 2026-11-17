@@ -1,4 +1,4 @@
-/* ludens-core embedding API (ROADMAP 12.1), ABI v0.7.
+/* ludens-core embedding API (ROADMAP 12.1), ABI v0.8.
  *
  * Build the library with `pixi run capi` -> build/libludens.so.
  * Contract (docs/design/12.1-embedding.md):
@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #define LD_ABI_MAJOR 0
-#define LD_ABI_MINOR 7
+#define LD_ABI_MINOR 8
 
 #define LD_OK 0
 #define LD_ERR_HANDLE (-1)   /* null or destroyed world / navmesh handle */
@@ -226,6 +226,23 @@ int64_t ld_world_export_frame(ld_world* w, uint8_t* buf, int64_t cap);
 int64_t ld_world_transfer_size(ld_world* w, const uint8_t* registered);
 int64_t ld_world_transfer_save(ld_world* w, const uint8_t* registered, uint8_t* buf, int64_t cap);
 int32_t ld_world_transfer_load(ld_world* w, const uint8_t* registered, const uint8_t* data, int64_t n);
+
+/* ---- 0.8 (ROADMAP 17.97): what EmbedWorld already had. A capsule's axis is the body's local y; half_len is half the
+ * cylinder part. A kinematic body moves by its velocity and ignores forces. Surface materials (ids 0..65535) set the
+ * friction and contact stiffness of mesh / heightfield triangles. Joints: anchors la (body a's frame) and lb (body b's
+ * frame) held together; hinge keeps axis (a unit vector in each body's frame) aligned; distance keeps |anchors| = rest;
+ * weld holds the current relative rotation. They return the joint index (>= 0), which never shifts; a removed or
+ * never-issued body -> LD_ERR_STALE, a bad value -> LD_ERR_ARG. ld_world_joint_count counts every slot ever added. */
+ld_body ld_body_add_capsule(ld_world* w, float px, float py, float pz, float r, float half_len, float mass, int32_t is_static);
+int32_t ld_body_set_kinematic(ld_world* w, ld_body b);
+int32_t ld_material_set_friction(ld_world* w, int32_t material, float mu);
+int32_t ld_material_set_softness(ld_world* w, int32_t material, float hertz, float zeta);
+int64_t ld_joint_add_ball(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+int64_t ld_joint_add_distance(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz, float rest);
+int64_t ld_joint_add_hinge(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz, float ax, float ay, float az);
+int64_t ld_joint_add_weld(ld_world* w, ld_body a, ld_body b, float lax, float lay, float laz, float lbx, float lby, float lbz);
+int32_t ld_joint_remove(ld_world* w, int64_t joint);
+int64_t ld_world_joint_count(ld_world* w);
 
 #ifdef __cplusplus
 }

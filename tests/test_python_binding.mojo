@@ -27,6 +27,33 @@ def _v(x: Real, y: Real, z: Real) -> Vec3:
     return Vec3(x, y, z, 0)
 
 
+def native_abi8() raises -> UInt64:
+    """The 0.8 scene of client_check.py and tests/capi/host.c (same as test_capi's native_abi8)."""
+    var w = EmbedWorld(1.0 / 60.0, _v(0, -9.8, 0))
+    _ = w.add_box(_v(0, -0.5, 0), _v(20, 0.5, 20), 0, True)
+    w.set_material_friction(0, 0.25)
+    w.set_material_softness(0, 30, 0.5)
+    _ = w.add_capsule(_v(0, 2, 0), 0.25, 0.5, 1, False)
+    var kin = w.add_box(_v(3, 0.5, 0), _v(0.5, 0.5, 0.5), 1, False)
+    w.set_kinematic(kin)
+    w.set_velocity(kin, _v(-1, 0, 0), _v(0, 0, 0))
+    var ja = w.add_box(_v(-2, 3, 0), _v(0.25, 0.25, 0.25), 0, True)
+    var jb = w.add_box(_v(-2, 2, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var jc = w.add_box(_v(-2, 1, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var jd = w.add_box(_v(-1, 1, 0), _v(0.25, 0.25, 0.25), 1, False)
+    var je = w.add_box(_v(-1, 2, 0), _v(0.25, 0.25, 0.25), 1, False)
+    _ = w.add_ball_joint(ja, jb, _v(0, -0.5, 0), _v(0, 0.5, 0))
+    _ = w.add_distance_joint(jb, jc, _v(0, -0.25, 0), _v(0, 0.25, 0), 0.5)
+    _ = w.add_hinge_joint(jc, jd, _v(0.5, 0, 0), _v(-0.5, 0, 0), _v(0, 0, 1))
+    var weld = w.add_weld_joint(jd, je, _v(0, 0.5, 0), _v(0, -0.5, 0))
+    for _ in range(120):
+        w.physics_tick()
+    w.remove_joint(weld)
+    for _ in range(60):
+        w.physics_tick()
+    return w.hash()
+
+
 struct Native:
     """The parity scenario of client_check.py (same as the C host of test_capi)."""
 
@@ -153,6 +180,8 @@ def main() raises:
     s.check(String(kv.get("hash", Python.list("?"))[0]) == String(nat.w.hash()), "Python-driven world hash == native Mojo run (" + String(nat.w.hash()) + ")")
     s.check(String(kv.get("began", Python.list("?", "?", "?"))[0]) == String(nat.began), "Python subscriber BEGAN count == native")
     s.check(String(kv.get("began", Python.list("?", "?", "?"))[2]) == String(nat.ended), "Python subscriber ENDED count == native")
+    s.check(String(kv.get("abi8_hash", Python.list("?"))[0]) == String(native_abi8()),
+            "0.8: the Python abi8 scene (capsule, kinematic, materials, four joints) hashes like the native run")
     var st = nat.w.state(nat.player)
     s.almost(Float64(String(kv["player"][0])), Float64(st.pos[0]), "player x", tol=2e-6)
 

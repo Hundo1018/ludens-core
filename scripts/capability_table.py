@@ -4,7 +4,8 @@ and whether the host can reach it: an EmbedWorld method, a C-ABI function, save 
 usage: python3 scripts/capability_table.py            print the table for this checkout (markdown)
 
 The capability list is curated by hand (CAPS below). Every cell after it is found by searching the checkout, so the table
-says what the code has, not what someone remembers. A cell is "yes" when its regex matches in the named files.
+says what the code has, not what someone remembers. A cell is "yes" when its regex matches in the named files. "不適用" marks a column that does not apply (a stateless query has nothing to save or
+author); "拒絕" marks a save that is refused on purpose (17.95).
 """
 import re
 import sys
@@ -36,16 +37,16 @@ CAPS = [
     ("剛體", "凸殼", ["collision/hull.mojo"], r"def add_convex|def add_hull", r"ld_body_add_(convex|hull)", None, None,
      r"from collision\.hull"),
     ("剛體", "三角網格 / 高度場", ["collision/trimesh.mojo"], r"def add_(mesh|heightfield)",
-     r"ld_body_add_(mesh|heightfield)", None, None, r"heightfield|trimesh"),
+     r"ld_body_add_(trimesh|heightfield)", None, None, r"heightfield|trimesh"),
     ("剛體", "運動學", ["physics/solver6.mojo"], r"def set_kinematic", r"ld_body_set_kinematic", r'"kinematic"', r"kinematic", r"set_kinematic"),
-    ("剛體", "材質(摩擦、柔度)", ["physics/material.mojo"], r"def set_material_friction", r"ld_world_set_material_friction",
+    ("剛體", "材質(摩擦、柔度)", ["physics/material.mojo"], r"def set_material_friction", r"ld_material_set_friction",
      r'"material_friction"', r"SceneMaterial", r"set_material_friction|physics\.material"),
     ("剛體", "碰撞層", ["physics/solver6.mojo"], r"def set_layer", r"ld_body_set_layer", r'"layer"', r"category", r"set_layer"),
     ("剛體", "連續碰撞(CCD)", ["physics/ccd6.mojo"], r"def set_ccd", r"ld_body_set_ccd", None, r"ccd_mode", r"ccd"),
-    ("關節", "球 / 距離 / 鉸鏈 / 焊接", ["physics/joints6.mojo"], r"def add_ball_joint", r"ld_(world|body)_add_\w*joint", r'"joint"',
+    ("關節", "球 / 距離 / 鉸鏈 / 焊接", ["physics/joints6.mojo"], r"def add_ball_joint", r"ld_joint_add_(ball|hinge)", r'"joint"',
      r"SceneJoint", r"add_ball_joint|add_hinge_joint"),
     ("關節", "限制 / 馬達 / 彈簧 / 滑軌 / cone-twist", ["physics/joint_ext.mojo"], r"def (set_joint_limit|set_joint_motor|add_slider)",
-     r"ld_joint_set_(limit|motor)", None, None, r"joint_ext"),
+     r"ld_joint_set_(limits|motor)", None, None, r"joint_ext"),
     ("關節", "縮座標關節鏈", ["physics/chain.mojo", "physics/chain_scene.mojo"], r"def add_chain", r"ld_world_add_chain", None, None,
      r"from physics\.chain"),
     ("破壞", "預先破碎的物件", ["physics/fracture.mojo"], r"def add_fracture_box", r"ld_world_add_fracture_box", r"fracture_save",
@@ -75,8 +76,8 @@ CAPS = [
      r"physics\.diff"),
     ("其他物理", "GPU 物理(接觸、布料、LBM)", ["physics/gpu_contact.mojo", "physics/gpu_cloth.mojo"], r"\bgpu", r"ld_world_\w*gpu",
      None, None, r"gpu_contact|gpu_cloth|lbm_gpu"),
-    ("查詢", "射線", ["collision/queries.mojo", "collision/world_query.mojo"], r"def raycast", r"ld_world_raycast", None, None, r"raycast"),
-    ("查詢", "重疊 / 掃掠", ["collision/queries.mojo", "collision/world_query.mojo"], r"def (overlap|sweep)", r"ld_world_(overlap|sweep)", None, None,
+    ("查詢", "射線", ["collision/queries.mojo", "collision/world_query.mojo"], r"def raycast", r"ld_world_raycast", "N/A", "N/A", r"raycast"),
+    ("查詢", "重疊 / 掃掠", ["collision/queries.mojo", "collision/world_query.mojo"], r"def (overlap|sweep)", r"ld_world_(overlap|sweep)", "N/A", "N/A",
      r"overlap|sweep"),
     ("gameplay", "布娃娃", ["gameplay/ragdoll.mojo", "embed/ragdoll.mojo"], r"struct EmbedRagdoll", r"ld_\w*ragdoll", None, None,
      r"ragdoll"),
@@ -105,7 +106,8 @@ for cat, name, mods, rw, rc, rs, rsc, rex in CAPS:
     missing = [m for m in mods if not (root / m).exists()]
     in_world = has(rw, WORLD)
     rows.append((cat, name, ", ".join(f"`{m}`" for m in mods), "；".join(missing), in_world, has(rc, CAPI),
-                 ("拒絕" if rs == "REFUSED" else in_world and has(rs, SAVE_TESTS)), has(rsc, SCENE), has(rex, EXAMPLES)))
+                 ("拒絕" if rs == "REFUSED" else "不適用" if rs == "N/A" else in_world and has(rs, SAVE_TESTS)),
+                 "不適用" if rsc == "N/A" else has(rsc, SCENE), has(rex, EXAMPLES)))
 
 print("| 類別 | 能力 | core 模組 | EmbedWorld | C-ABI | 存檔 / 雜湊測試 | scene_io | 範例 |")
 print("|---|---|---|:-:|:-:|:-:|:-:|:-:|")
@@ -115,4 +117,4 @@ for cat, name, mods, missing, w, c, s, sc, ex in rows:
 n = len(rows)
 print()
 print(f"能力 {n} 項:EmbedWorld {sum(r[4] for r in rows)}、C-ABI {sum(r[5] for r in rows)}、存檔 / 雜湊測試 {sum(r[6] is True for r in rows)}、"
-      f"scene_io {sum(r[7] for r in rows)}、範例 {sum(r[8] for r in rows)}")
+      f"scene_io {sum(r[7] is True for r in rows)}、範例 {sum(r[8] for r in rows)}")
