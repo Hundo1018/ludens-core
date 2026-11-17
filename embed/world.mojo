@@ -36,7 +36,10 @@ from physics.flip import FlipWater2
 from physics.flip_diffuse import DiffuseParticles
 from geometry.polytope import Polytope
 from geometry.fracture_cut import FragmentSet, scatter_seeds, voronoi_fracture
-from collision.world_query import QueryFilter
+from collision.world_query import QueryFilter, QueryShape, pose3_of
+from collision.collider_set import CompoundSpec
+from physics.joint_ext import MOTOR_NONE, MOTOR_VELOCITY, MOTOR_POSITION
+from physics.mass_props import hull_mass
 from collision.contact_events import ContactEvent
 
 comptime ABI_MAJOR = 0
@@ -160,6 +163,17 @@ struct RayResult(Copyable, ImplicitlyCopyable, Movable):
     var t: Real
     var point: Vec3
     var normal: Vec3
+
+
+@fieldwise_init
+struct SweepResult(Copyable, ImplicitlyCopyable, Movable):
+    """A shape swept along a direction (17.97): the first body it touches. `start_solid`: it already overlapped at t 0."""
+
+    var body: Int64  # -1 = no hit
+    var t: Real
+    var point: Vec3
+    var normal: Vec3
+    var start_solid: Bool
 
 
 @fieldwise_init
@@ -331,6 +345,59 @@ struct EmbedWorld(Movable):
         var id = self.scene.add_capsule(QuatBody6.at_rest(pos, Inertia3.capsule(m, r, half_len)), r, half_len, is_static)
         return pack_body(id)
 
+    def add_hull(mut self, pos: Vec3, verts: List[Vec3], mass: Real, is_static: Bool) raises -> Int64:
+        """A convex body from the hull of `verts` (body frame, around `pos`). Its centre of mass and principal axes come
+        from the hull at uniform density, so the body's origin moves to the centre of mass; `state(h).pos` is that
+        centre (17.97). 4..4096 vertices."""
+        self._check_new(pos, mass, is_static)
+        if len(verts) < 4 or len(verts) > 4096:
+            raise Error("add_hull: need 4 to 4096 vertices")
+        var flat = List[Real]()
+        for v in verts:
+            if not _finite3(v):
+                raise Error("add_hull: vertices must be finite")
+            flat.append(v[0])
+            flat.append(v[1])
+            flat.append(v[2])
+        var vol = hull_mass(flat, Real(1))[0]
+        if not (vol > Real(1e-12)):
+            raise Error("add_hull: the vertices span no volume")
+        var spec = CompoundSpec()
+        spec.hull(flat, Vec3(0), Quat.identity())
+        var density = (mass if not is_static else Real(1)) / vol
+        var id = self.scene.add_compound(QuatBody6.at_rest(pos, Inertia3.box(Real(1), 1, 1, 1)), spec, density, is_static)
+        return pack_body(id)
+
+    def add_trimesh(mut self, pos: Vec3, verts: List[Vec3], tris: List[Int]) raises -> Int64:
+        """A static triangle mesh; `verts` in the body frame at `pos`, `tris` three vertex indices per triangle."""
+        self._check_new(pos, 1, True)
+        if len(verts) < 3 or len(tris) < 3 or len(tris) % 3 != 0:
+            raise Error("add_trimesh: need >= 3 vertices and a multiple of 3 indices")
+        var flat = List[Real]()
+        for v in verts:
+            if not _finite3(v):
+                raise Error("add_trimesh: vertices must be finite")
+            flat.append(v[0])
+            flat.append(v[1])
+            flat.append(v[2])
+        for i in tris:
+            if i < 0 or i >= len(verts):
+                raise Error("add_trimesh: an index is outside the vertex list")
+        var id = self.scene.add_trimesh(QuatBody6.at_rest(pos, Inertia3.box(Real(1), 1, 1, 1)), flat, tris, List[UInt8](), True)
+        return pack_body(id)
+
+    def add_heightfield(mut self, heights: List[Real], nx: Int, nz: Int, cell: Real, ox: Real, oz: Real) raises -> Int64:
+        """A static heightfield: nx x nz samples `cell` apart, row-major by z, sample (i, k) at (ox + i cell, h, oz + k cell)."""
+        if nx < 2 or nz < 2 or len(heights) != nx * nz:
+            raise Error("add_heightfield: need nx, nz >= 2 and nx * nz heights")
+        if not (cell > 0) or not isfinite(cell) or not isfinite(ox) or not isfinite(oz):
+            raise Error("add_heightfield: cell must be > 0 and the origin finite")
+        for h in heights:
+            if not isfinite(h):
+                raise Error("add_heightfield: heights must be finite")
+        var id = self.scene.add_heightfield(QuatBody6.at_rest(Vec3(0), Inertia3.box(Real(1), 1, 1, 1)), heights, nx, nz, cell, ox, oz)
+        return pack_body(id)
+
     def set_kinematic(mut self, h: Int64) raises:
         """Make a live body kinematic (ROADMAP 17.24): moved by its velocity, unaffected by forces."""
         var id = unpack_body(h)
@@ -403,6 +470,50 @@ struct EmbedWorld(Movable):
         """Put joint slot `j` back to `rec` (accumulated impulses start at zero, as for a new joint). A live record
         needs both of its bodies alive."""
         self.scene.restore_joint(j, rec)
+
+    # 17.97: limits, motor, spring and break threshold of a joint (ContactScene6's joint ext; saved with the scene).
+
+    def _joint_ok(self, j: Int, what: String) raises:
+        if j < 0 or j >= len(self.scene.joints):
+            raise Error(what + ": no joint with this index")
+
+    def _wake_joint(mut self, j: Int) raises:
+        """A changed limit, motor or spring must act now: wake both bodies' islands (static ones are a no-op)."""
+        var a = self.scene.joints[j].a
+        var b = self.scene.joints[j].b
+        if a >= 0:
+            self.scene.wake(self.scene.bset.id_of(a))
+        if b >= 0:
+            self.scene.wake(self.scene.bset.id_of(b))
+
+    def set_joint_limits(mut self, j: Int, lo: Real, hi: Real) raises:
+        """Hinge angle (rad, 0 where the joint was made) kept in [lo, hi]."""
+        self._joint_ok(j, "set_joint_limits")
+        if not isfinite(lo) or not isfinite(hi):
+            raise Error("set_joint_limits: lo and hi must be finite")
+        self.scene.set_joint_limits(j, lo, hi)
+        self._wake_joint(j)
+
+    def set_joint_motor(mut self, j: Int, mode: Int, target: Real, max_force: Real, hertz: Real = 5, zeta: Real = 1) raises:
+        """Mode 0 off, 1 velocity (target in rad/s), 2 position (target in rad, a spring of hertz / zeta);
+        max_force caps the motor's force or torque."""
+        self._joint_ok(j, "set_joint_motor")
+        if not isfinite(target) or not (max_force >= 0) or not isfinite(max_force):
+            raise Error("set_joint_motor: target must be finite and max_force >= 0")
+        self.scene.set_joint_motor(j, mode, target, max_force, hertz, zeta)
+        self._wake_joint(j)
+
+    def set_joint_spring(mut self, j: Int, hertz: Real, zeta: Real, rest: Real) raises:
+        self._joint_ok(j, "set_joint_spring")
+        if not (hertz > 0) or not (zeta >= 0) or not isfinite(rest) or not isfinite(hertz) or not isfinite(zeta):
+            raise Error("set_joint_spring: need hertz > 0, zeta >= 0 and a finite rest")
+        self.scene.set_joint_spring(j, hertz, zeta, rest)
+        self._wake_joint(j)
+
+    def set_joint_break(mut self, j: Int, force: Real, torque: Real) raises:
+        """Release the joint when its force exceeds `force` (N) or its torque `torque` (N m); see `released_joints`."""
+        self._joint_ok(j, "set_joint_break")
+        self.scene.set_joint_break(j, force, torque)
 
     def joint_count(self) -> Int:
         """Joint slots ever added, removed ones included (indices never shift)."""
@@ -631,6 +742,58 @@ struct EmbedWorld(Movable):
         if not hit.hit:
             return RayResult(-1, 0, Vec3(0), Vec3(0))
         return RayResult(pack_body(self.scene.bset.id_of(hit.body)), hit.t, hit.point, hit.normal)
+
+    # 17.97: overlap and sweep queries (stateless; the scene's world_query). `mask` filters by collision category.
+
+    def _unit(self, rot: Quat, what: String) raises -> Quat:
+        if rot.x * rot.x + rot.y * rot.y + rot.z * rot.z + rot.w * rot.w < 1e-12:
+            raise Error(what + ": quaternion must be non-zero")
+        return teleport_rotation(rot)
+
+    def _handles(self, slots: List[Int]) -> List[Int64]:
+        var out = List[Int64]()
+        for i in slots:
+            out.append(pack_body(self.scene.bset.id_of(i)))
+        return out^
+
+    def overlap_sphere(self, c: Vec3, r: Real, mask: UInt32 = 0xFFFFFFFF) raises -> List[Int64]:
+        """Bodies whose collider overlaps the sphere, in slot order."""
+        if not _finite3(c) or not (r > 0) or not isfinite(r):
+            raise Error("overlap_sphere: centre must be finite and radius > 0")
+        var f = QueryFilter.all()
+        f.mask = mask
+        return self._handles(self.scene.overlap_sphere(c, r, f))
+
+    def overlap_box(self, c: Vec3, half: Vec3, rot: Quat, mask: UInt32 = 0xFFFFFFFF) raises -> List[Int64]:
+        """Bodies whose collider overlaps the oriented box, in slot order."""
+        if not _finite3(c) or not _finite3(half) or not (half[0] > 0 and half[1] > 0 and half[2] > 0):
+            raise Error("overlap_box: centre must be finite and half extents > 0")
+        var f = QueryFilter.all()
+        f.mask = mask
+        return self._handles(self.scene.overlap_shape(QueryShape.box(half), pose3_of(c, self._unit(rot, "overlap_box")), f))
+
+    def _sweep(self, shape: QueryShape, pos: Vec3, rot: Quat, dir: Vec3, max_t: Real, mask: UInt32) raises -> SweepResult:
+        if not _finite3(pos) or not _finite3(dir) or not (max_t >= 0) or not isfinite(max_t):
+            raise Error("sweep: start, direction and max_t must be finite, max_t >= 0")
+        var l2 = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]
+        if l2 < 1e-12:
+            raise Error("sweep: direction must be non-zero")
+        var f = QueryFilter.all()
+        f.mask = mask
+        var hit = self.scene.shape_cast(shape, pose3_of(pos, self._unit(rot, "sweep")), dir / l2 ** 0.5, max_t, f)
+        if not hit.hit:
+            return SweepResult(-1, 0, Vec3(0), Vec3(0), False)
+        return SweepResult(pack_body(self.scene.bset.id_of(hit.body)), hit.t, hit.point, hit.normal, hit.start_solid)
+
+    def sweep_sphere(self, pos: Vec3, r: Real, dir: Vec3, max_t: Real, mask: UInt32 = 0xFFFFFFFF) raises -> SweepResult:
+        if not (r > 0) or not isfinite(r):
+            raise Error("sweep_sphere: radius must be > 0")
+        return self._sweep(QueryShape.sphere(r), pos, Quat.identity(), dir, max_t, mask)
+
+    def sweep_box(self, pos: Vec3, half: Vec3, rot: Quat, dir: Vec3, max_t: Real, mask: UInt32 = 0xFFFFFFFF) raises -> SweepResult:
+        if not _finite3(half) or not (half[0] > 0 and half[1] > 0 and half[2] > 0):
+            raise Error("sweep_box: half extents must be finite and > 0")
+        return self._sweep(QueryShape.box(half), pos, rot, dir, max_t, mask)
 
     # ------------------------------------------------------------ stepping
 
