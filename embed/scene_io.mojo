@@ -27,6 +27,7 @@ from geometry.quat import Quat
 from geometry.vec import Real, Vec3
 from physics.ccd6 import CCD_AUTO
 from physics.material import COMBINE_AVERAGE, COMBINE_MAX
+from physics.joint_ext import MOTOR_NONE, MOTOR_POSITION, MOTOR_VELOCITY
 from physics.joints6 import JOINT_BALL, JOINT_BROKEN, JOINT_DISTANCE, JOINT_HINGE, JOINT_WELD, Joint6
 from physics.rigid6 import Inertia3
 
@@ -135,7 +136,11 @@ struct SceneDoc(Copyable, Movable):
 struct SceneJoint(Copyable, Movable):
     """A joint between two bodies, named by their position in `SceneDoc.bodies`. `kind` is one of JOINT_BALL /
     JOINT_DISTANCE / JOINT_HINGE / JOINT_WELD; `rest` is the distance of a distance joint; `axis_a` / `axis_b` are
-    the hinge axes (a weld keeps its reference rotation in `axis_a` and `rest`, as `Joint6.weld` does)."""
+    the hinge axes (a weld keeps its reference rotation in `axis_a` and `rest`, as `Joint6.weld` does).
+
+    The rest are the settings `ContactScene6.set_joint_limits / set_joint_motor / set_joint_spring / set_joint_break`
+    take, with a new joint's values by default (`SceneJoint.plain`): no limit, MOTOR_NONE, spring hertz 0, break
+    thresholds Real.MAX. A group's rows are written only when one of its values differs from that default."""
     var kind: Int
     var a: Int
     var b: Int
@@ -144,6 +149,36 @@ struct SceneJoint(Copyable, Movable):
     var rest: Real
     var axis_a: Vec3
     var axis_b: Vec3
+    var lim_on: Bool
+    var lo: Real
+    var hi: Real
+    var motor: Int
+    var target: Real
+    var max_force: Real
+    var m_hertz: Real
+    var m_zeta: Real
+    var s_hertz: Real
+    var s_zeta: Real
+    var s_rest: Real
+    var break_force: Real
+    var break_torque: Real
+
+    @staticmethod
+    def plain(kind: Int, a: Int, b: Int, la: Vec3, lb: Vec3, rest: Real, axis_a: Vec3, axis_b: Vec3) -> Self:
+        """A joint with no limit, motor, spring or break threshold."""
+        return Self(kind, a, b, la, lb, rest, axis_a, axis_b, False, 0, 0, MOTOR_NONE, 0, 0, 0, 0, 0, 0, 0, Real.MAX, Real.MAX)
+
+    def has_limit(self) -> Bool:
+        return self.lim_on or self.lo != 0 or self.hi != 0
+
+    def has_motor(self) -> Bool:
+        return self.motor != MOTOR_NONE or self.target != 0 or self.max_force != 0 or self.m_hertz != 0 or self.m_zeta != 0
+
+    def has_spring(self) -> Bool:
+        return self.s_hertz != 0 or self.s_zeta != 0 or self.s_rest != 0
+
+    def has_break(self) -> Bool:
+        return self.break_force < Real.MAX or self.break_torque < Real.MAX
 
 
 @fieldwise_init
@@ -248,9 +283,14 @@ def export_scene(world: EmbedWorld) raises -> SceneDoc:
             continue  # removed or released: not authored content
         if j.kind != JOINT_BALL and j.kind != JOINT_DISTANCE and j.kind != JOINT_HINGE and j.kind != JOINT_WELD:
             raise Error("export_scene: joint " + String(c) + " has kind " + String(j.kind) + " (scene v1 has ball, distance, hinge and weld joints)")
-        if not world.scene.joint_is_plain(c):
-            raise Error("export_scene: joint " + String(c) + " has a limit, motor, spring, drive, break threshold or a zero-angle reference that differs from where it was made (not representable in scene v1)")
-        doc.joints.append(SceneJoint(j.kind, doc_index[j.a], doc_index[j.b], j.la, j.lb, j.rest, j.axis_a, j.axis_b))
+        if not world.scene.joint_has_creation_frame(c):
+            raise Error("export_scene: joint " + String(c) + " has a drive, a cone or D6 limit, or a zero-angle reference or collide flag that differs from where it was made (not representable in scene v1)")
+        ref e = world.scene.jext[c]
+        doc.joints.append(SceneJoint(
+            j.kind, doc_index[j.a], doc_index[j.b], j.la, j.lb, j.rest, j.axis_a, j.axis_b,
+            e.lim_on, e.lo, e.hi, e.motor, e.target, e.max_force, e.m_hertz, e.m_zeta, e.s_hertz, e.s_zeta, e.s_rest,
+            world.scene.break_force[c], world.scene.break_torque[c],
+        ))
     ref sc = world.scene
     var n_mat = len(sc.material_mu)
     if len(sc.material_hz) > n_mat:
@@ -322,6 +362,16 @@ def _validate(doc: SceneDoc) raises:
             raise Error(at + "anchors, axes and rest length must be finite")
         if j.kind == JOINT_DISTANCE and j.rest < 0:
             raise Error(at + "rest length must be >= 0")
+        if not (isfinite(j.lo) and isfinite(j.hi) and j.lo <= j.hi):
+            raise Error(at + "limits must be finite with lo <= hi")
+        if j.motor != MOTOR_NONE and j.motor != MOTOR_VELOCITY and j.motor != MOTOR_POSITION:
+            raise Error(at + "unknown motor mode " + String(j.motor))
+        if not (isfinite(j.target) and isfinite(j.max_force) and j.max_force >= 0 and isfinite(j.m_hertz) and isfinite(j.m_zeta)):
+            raise Error(at + "motor values must be finite with max_force >= 0")
+        if not (isfinite(j.s_hertz) and isfinite(j.s_zeta) and isfinite(j.s_rest)):
+            raise Error(at + "spring values must be finite")
+        if not (j.break_force > 0 and j.break_torque > 0):
+            raise Error(at + "break thresholds must be > 0")
     for k in range(len(doc.materials)):
         ref m = doc.materials[k]
         var at = "import_scene: material " + String(k) + ": "
@@ -442,7 +492,18 @@ def import_scene(mut world: EmbedWorld, doc: SceneDoc) raises:
     for k in range(len(doc.joints)):
         ref j = doc.joints[k]
         var zero = Vec3(0, 0, 0, 0)
-        _ = world.scene.add_joint(Joint6(j.kind, j.a, j.b, j.la, j.lb, j.rest, j.axis_a, j.axis_b, zero, zero, 1))
+        var c = world.scene.add_joint(Joint6(j.kind, j.a, j.b, j.la, j.lb, j.rest, j.axis_a, j.axis_b, zero, zero, 1))
+        # the scene's own setters, not EmbedWorld's (those also wake the bodies), so this path equals load(save())
+        if j.has_limit():
+            world.scene.set_joint_limits(c, j.lo, j.hi)
+            if not j.lim_on:
+                world.scene.clear_joint_limits(c)
+        if j.has_motor():
+            world.scene.set_joint_motor(c, j.motor, j.target, j.max_force, j.m_hertz, j.m_zeta)
+        if j.has_spring():
+            world.scene.set_joint_spring(c, j.s_hertz, j.s_zeta, j.s_rest)
+        if j.has_break():
+            world.scene.set_joint_break(c, j.break_force, j.break_torque)
     for k in range(len(doc.materials)):
         ref m = doc.materials[k]
         if m.mu >= 0:
@@ -542,6 +603,28 @@ def scene_to_fields(doc: SceneDoc) -> List[SceneField]:
             _push(out, p + "rest", _t(j.rest))
             _push_vec(out, p + "axis_a", j.axis_a)
             _push_vec(out, p + "axis_b", j.axis_b)
+            if j.has_limit():
+                _push(out, p + "limit.on", "true" if j.lim_on else "false")
+                _push(out, p + "limit.lo", _t(j.lo))
+                _push(out, p + "limit.hi", _t(j.hi))
+            if j.has_motor():
+                var mn = "none"
+                if j.motor == MOTOR_VELOCITY:
+                    mn = "velocity"
+                elif j.motor == MOTOR_POSITION:
+                    mn = "position"
+                _push(out, p + "motor.mode", mn)
+                _push(out, p + "motor.target", _t(j.target))
+                _push(out, p + "motor.max_force", _t(j.max_force))
+                _push(out, p + "motor.hertz", _t(j.m_hertz))
+                _push(out, p + "motor.zeta", _t(j.m_zeta))
+            if j.has_spring():
+                _push(out, p + "spring.hertz", _t(j.s_hertz))
+                _push(out, p + "spring.zeta", _t(j.s_zeta))
+                _push(out, p + "spring.rest", _t(j.s_rest))
+            if j.has_break():
+                _push(out, p + "break.force", _t(j.break_force))
+                _push(out, p + "break.torque", _t(j.break_torque))
     if len(doc.materials) > 0:  # only written when the table is not empty, so scenes without one keep their rows
         _push(out, "materials.count", String(len(doc.materials)))
         for k in range(len(doc.materials)):
@@ -665,7 +748,31 @@ def scene_from_fields(fields: List[SceneField]) raises -> SceneDoc:
                 kind = JOINT_WELD
             elif kt != "ball":
                 raise Error("scene_from_fields: `" + p + "kind` must be ball, distance, hinge or weld, got `" + kt + "`")
-            doc.joints.append(SceneJoint(kind, rows.int(p + "a"), rows.int(p + "b"), rows.vec(p + "la"), rows.vec(p + "lb"), rows.real(p + "rest"), rows.vec(p + "axis_a"), rows.vec(p + "axis_b")))
+            var sj = SceneJoint.plain(kind, rows.int(p + "a"), rows.int(p + "b"), rows.vec(p + "la"), rows.vec(p + "lb"), rows.real(p + "rest"), rows.vec(p + "axis_a"), rows.vec(p + "axis_b"))
+            if rows.has(p + "limit.on"):
+                sj.lim_on = rows.flag(p + "limit.on")
+                sj.lo = rows.real(p + "limit.lo")
+                sj.hi = rows.real(p + "limit.hi")
+            if rows.has(p + "motor.mode"):
+                var mt = rows.text(p + "motor.mode")
+                if mt == "velocity":
+                    sj.motor = MOTOR_VELOCITY
+                elif mt == "position":
+                    sj.motor = MOTOR_POSITION
+                elif mt != "none":
+                    raise Error("scene_from_fields: `" + p + "motor.mode` must be none, velocity or position, got `" + mt + "`")
+                sj.target = rows.real(p + "motor.target")
+                sj.max_force = rows.real(p + "motor.max_force")
+                sj.m_hertz = rows.real(p + "motor.hertz")
+                sj.m_zeta = rows.real(p + "motor.zeta")
+            if rows.has(p + "spring.hertz"):
+                sj.s_hertz = rows.real(p + "spring.hertz")
+                sj.s_zeta = rows.real(p + "spring.zeta")
+                sj.s_rest = rows.real(p + "spring.rest")
+            if rows.has(p + "break.force"):
+                sj.break_force = rows.real(p + "break.force")
+                sj.break_torque = rows.real(p + "break.torque")
+            doc.joints.append(sj^)
     if rows.has("materials.count"):
         var nm = rows.int("materials.count")
         if nm < 0:
