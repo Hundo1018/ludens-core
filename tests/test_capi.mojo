@@ -121,7 +121,7 @@ def native_abi8() raises -> UInt64:
 
 
 def native_abi9() raises -> UInt64:
-    """tests/capi/host.c's 0.9 block against EmbedWorld."""
+    """The 0.9 block of tests/capi/host.c against EmbedWorld."""
     var w = EmbedWorld(1.0 / 60.0, _v(0, -9.8, 0))
     _ = w.add_box(_v(0, -0.5, 0), _v(20, 0.5, 20), 0, True)
     var cube = List[Vec3]()
