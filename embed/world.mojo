@@ -22,6 +22,7 @@ that blob, so two hosts that agree on `hash` agree on every body bit.
 """
 
 from std.math import isfinite
+from diag.counters import GAMELOOP_DEBT_DROPPED
 from geometry.vec import Real, Vec3, length
 from geometry.quat import Quat
 from physics.body_set import BodyId
@@ -230,7 +231,6 @@ struct EmbedWorld(Movable):
     var acc: Float64
     var max_steps: Int
     var tick: Int
-    var debt_dropped: Int  # frames whose excess time was dropped (FixedLoop's E22 rule)
     var fracture: FractureSet  # 17.90: fragments + bonds added by `add_fracture_box`
     var fracture_on: Bool
     var frac_params: List[Float64]  # add_fracture_box's pos (3), half (3), stress, density, pieces, seed: to rebuild on load
@@ -271,7 +271,6 @@ struct EmbedWorld(Movable):
         self.acc = 0
         self.max_steps = max_steps
         self.tick = 0
-        self.debt_dropped = 0
         self.fracture = FractureSet(Real(1000), 0)
         self.fracture_on = False
         self.frac_params = List[Float64]()
@@ -813,7 +812,7 @@ struct EmbedWorld(Movable):
             n += 1
         if self.acc >= self.dt:
             self.acc = 0
-            self.debt_dropped += 1
+            self.scene.counters.incr(GAMELOOP_DEBT_DROPPED)  # the same counter FixedLoop bumps (E22); ld_world_get_counters reads it
         return n
 
     def touching(self, a: Int64, b: Int64) -> Bool:

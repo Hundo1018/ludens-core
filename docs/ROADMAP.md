@@ -4144,6 +4144,11 @@
 > 2. 熱點算式改寫為明確 `fma`(由程式決定合併位置),其餘關閉合併;在有 FMA 的目標上量 benchmark,與「全開合併」「全關 FMA」三者比較。
 > 3. 位元一致性:同一算式在內聯與不內聯、x86-64(有 / 無 FMA)、aarch64、wasm64 之間逐位比較;wasm 沒有 FMA 指令時,明確 `fma` 需軟體實作,量其成本。
 > **驗收**:速度表(三種設定 × 代表性 bench);逐位相同的平台矩陣;若可行,`flag-policy` 加入對應旗標的檢查。
+> **進度註(2026-11-17,實例與量測工具)**:第二個實例是 `Inertia3.capsule`(#135):原生程式以字面值呼叫時在編譯期摺疊(無 FMA),C-ABI 共享庫的
+> 參數在執行期才有,在有 FMA 的 CPU 上合併,慣量差 1 ulp;世界雜湊在 tick 0 就不同,膠囊在第 33 tick 落地後狀態分歧,`test_capi` 在 linux-aarch64 失敗。
+> `@no_inline` 後一致。`scripts/fma_parity_probe.py`(`pixi run fma-parity`,CI 的 gate job 每次執行)以 skylake 為目標各建一個 box / capsule / hull 的世界,
+> 比對共享庫與原生的雜湊(tick 0 與 120 tick 後):目前三者皆相同;拿掉 capsule 的 `@no_inline` 則 capsule 兩項皆不同(變異測試)。
+> `Inertia3.box` 與 `hull_mass` 沒有量到差異,未加 `@no_inline`。
 
 #### 17.97 宿主入口:實體、ChildOf 階層、換關卡與能力開放
 
@@ -4171,6 +4176,13 @@
 > 驅動、cone / D6、與建立時不符的零角參考或 collide 旗標。`test_scene_joints` 23 → 34 項:四種延伸(30 N 的焊接在第 1 tick 斷開)
 > 場景路徑 == 快照路徑 == 原世界,tick 0 與 300 tick 後逐位相同;對照組沒有延伸則結果不同;只有設定的組有列;壞值(lo > hi、未知馬達、
 > 斷裂閾值 0)拒絕且不改世界。變異測試:匯入時不設彈簧,4 項失敗。對照表:`scene_io` 7 → 8。
+> **進度註(2026-11-17,參數化可行性與正確性修正)**:`scripts/mojo_param_probe.py` 以 `tools/mojo_probes/*.mojo`(每檔一個問題,檔頭寫預期輸出)量 Mojo 1.2.0
+> 支援哪些編譯期參數化:22 個探針全數符合預期。可用:結構參數預設值、`comptime` 別名經 C-ABI 與 wasm64 輸出、對真的 `ecs.StorageBackend` 泛型的宿主世界、
+> move-only 元素的 `Tuple[*Ps]` 欄位與 `comptime for`、trait 的 `comptime` 字串常數、trait 預設方法、方法上的 `where`、`ref [self.xs[i]]` 回傳、線性型別
+> (`not Deinitable`)、型別化 id(`BodyId` 傳給 `JointId` 參數被編譯器拒絕,C-ABI 仍是整數)、函式內的 `comptime assert` 檢查結構大小。不可用(探針記錄為
+> 「應被拒絕」):trait 方法宣告 `ref [self]` 回傳;以 define 選擇 `WorldType`(`sin` 失去浮點型別的靜態證明),`mojo precompile` 也不接受 `-D`,所以
+> `build_f64.sh` 維持改寫原始碼。修正:`ContactScene6.set_restitution_combine` / `set_friction_combine` 原本不檢查索引與模式(越界寫入),現在會 raise;
+> `EmbedWorld` 丟棄的幀時間原本記在沒人讀的 `debt_dropped`,改記入 `scene.counters[GAMELOOP_DEBT_DROPPED]`(`ld_world_get_counters` 讀得到)。
 > **待決**:網格 / 高度場在 `scene_io` 的表示(直接寫入列,或資產內容雜湊)。B 批(繩、布料、角色控制、
 > 世界分區)排在設計筆記切片 1–2(實體、`ChildOf`)之後。
 > **未做**:實體、`ChildOf`、事件冒泡、群組、換關卡(設計筆記的工作切片 1–5)。

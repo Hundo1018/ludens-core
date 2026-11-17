@@ -103,6 +103,7 @@ from diag.trace import TraceBuffer
 from diag.draw import DrawQueue
 from .rigid6 import Body6, QuatBody6, Inertia3, Pose6
 from .body_set import BodySet, BodyId, MOTION_STATIC, MOTION_DYNAMIC, MOTION_KINEMATIC
+from .material import COMBINE_AVERAGE, COMBINE_MIN, COMBINE_MULTIPLY, COMBINE_MAX
 from .solver_config import SolverConfig, IMPULSE_SUBSTEP_SUM, IMPULSE_LAST_SUBSTEP, CONTACT_BLOCK, MASS_RATIO_DEFAULT
 from .state_io import StateWriter, StateReader
 from .softbody import SoftBody, SP, SEdge
@@ -900,12 +901,15 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             raise Error("ContactScene6.set_restitution: e must be in [0, 1]")
         self.bset.restitution[i] = e
 
-    def set_restitution_combine(mut self, i: Int, mode: Int):
+    def set_restitution_combine(mut self, i: Int, mode: Int) raises:
         """ROADMAP 17.23: which formula a pair touching body `i` uses when
         the two bodies' restitution combine modes disagree (`physics
         .material.combine`'s docstring has the PhysX "higher mode wins"
         rule). Default `COMBINE_MAX` reproduces today's hardcoded
         `max(a, b)`."""
+        self._check_body_index(i, "set_restitution_combine")
+        if mode != COMBINE_AVERAGE and mode != COMBINE_MIN and mode != COMBINE_MULTIPLY and mode != COMBINE_MAX:
+            raise Error("ContactScene6.set_restitution_combine: unknown combine mode")
         self.bset.restitution_combine[i] = mode
 
     def set_friction(mut self, i: Int, mu: Real) raises:
@@ -1073,10 +1077,13 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             return fallback
         return self.bset.eff_friction(body, fallback)
 
-    def set_friction_combine(mut self, i: Int, mode: Int):
+    def set_friction_combine(mut self, i: Int, mode: Int) raises:
         """Same pair-priority rule as `set_restitution_combine`, for
         friction. Default `COMBINE_AVERAGE` reproduces today's single
         shared `mu` bit-exactly (`physics.material.combine`'s docstring)."""
+        self._check_body_index(i, "set_friction_combine")
+        if mode != COMBINE_AVERAGE and mode != COMBINE_MIN and mode != COMBINE_MULTIPLY and mode != COMBINE_MAX:
+            raise Error("ContactScene6.set_friction_combine: unknown combine mode")
         self.bset.friction_combine[i] = mode
 
     def set_kinematic(mut self, id: BodyId) raises:

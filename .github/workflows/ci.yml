@@ -63,6 +63,10 @@ jobs:
         run: pixi run gate
       - name: wasm leaf-kernel probe (tools/wasm)
         run: pixi run wasm-probe
+      # ROADMAP 17.96: the x86-64 test target has no FMA, so a mass-property function that rounds differently in the
+      # C-ABI library and in a native program only shows on FMA CPUs (it did on linux-aarch64, #135). Compiled for skylake.
+      - name: FMA parity (C-ABI library vs native Mojo, compiled for an FMA CPU)
+        run: pixi run fma-parity
       - name: upload gate log
         if: always()
         uses: actions/upload-artifact@v4
