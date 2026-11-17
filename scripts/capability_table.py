@@ -46,7 +46,7 @@ CAPS = [
     ("關節", "球 / 距離 / 鉸鏈 / 焊接", ["physics/joints6.mojo"], r"def add_ball_joint", r"ld_joint_add_(ball|hinge)", r'"joint"',
      r"SceneJoint", r"add_ball_joint|add_hinge_joint"),
     ("關節", "限制 / 馬達 / 彈簧 / 滑軌 / cone-twist", ["physics/joint_ext.mojo"], r"def (set_joint_limit|set_joint_motor|add_slider)",
-     r"ld_joint_set_(limits|motor)", r'"joint_limits"|"joint_motor"', None, r"joint_ext"),
+     r"ld_joint_set_(limits|motor)", r'"joint_limits"|"joint_motor"', r'"limit\.lo"', r"joint_ext"),
     ("關節", "縮座標關節鏈", ["physics/chain.mojo", "physics/chain_scene.mojo"], r"def add_chain", r"ld_world_add_chain", None, None,
      r"from physics\.chain"),
     ("破壞", "預先破碎的物件", ["physics/fracture.mojo"], r"def add_fracture_box", r"ld_world_add_fracture_box", r"fracture_save",

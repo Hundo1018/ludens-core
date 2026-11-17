@@ -511,9 +511,18 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         """True when joint `c` has the state `add_joint` gives a new joint at the bodies' current poses: no limit,
         motor, spring, cone or D6, the zero-angle references where creation would put them, no break thresholds.
         A scene can describe such a joint by its kind, bodies and anchors alone."""
-        if c < 0 or c >= len(self.joints) or c >= len(self.jext):
+        if not self.joint_has_creation_frame(c):
             return False
         if self.break_force[c] < Real.MAX or self.break_torque[c] < Real.MAX:
+            return False
+        ref e = self.jext[c]
+        return not e.active() and e.lim_on == self._new_ext(self.joints[c]).lim_on
+
+    def joint_has_creation_frame(self, c: Int) -> Bool:
+        """True when joint `c` has no drive, cone or D6 axes, and its zero-angle references and collide flag are
+        where `add_joint` would put them at the bodies' current poses. Limits, motor, spring and break thresholds
+        may differ: a scene describes those by value and sets them after `add_joint` (ROADMAP 17.97)."""
+        if c < 0 or c >= len(self.joints) or c >= len(self.jext):
             return False
         for d in range(len(self.drives)):
             if self.drives[d].a == self.joints[c].a and self.drives[d].b == self.joints[c].b:
@@ -521,9 +530,8 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         ref e = self.jext[c]
         var f = self._new_ext(self.joints[c])
         return (
-            not e.active() and e.collide == f.collide and e.ref_a == f.ref_a and e.ref_b == f.ref_b
+            e.cone < 0 and e.d6_mode == 0 and e.collide == f.collide and e.ref_a == f.ref_a and e.ref_b == f.ref_b
             and e.ref_rel.x == f.ref_rel.x and e.ref_rel.y == f.ref_rel.y and e.ref_rel.z == f.ref_rel.z and e.ref_rel.w == f.ref_rel.w
-            and e.lim_on == f.lim_on
         )
 
     def _ensure_ext(mut self):

@@ -4,17 +4,20 @@
 - a chain of ball, hinge, distance and weld joints: scene path == snapshot path == original at tick 0 and after
   300 ticks (the joints constrain the motion, so a joint lost in the round trip changes the hash);
 - rows: no joints, no joint rows; with joints rows -> doc -> rows is the identity;
-- joints the scene cannot describe are refused by name: a limit, a break threshold, a hinge whose bodies moved after
+- limits (one set, one cleared), a motor, a spring and a break threshold (17.97): the same three-way equality at tick
+  0 and after 300 ticks, and the same scene without them ends differently; only the groups that are set get rows;
+- joints the scene cannot describe are refused by name: a non-default collide flag, a hinge whose bodies moved after
   it was made (its zero-angle reference no longer matches);
 - `EmbedWorld.remove_joint`: the slot stays (indices do not shift), the joint leaves the exported scene, the body it
   held can then be removed, while removing a body that still has a joint is refused;
 - bad documents (body index out of range, one body twice, unknown kind) are refused and change nothing.
 Times are not printed (the golden compares this output)."""
 from harness.runner import Suite
-from embed.scene_io import SceneJoint, export_scene, import_scene, scene_diff, scene_from_fields, scene_to_fields
+from embed.scene_io import SceneDoc, SceneJoint, export_scene, import_scene, scene_diff, scene_from_fields, scene_to_fields
 from embed.world import EmbedWorld
 from geometry.quat import Quat
 from geometry.vec import Real, Vec3
+from physics.joint_ext import MOTOR_NONE, MOTOR_VELOCITY
 from physics.joints6 import JOINT_BALL
 
 comptime DT = 1.0 / 60.0
@@ -42,6 +45,26 @@ def run_ticks(mut w: EmbedWorld, n: Int) raises:
     for _ in range(n):
         for _ in range(w.ticks_due(DT)):
             w.physics_tick()
+
+
+def add_ext(mut w: EmbedWorld) raises:
+    """Joint 0 (ball): a limit set and then cleared (lo / hi stay); 1 (hinge): limit and velocity motor; 2 (weld): a
+    break threshold low enough that it breaks; 3 (distance): a spring."""
+    w.scene.set_joint_limits(0, -1.0, 1.0)
+    w.scene.clear_joint_limits(0)
+    w.scene.set_joint_limits(1, -0.3, 0.3)
+    w.scene.set_joint_motor(1, MOTOR_VELOCITY, 2.0, 20.0)
+    w.scene.set_joint_break(2, 30.0, 30.0)
+    w.scene.set_joint_spring(3, 2.0, 0.3, 0.1)
+
+
+def import_fails(doc: SceneDoc, needle: String) raises -> Bool:
+    var t = fresh()
+    try:
+        import_scene(t, doc)
+    except e:
+        return needle in String(e) and len(export_scene(t).bodies) == 0
+    return False
 
 
 def refused(mut w: EmbedWorld, needle: String) raises -> Bool:
@@ -96,15 +119,42 @@ def main() raises:
             any_j = True
     s.check(not any_j, "a scene without joints has no joint rows")
 
+    # limits, motor, spring, break (17.97)
+    var he = List[Int64]()
+    var ext = build(he)
+    add_ext(ext)
+    var edoc = export_scene(ext)
+    s.check(edoc.joints[0].has_limit() and not edoc.joints[0].lim_on and edoc.joints[1].lim_on and edoc.joints[1].motor == MOTOR_VELOCITY
+            and edoc.joints[2].has_break() and edoc.joints[3].has_spring() and edoc.joints[3].motor == MOTOR_NONE,
+            "export: the cleared limit, hinge limit and motor, weld break threshold and distance spring are in the document")
+    var erows = scene_to_fields(edoc)
+    var grp = 0
+    for i in range(len(erows)):
+        if erows[i].path.startswith("joint") and (".limit." in erows[i].path or ".motor." in erows[i].path or ".spring." in erows[i].path or ".break." in erows[i].path):
+            grp += 1
+    s.eqi(grp, 3 + 3 + 5 + 2 + 3, "rows only for the groups that are set (2 limits, 1 motor, 1 break, 1 spring)")
+    s.check(len(scene_diff(scene_to_fields(scene_from_fields(erows)), erows)) == 0, "with extensions: rows -> doc -> rows is the identity")
+    var erebuilt = fresh()
+    import_scene(erebuilt, scene_from_fields(erows))
+    var esnap = fresh()
+    esnap.load(ext.save())
+    s.check(erebuilt.hash() == ext.hash(), "with extensions: scene path == original at tick 0")
+    s.check(esnap.hash() == erebuilt.hash(), "with extensions: scene path == snapshot path at tick 0")
+    run_ticks(ext, 300)
+    run_ticks(erebuilt, 300)
+    run_ticks(esnap, 300)
+    s.check(erebuilt.hash() == ext.hash(), "with extensions, after 300 ticks: scene path == original")
+    s.check(esnap.hash() == erebuilt.hash(), "with extensions, after 300 ticks: snapshot path == scene path")
+    s.check(erebuilt.hash() != rebuilt.hash(), "control: the same scene without the extensions ends differently")
+
     # what the scene cannot describe
     var h2 = List[Int64]()
     var w2 = build(h2)
-    w2.scene.set_joint_limits(1, -0.5, 0.5)
-    s.check(refused(w2, "limit"), "a joint limit is refused by name")
-    var h3 = List[Int64]()
-    var w3 = build(h3)
-    w3.scene.set_joint_break(0, 100.0, 100.0)
-    s.check(refused(w3, "break threshold"), "a break threshold is refused by name")
+    w2.scene.set_collide_connected(1, False)
+    w2.scene.set_collide_connected(1, True)
+    s.check(not refused(w2, "collide"), "a collide flag set back to the default is accepted")
+    w2.scene.set_collide_connected(2, True)  # a weld is made with collide off
+    s.check(refused(w2, "collide flag"), "a non-default collide flag is refused by name")
     var h4 = List[Int64]()
     var w4 = build(h4)
     w4.teleport(h4[2], Vec3(3.0, 6.0, 0.0, 0.0), Quat(0.0, 0.0, 0.3826834, 0.9238795))
@@ -161,4 +211,15 @@ def main() raises:
     except e:
         raised = "unknown kind" in String(e)
     s.check(raised, "an unknown joint kind is refused")
+    bad = good.copy()
+    bad.joints[1].lim_on = True
+    bad.joints[1].lo = 0.5
+    bad.joints[1].hi = -0.5
+    s.check(import_fails(bad, "lo <= hi"), "a limit with lo > hi is refused, the world untouched")
+    bad = good.copy()
+    bad.joints[1].motor = 7
+    s.check(import_fails(bad, "unknown motor mode"), "an unknown motor mode is refused")
+    bad = good.copy()
+    bad.joints[2].break_force = 0.0
+    s.check(import_fails(bad, "break thresholds"), "a break threshold of 0 is refused")
     s.finish()
