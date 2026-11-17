@@ -24,21 +24,32 @@ comptime K_KINEMATIC = 7
 comptime K_HOST_MATERIAL = 8
 comptime K_USER = 9
 comptime K_JOINT = 10
-comptime K_COUNT = 11
+comptime K_HULL = 11
+comptime K_TRIMESH = 12
+comptime K_HEIGHTFIELD = 13
+comptime K_JLIMITS = 14  # from here on both worlds have the same hinge; only its ext differs
+comptime K_JMOTOR = 15
+comptime K_JSPRING = 16
+comptime K_JBREAK = 17
+comptime K_COUNT = 18
 
 
 def _name(k: Int) -> String:
     var names: List[String] = ["velocity", "gravity", "solver", "unit_scale", "material_friction", "material_softness",
-                               "layer", "kinematic", "host_material", "user", "joint"]
+                               "layer", "kinematic", "host_material", "user", "joint", "hull", "trimesh", "heightfield",
+                               "joint_limits", "joint_motor", "joint_spring", "joint_break"]
     return names[k]
 
 
-def _base() raises -> EmbedWorld:
+def _base(k: Int) raises -> EmbedWorld:
     var w = EmbedWorld(1.0 / 60.0, Vec3(0, -9.81, 0, 0))
     _ = w.add_box(Vec3(0, -0.5, 0, 0), Vec3(20, 0.5, 20, 0), 0.0, True)
     _ = w.add_box(Vec3(0, 1.0, 0, 0), Vec3(0.5, 0.5, 0.5, 0), 1.0, False)
     _ = w.add_box(Vec3(0.3, 2.2, 0, 0), Vec3(0.5, 0.5, 0.5, 0), 1.0, False)
     _ = w.add_sphere(Vec3(1.0, 3.0, 0, 0), 0.3, 1.0, False)
+    if k >= K_JLIMITS:
+        var hs = w.bodies()
+        _ = w.add_hinge_joint(hs[1], hs[2], Vec3(0, 0.5, 0, 0), Vec3(0, -0.5, 0, 0), Vec3(0, 0, 1, 0))
     return w^
 
 
@@ -64,8 +75,30 @@ def _apply(k: Int, mut w: EmbedWorld) raises:
         w.set_material(hs[2], 7)
     elif k == K_USER:
         w.set_user(hs[2], 4242)
-    else:
+    elif k == K_JOINT:
         _ = w.add_ball_joint(hs[1], hs[2], Vec3(0, 0.5, 0, 0), Vec3(0, -0.5, 0, 0))
+    elif k == K_HULL:
+        var v = List[Vec3]()
+        for p in [Vec3(0, 0, 0, 0), Vec3(1, 0, 0, 0), Vec3(0, 1, 0, 0), Vec3(0, 0, 1, 0)]:
+            v.append(p)
+        _ = w.add_hull(Vec3(-2, 3, 0, 0), v, 1.0, False)
+    elif k == K_TRIMESH:
+        var v = List[Vec3]()
+        for p in [Vec3(-1, 0, -1, 0), Vec3(1, 0.5, -1, 0), Vec3(1, 0.5, 1, 0), Vec3(-1, 0, 1, 0)]:
+            v.append(p)
+        var tris: List[Int] = [0, 2, 1, 0, 3, 2]
+        _ = w.add_trimesh(Vec3(1.0, 0.01, 0, 0), v, tris)  # a ramp under the sphere
+    elif k == K_HEIGHTFIELD:
+        var hts: List[Real] = [0.0, 0.2, 0.0, 0.2, 0.6, 0.2, 0.0, 0.2, 0.0]
+        _ = w.add_heightfield(hts, 3, 3, 1.0, 0.0, -1.0)  # a bump under the sphere
+    elif k == K_JLIMITS:
+        w.set_joint_limits(0, -0.05, 0.05)
+    elif k == K_JMOTOR:
+        w.set_joint_motor(0, 1, 3.0, 50.0)
+    elif k == K_JSPRING:
+        w.set_joint_spring(0, 2.0, 0.5, 0.3)
+    else:
+        w.set_joint_break(0, 1.0, 1.0)  # low: the hinge breaks under the upper box's weight
 
 
 def _same_states(a: EmbedWorld, b: EmbedWorld) raises -> Bool:
@@ -97,8 +130,8 @@ def _excluded(name: String) -> Bool:
 def main() raises:
     var s = Suite("save_coverage")
     for k in range(K_COUNT):
-        var a = _base()
-        var b = _base()
+        var a = _base(k)
+        var b = _base(k)
         _run(a, 5)
         _run(b, 5)
         _apply(k, a)
@@ -121,9 +154,9 @@ def main() raises:
         else:
             s.check(carried, _name(k) + " is carried by save / load and seen by hash")
     # a water tank: save marks it, load refuses the blob, hash covers its particles
-    var wa = _base()
+    var wa = _base(0)
     _ = wa.add_water(40, 12, 0.025, 0.0, 0.0, 0.25, 0.25, 5)
-    var wb = _base()
+    var wb = _base(0)
     _ = wb.add_water(40, 12, 0.025, 0.0, 0.0, 0.25, 0.25, 5)
     _run(wa, 10)
     _run(wb, 10)
