@@ -156,8 +156,8 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
   target past the end (x 20.000086 ): camera x 11.999986  s 24.00001 of 24.00002
 [PASS] camera_spring - 8 / 8 checks
 --- tests/test_capi.mojo ---
-  gen_bindings: up to date (75 functions);  rust host hash e8b9cc5196858e23  c host hash e8b9cc5196858e23
-[PASS] capi - 105 / 105 checks
+  gen_bindings: up to date (86 functions);  rust host hash e8b9cc5196858e23  c host hash e8b9cc5196858e23
+[PASS] capi - 110 / 110 checks
 --- tests/test_capture.mojo ---
   120 frames, 4 keyframes: 61208 bytes ( 501 per frame incl. keyframes )
   draw_frame(100): 18 commands = 5 body points + 13 contact arrows
@@ -583,6 +583,8 @@ lattice: 50 / 50  ring: 12
 [PASS] ellipsoid - 17 / 17 checks
 --- tests/test_embed_ragdoll.mojo ---
 [PASS] embed_ragdoll - 8 / 8 checks
+--- tests/test_embed_scene_native.mojo ---
+[PASS] embed_scene_native - 17 / 17 checks
 --- tests/test_embed_touching.mojo ---
 [PASS] embed_touching - 6 / 6 checks
 --- tests/test_entity_change_undo.mojo ---
@@ -1668,8 +1670,15 @@ kinematic : hash differs | save -> load restores
 host_material : hash same | save -> load loses
 user : hash differs | save -> load restores
 joint : hash differs | save -> load restores
+hull : hash differs | save -> load restores
+trimesh : hash differs | save -> load restores
+heightfield : hash differs | save -> load restores
+joint_limits : hash differs | save -> load restores
+joint_motor : hash differs | save -> load restores
+joint_spring : hash differs | save -> load restores
+joint_break : hash differs | save -> load restores
 water : hash differs after one more tick
-[PASS] save_coverage - 14 / 14 checks
+[PASS] save_coverage - 21 / 21 checks
 --- tests/test_scene_io.mojo ---
 [PASS] scene_io - 44 / 44 checks
 --- tests/test_scene_joints.mojo ---
