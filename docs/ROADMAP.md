@@ -4159,6 +4159,14 @@
 > Rust / C# 綁定 65 → 75 個函式,Python `World` / `Body` 包裝。同一場景(膠囊、運動學方塊、材質、四種關節、120 tick 後移除焊接再 60 tick)
 > C 宿主、Python 與 Mojo 雜湊相同;只在 C 端改鉸鏈軸則比對失敗。`test_capi` 105/105、`test_python_binding` 15/15。
 > 對照表(`scripts/capability_table.py`):C-ABI 6 → 10;查詢的存檔與 `scene_io` 欄標「不適用」。
+> **進度註(2026-11-17,補齊第 2 步 A 批:已在場景內的能力)**:`EmbedWorld` 加 `overlap_sphere` / `overlap_box` / `sweep_sphere` /
+> `sweep_box`、`add_hull`(剛體原點為凸殼質心,經 `add_compound`)、`add_trimesh` / `add_heightfield`(靜態)、`set_joint_limits` / `_motor` /
+> `_spring` / `_break`;設定限制、馬達、彈簧時喚醒關節兩端(否則已睡著的輪子設馬達後仍 0 rad/s,拿掉喚醒則測試失敗)。C-ABI 0.9 共 11 個
+> 函式(綁定 75 → 86)。`test_embed_scene_native` 17/17(向下掃掠在 t 4.5 撞地、立方凸殼停在 0.5、斜高度場上的球往下坡滾、限制擺錘不超過
+> 0.25 rad、速度馬達到 2 rad/s、50 kg 負載拉斷 100 N 關節),`test_save_coverage` 21/21(新 7 項皆被雜湊看見且存讀還原),`test_capi` 110/110
+> (C 與 Mojo 同場景雜湊相同,只在 C 端改馬達目標則失敗)。對照表:`EmbedWorld` 11 → 15、C-ABI 10 → 14、存檔 / 雜湊 6 → 9。
+> **待決**:網格 / 高度場在 `scene_io` 的表示(直接寫入列,或資產內容雜湊);關節延伸的 `scene_io` 列未做。B 批(繩、布料、角色控制、
+> 世界分區)排在設計筆記切片 1–2(實體、`ChildOf`)之後。
 > **未做**:實體、`ChildOf`、事件冒泡、群組、換關卡(設計筆記的工作切片 1–5)。
 
 ## 工程、測試、效能與工具鏈
