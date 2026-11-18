@@ -1636,10 +1636,10 @@ counted, not listed.
 ### `physics/serialize.mojo`
 - struct `BinReader` : StateReader — 3 methods
 - struct `BinWriter` : StateWriter — 3 methods
-- `def scene_from_bytes(var data: List[UInt8]) -> ContactScene6[QuatBody6]`
-- `def scene_from_string(data: String) -> ContactScene6[QuatBody6]`
-- `def scene_to_bytes(sc: ContactScene6[QuatBody6]) -> List[UInt8]`
-- `def scene_to_string(sc: ContactScene6[QuatBody6]) -> String`
+- `def scene_from_bytes[BP: BroadPhase = BVHBroadPhase[Int(3)]](var data: List[UInt8]) -> ContactScene6[QuatBody6, BP]`
+- `def scene_from_string[BP: BroadPhase = BVHBroadPhase[Int(3)]](data: String) -> ContactScene6[QuatBody6, BP]`
+- `def scene_to_bytes[BP: BroadPhase](sc: ContactScene6[QuatBody6, BP]) -> List[UInt8]`
+- `def scene_to_string[BP: BroadPhase](sc: ContactScene6[QuatBody6, BP]) -> String`
 
 ### `physics/sim_cache.mojo`
 - struct `CachePlayer` : ContinuumSolver — 5 methods
@@ -1664,8 +1664,8 @@ counted, not listed.
 ### `physics/solver6.mojo`
 - struct `ContactReport` — 0 methods
 - struct `ContactScene6` — 111 methods
-- `def read_state[R: StateReader](mut sc: ContactScene6[QuatBody6], mut r: R)`
-- `def write_state[W: StateWriter](sc: ContactScene6[QuatBody6], mut out: W)`
+- `def read_state[R: StateReader, BP: BroadPhase](mut sc: ContactScene6[QuatBody6, BP], mut r: R)`
+- `def write_state[W: StateWriter, BP: BroadPhase](sc: ContactScene6[QuatBody6, BP], mut out: W)`
 - aliases: `FORCE_MODE_ACCELERATION`, `FORCE_MODE_FORCE`, `FORCE_MODE_IMPULSE`, `FORCE_MODE_VELOCITY_CHANGE`
 
 ### `physics/solver_config.mojo`
@@ -2101,7 +2101,7 @@ counted, not listed.
 - struct `HullBuoyancy` : ForceElement — 2 methods
 - struct `Rudder` : ForceElement — 2 methods
 
-## embed (layer 6) — 7 modules, 186 public declarations
+## embed (layer 6) — 7 modules, 187 public declarations
 
 ### `embed/capi.mojo`
 - `def ld_abi_version() -> UInt32`
@@ -2208,29 +2208,29 @@ counted, not listed.
 - struct `SceneField` — 0 methods
 - struct `SceneJoint` — 5 methods
 - struct `SceneMaterial` — 0 methods
-- `def add_body_record(mut world: EmbedWorld, s: SceneBody) -> Int64`
+- `def add_body_record(mut world: EmbedWorldOf, s: SceneBody) -> Int64`
 - `def body_equal(a: SceneBody, b: SceneBody) -> Bool`
-- `def body_record(world: EmbedWorld, h: Int64) -> SceneBody`
-- `def export_body(world: EmbedWorld, i: Int) -> SceneBody`
-- `def export_scene(world: EmbedWorld) -> SceneDoc`
-- `def import_scene(mut world: EmbedWorld, doc: SceneDoc)`
-- `def refresh_flags(mut world: EmbedWorld)`
-- `def restore_body(mut world: EmbedWorld, h: Int64, s: SceneBody)`
+- `def body_record(world: EmbedWorldOf, h: Int64) -> SceneBody`
+- `def export_body(world: EmbedWorldOf, i: Int) -> SceneBody`
+- `def export_scene(world: EmbedWorldOf) -> SceneDoc`
+- `def import_scene(mut world: EmbedWorldOf, doc: SceneDoc)`
+- `def refresh_flags(mut world: EmbedWorldOf)`
+- `def restore_body(mut world: EmbedWorldOf, h: Int64, s: SceneBody)`
 - `def same_shape(a: SceneBody, b: SceneBody) -> Bool`
 - `def scene_apply(base: List[SceneField], changes: List[SceneChange]) -> List[SceneField]`
 - `def scene_diff(a: List[SceneField], b: List[SceneField]) -> List[SceneChange]`
 - `def scene_from_fields(fields: List[SceneField]) -> SceneDoc`
 - `def scene_to_fields(doc: SceneDoc) -> List[SceneField]`
-- `def write_body_record(mut world: EmbedWorld, h: Int64, s: SceneBody, refresh: Bool = True, wake: Bool = True)`
+- `def write_body_record(mut world: EmbedWorldOf, h: Int64, s: SceneBody, refresh: Bool = True, wake: Bool = True)`
 - aliases: `BODY_BOX`, `BODY_CAPSULE`, `BODY_SPHERE`, `CHANGE_ADDED`, `CHANGE_CHANGED`, `CHANGE_REMOVED`, `SCENE_FORMAT_VERSION`
 
 ### `embed/transfer.mojo`
 - struct `TransferInfo` — 0 methods
-- `def settings_hash(world: EmbedWorld) -> UInt64`
-- `def transfer_check(world: EmbedWorld, blob: List[UInt8], registered: List[String]) -> Int`
+- `def settings_hash(world: EmbedWorldOf) -> UInt64`
+- `def transfer_check(world: EmbedWorldOf, blob: List[UInt8], registered: List[String]) -> Int`
 - `def transfer_info(blob: List[UInt8]) -> TransferInfo`
-- `def transfer_load(mut world: EmbedWorld, blob: List[UInt8], registered: List[String])`
-- `def transfer_save(world: EmbedWorld, registered: List[String]) -> List[UInt8]`
+- `def transfer_load(mut world: EmbedWorldOf, blob: List[UInt8], registered: List[String])`
+- `def transfer_save(world: EmbedWorldOf, registered: List[String]) -> List[UInt8]`
 - `def transfer_status_name(status: Int) -> String`
 - aliases: `TRANSFER_MAGIC`, `TRANSFER_VERSION`, `XFER_CORRUPT`, `XFER_MAGIC`, `XFER_OK`, `XFER_REGISTRATION`, `XFER_SCALAR`, `XFER_SETTINGS`, `XFER_TRUNCATED`, `XFER_VERSION`
 
@@ -2241,13 +2241,13 @@ counted, not listed.
 - struct `SolverFlags` — 0 methods
 - struct `Transaction` — 3 methods
 - struct `UndoLog` — 14 methods
-- `def read_flags(world: EmbedWorld) -> SolverFlags`
-- `def write_flags(mut world: EmbedWorld, f: SolverFlags)`
+- `def read_flags(world: EmbedWorldOf) -> SolverFlags`
+- `def write_flags(mut world: EmbedWorldOf, f: SolverFlags)`
 
 ### `embed/world.mojo`
 - struct `BodyState` — 0 methods
 - struct `BubbleRec` — 0 methods
-- struct `EmbedWorld` — 60 methods
+- struct `EmbedWorldOf` — 60 methods
 - struct `FractureRec` — 0 methods
 - struct `RayResult` — 0 methods
 - struct `SweepResult` — 0 methods
@@ -2259,7 +2259,7 @@ counted, not listed.
 - `def save_excludes() -> List[String]`
 - `def teleport_rotation(rot: Quat) -> Quat`
 - `def unpack_body(h: Int64) -> BodyId`
-- aliases: `ABI_MAJOR`, `ABI_MINOR`, `EVENT_BEGAN`, `EVENT_ENDED`, `EVENT_STAY`, `LD_ERR_ARG`, `LD_ERR_BUFFER`, `LD_ERR_CALLBACK`, `LD_ERR_FORMAT`, `LD_ERR_HANDLE`, `LD_ERR_STALE`, `LD_ERR_STATE`, `LD_ERR_THREAD`, `LD_OK`, `PHASE_POST`, `PHASE_PRE`
+- aliases: `ABI_MAJOR`, `ABI_MINOR`, `EVENT_BEGAN`, `EVENT_ENDED`, `EVENT_STAY`, `EmbedWorld`, `LD_ERR_ARG`, `LD_ERR_BUFFER`, `LD_ERR_CALLBACK`, `LD_ERR_FORMAT`, `LD_ERR_HANDLE`, `LD_ERR_STALE`, `LD_ERR_STATE`, `LD_ERR_THREAD`, `LD_OK`, `PHASE_POST`, `PHASE_PRE`
 
 ## oop (layer 6) — 2 modules, 8 public declarations
 
