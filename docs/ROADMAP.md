@@ -4533,6 +4533,16 @@
 >    取代 `physics/pbf.mojo`、`pbf_unified.mojo`、`sph_rigid.mojo`、`ai/steering.mojo`、`nav/crowd.mojo` 的五份副本;各處仍用自己的格子規則
 >    (截斷或 floor、夾限與否、2D / 3D),只共用分組。用到這五個模組的 9 個測試 golden 段相同(`test_continuum` 只差 gate 濾掉的耗時行)。
 >    原計畫把「PBF / SPH 共用網格」列為改變結果的項目;只共用排序、不動格子規則與走訪順序時結果不變。
+> 9. 改變結果的整併(計畫第 3 階段)先量上界(2026-11-18;`scripts/fn_share.py`,探針在 `benchmarks/probes/`),四項都不做:
+>    - 關節依種類分桶:`joint_probe.mojo`(12 條 6 節的鏈,球 / 鉸鏈 / 距離關節交替,60 步)總指令 990 137 128,`joint_sweep` 自身 7.88 %,
+>      但其中多數是內聯的各種類算式;逐關節的種類判斷約 8 次比較,共 80 640 次關節迭代(`joint_axis` 241 920 次呼叫 ÷ 每輪 216),
+>      約 1.3–1.9 M 條,0.13–0.19 %,且會改變 Gauss–Seidel 順序。
+>    - 形狀對依 (ka, kb) 分桶:`shape_pair` 每 60 步約 2 190 次呼叫(`icount_probe` 與 `hull_probe` 皆然),分派 20–40 條 / 次,
+>      0.008–0.015 %。
+>    - `Quat` / `Motor3` / GA 改 SIMD 儲存:函式層級量不到(全部已內聯,`fn_share` 找不到任何 `geometry::quat` / `motor` / `ga` 函式);
+>      第 6 項的內聯量測無差異。沒有可量的上界,不做。
+>    - `FlipWater[D]`:不帶來執行期收益(兩檔 655 行),會改變 2D 水的結果與 `tests/golden/wasm_scenes.txt` 的 `water` 雜湊;
+>      保留兩種取樣算式則每個函式都要 `comptime if`(第 7 項)。要合併時另行決定。
 
 ## 編號索引
 
