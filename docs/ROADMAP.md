@@ -4510,6 +4510,16 @@
 >    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
 >      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
+> 9. 改變結果的整併(計畫第 3 階段)先量上界(2026-11-18;`scripts/fn_share.py`,探針在 `benchmarks/probes/`),四項都不做:
+>    - 關節依種類分桶:`joint_probe.mojo`(12 條 6 節的鏈,球 / 鉸鏈 / 距離關節交替,60 步)總指令 990 137 128,`joint_sweep` 自身 7.88 %,
+>      但其中多數是內聯的各種類算式;逐關節的種類判斷約 8 次比較,共 80 640 次關節迭代(`joint_axis` 241 920 次呼叫 ÷ 每輪 216),
+>      約 1.3–1.9 M 條,0.13–0.19 %,且會改變 Gauss–Seidel 順序。
+>    - 形狀對依 (ka, kb) 分桶:`shape_pair` 每 60 步約 2 190 次呼叫(`icount_probe` 與 `hull_probe` 皆然),分派 20–40 條 / 次,
+>      0.008–0.015 %。
+>    - `Quat` / `Motor3` / GA 改 SIMD 儲存:函式層級量不到(全部已內聯,`fn_share` 找不到任何 `geometry::quat` / `motor` / `ga` 函式);
+>      第 6 項的內聯量測無差異。沒有可量的上界,不做。
+>    - `FlipWater[D]`:不帶來執行期收益(兩檔 655 行),會改變 2D 水的結果與 `tests/golden/wasm_scenes.txt` 的 `water` 雜湊;
+>      保留兩種取樣算式則每個函式都要 `comptime if`(第 7 項)。要合併時另行決定。
 
 ## 編號索引
 
