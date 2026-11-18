@@ -4514,8 +4514,10 @@
       仍分維度:取樣與 `add_impulse` 的展開(雙線性 / 三線性)、`momentum` 的 dx^D 乘法順序、黏滯穩定上限(1/4、1/6)、multigrid 型別
       (結構內的 `comptime MG = ... if D == 2 else ...`,以 `rebind` 取用)、2D 的固體遮罩與動量修正、3D 的渦度約束(`comptime assert` 擋錯誤維度)。
       3D 迴圈改用預先算好的週期鄰居索引(原為每次 `idx()` 取模):固定工作量(2D 32² 與 3D 12³ 各 8 步、半拉格朗日與通量式各一次)
-      callgrind 指令數 564 016 852 → 533 507 447 與 533 807 146(兩次建置,−5.4 %)。兩檔 1189 → 1101 行。18 個用到流體的測試 golden 段逐位元相同;
+      callgrind 指令數 564 016 852 → 534 545 472(−5.2 %)。兩檔 1189 → 1101 行。18 個用到流體的測試 golden 段逐位元相同;
       四個 3D 測試的 tier 依規則由 integration 改為 unit(`mac_fluid3` 不再直接 import `numerics`)。
+      `_advect_flux` / `_flux_once` 先寫成一份時,aarch64 上三個通量式測試改變(`test_fluid_flux` KE flux 1.7181101 → 3.5310867,FMA 合併位置不同),
+      改為兩維各保留原式(`comptime if`)。本機以有 FMA 的 x86 目標驗證:三個測試的輸出與 main 的程式在同一目標上逐位元相同。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
 
 ## 編號索引
