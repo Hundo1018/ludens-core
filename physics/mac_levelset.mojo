@@ -116,6 +116,63 @@ struct _LiquidPoisson[D: Int](LinearOperator, Movable):
             out[k] = self.diag[k]
 
 
+def _ring[D: Int](known: List[Bool], mut f: List[Real], n: Int, nx: Int, ny: Int, nz: Int) -> List[Bool]:
+    """One extrapolation ring on one face array of an n^D grid (nz = 1 in 2-D): each unknown interior face (index
+    1..n-1 along its own axis, the axis whose length is n + 1) takes the mean of its known neighbours. Faces on the
+    walls (index 0 or n on that axis) stay as they are. The neighbours are summed in each solver's original order
+    (2-D: -x, +x, -y, +y; 3-D: +x, -x, +y, -y, +z, -z), which the last bits of the mean depend on."""
+    var nxt = known.copy()
+    var axis = 0 if nx == n + 1 else (1 if ny == n + 1 else 2)
+    comptime FIRST = -1 if D == 2 else 1
+    for k in range(nz):
+        for j in range(ny):
+            for i in range(nx):
+                var c = (k * ny + j) * nx + i
+                if known[c]:
+                    continue
+                var pos = i if axis == 0 else (j if axis == 1 else k)
+                if pos < 1 or pos >= n:
+                    continue
+                var s = Real(0)
+                var cnt = 0
+                for d in range(2 * D):
+                    var ii = i + (FIRST if d == 0 else (-FIRST if d == 1 else 0))
+                    var jj = j + (FIRST if d == 2 else (-FIRST if d == 3 else 0))
+                    var kk = k + (1 if d == 4 else (-1 if d == 5 else 0))
+                    if ii < 0 or ii >= nx or jj < 0 or jj >= ny or kk < 0 or kk >= nz:
+                        continue
+                    var o = (kk * ny + jj) * nx + ii
+                    if known[o]:
+                        s += f[o]
+                        cnt += 1
+                if cnt > 0:
+                    f[c] = s / Real(cnt)
+                    nxt[c] = True
+    return nxt^
+
+
+def _face_update(mut f: List[Real], face: Int, phi: List[Real], p: List[Real], ca: Int, cb: Int, dx: Real, dt: Real):
+    """The pressure update of the face between cells ca and cb (cb the higher index on the face's axis):
+    f[face] -= dt (pb - pa) / dist. Liquid-liquid uses dist = dx; liquid-air puts the ghost p = 0 on the surface, at
+    theta dx from the liquid cell's centre (theta >= 0.01); air-air faces are left alone."""
+    var a = phi[ca] < 0
+    var b = phi[cb] < 0
+    if not a and not b:
+        return
+    var pa = p[ca]
+    var pb = p[cb]
+    var dist = dx
+    if a and not b:
+        var th = max(phi[ca] / (phi[ca] - phi[cb]), Real(0.01))
+        pb = 0
+        dist = th * dx
+    elif b and not a:
+        var th = max(phi[cb] / (phi[cb] - phi[ca]), Real(0.01))
+        pa = 0
+        dist = th * dx
+    f[face] -= dt * (pb - pa) / dist
+
+
 struct LevelSetWater2(Movable):
     var n: Int
     var dx: Real
@@ -285,40 +342,10 @@ struct LevelSetWater2(Movable):
         # face updates: liquid-liquid and liquid-air (ghost p = 0 at theta)
         for j in range(n):
             for i in range(1, n):
-                var a = self._liquid(i - 1, j)
-                var b = self._liquid(i, j)
-                if not a and not b:
-                    continue
-                var pa = self.p[j * n + i - 1]
-                var pb = self.p[j * n + i]
-                var dist = dx
-                if a and not b:
-                    var th = max(self.phi[j * n + i - 1] / (self.phi[j * n + i - 1] - self.phi[j * n + i]), Real(0.01))
-                    pb = 0
-                    dist = th * dx
-                elif b and not a:
-                    var th = max(self.phi[j * n + i] / (self.phi[j * n + i] - self.phi[j * n + i - 1]), Real(0.01))
-                    pa = 0
-                    dist = th * dx
-                self.u[j * (n + 1) + i] -= dt * (pb - pa) / dist
+                _face_update(self.u, j * (n + 1) + i, self.phi, self.p, j * n + i - 1, j * n + i, dx, dt)
         for j in range(1, n):
             for i in range(n):
-                var a = self._liquid(i, j - 1)
-                var b = self._liquid(i, j)
-                if not a and not b:
-                    continue
-                var pa = self.p[(j - 1) * n + i]
-                var pb = self.p[j * n + i]
-                var dist = dx
-                if a and not b:
-                    var th = max(self.phi[(j - 1) * n + i] / (self.phi[(j - 1) * n + i] - self.phi[j * n + i]), Real(0.01))
-                    pb = 0
-                    dist = th * dx
-                elif b and not a:
-                    var th = max(self.phi[j * n + i] / (self.phi[j * n + i] - self.phi[(j - 1) * n + i]), Real(0.01))
-                    pa = 0
-                    dist = th * dx
-                self.v[j * n + i] -= dt * (pb - pa) / dist
+                _face_update(self.v, j * n + i, self.phi, self.p, (j - 1) * n + i, j * n + i, dx, dt)
         # outlet faces: Dirichlet p = 0 at dx / 2 from the liquid cell
         var half = 0.5 * dx
         for j in range(n):
@@ -347,42 +374,8 @@ struct LevelSetWater2(Movable):
                 var wall = (j == 0 and not self.open[2]) or (j == n and not self.open[3])
                 kv[j * n + i] = wall or self._liquid(i, j - 1) or self._liquid(i, j)
         for _ in range(self.extrap):
-            var nku = ku.copy()
-            for j in range(n):
-                for i in range(1, n):
-                    var f = j * (n + 1) + i
-                    if ku[f]:
-                        continue
-                    var s = Real(0)
-                    var c = 0
-                    for d in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                        var ii = i + d[0]
-                        var jj = j + d[1]
-                        if ii >= 0 and ii <= n and jj >= 0 and jj < n and ku[jj * (n + 1) + ii]:
-                            s += self.u[jj * (n + 1) + ii]
-                            c += 1
-                    if c > 0:
-                        self.u[f] = s / Real(c)
-                        nku[f] = True
-            ku = nku^
-            var nkv = kv.copy()
-            for j in range(1, n):
-                for i in range(n):
-                    var f = j * n + i
-                    if kv[f]:
-                        continue
-                    var s = Real(0)
-                    var c = 0
-                    for d in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                        var ii = i + d[0]
-                        var jj = j + d[1]
-                        if ii >= 0 and ii < n and jj >= 0 and jj <= n and kv[jj * n + ii]:
-                            s += self.v[jj * n + ii]
-                            c += 1
-                    if c > 0:
-                        self.v[f] = s / Real(c)
-                        nkv[f] = True
-            kv = nkv^
+            ku = _ring[2](ku, self.u, n, n + 1, n, 1)
+            kv = _ring[2](kv, self.v, n, n, n + 1, 1)
 
     def _redistance(mut self):
         """Fast sweeping for |grad phi| = 1, the cells next to a sign

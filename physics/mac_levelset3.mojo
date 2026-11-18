@@ -37,7 +37,7 @@ three-axis root.
 from std.math import floor, sqrt
 from geometry.vec import Real
 from numerics.cg import pcg, CgResult
-from .mac_levelset import _LiquidPoisson
+from .mac_levelset import _LiquidPoisson, _ring, _face_update
 
 
 def _godunov(a: Real, b: Real, c: Real, dx: Real) -> Real:
@@ -57,40 +57,6 @@ def _godunov(a: Real, b: Real, c: Real, dx: Real) -> Real:
     var s1 = x0 + x1 + x2
     var s2 = x0 * x0 + x1 * x1 + x2 * x2
     return (s1 + sqrt(s1 * s1 - 3 * (s2 - dx * dx))) / 3
-
-
-def _ring(known: List[Bool], mut f: List[Real], n: Int, nx: Int, ny: Int, nz: Int) -> List[Bool]:
-    """One extrapolation ring on one face array of n x n x n cells: each
-    unknown interior face (index 1..n-1 along its own axis, the axis whose
-    length is n + 1) takes the mean of its known neighbours. Faces on the
-    walls (index 0 or n on that axis) stay 0 and are known."""
-    var nxt = known.copy()
-    var axis = 0 if nx == n + 1 else (1 if ny == n + 1 else 2)
-    for k in range(nz):
-        for j in range(ny):
-            for i in range(nx):
-                var c = (k * ny + j) * nx + i
-                if known[c]:
-                    continue
-                var pos = i if axis == 0 else (j if axis == 1 else k)
-                if pos < 1 or pos >= n:
-                    continue
-                var s = Real(0)
-                var cnt = 0
-                for d in range(6):
-                    var ii = i + (1 if d == 0 else (-1 if d == 1 else 0))
-                    var jj = j + (1 if d == 2 else (-1 if d == 3 else 0))
-                    var kk = k + (1 if d == 4 else (-1 if d == 5 else 0))
-                    if ii < 0 or ii >= nx or jj < 0 or jj >= ny or kk < 0 or kk >= nz:
-                        continue
-                    var o = (kk * ny + jj) * nx + ii
-                    if known[o]:
-                        s += f[o]
-                        cnt += 1
-                if cnt > 0:
-                    f[c] = s / Real(cnt)
-                    nxt[c] = True
-    return nxt^
 
 
 struct LevelSetWater3(Movable):
@@ -314,66 +280,18 @@ struct LevelSetWater3(Movable):
         for k in range(n):
             for j in range(n):
                 for i in range(1, n):
-                    var ca = (k * n + j) * n + i - 1
                     var cb = (k * n + j) * n + i
-                    var a = self._liquid(i - 1, j, k)
-                    var b = self._liquid(i, j, k)
-                    if not a and not b:
-                        continue
-                    var pa = self.p[ca]
-                    var pb = self.p[cb]
-                    var dist = dx
-                    if a and not b:
-                        var th = max(self.phi[ca] / (self.phi[ca] - self.phi[cb]), Real(0.01))
-                        pb = 0
-                        dist = th * dx
-                    elif b and not a:
-                        var th = max(self.phi[cb] / (self.phi[cb] - self.phi[ca]), Real(0.01))
-                        pa = 0
-                        dist = th * dx
-                    self.u[(k * n + j) * (n + 1) + i] -= dt * (pb - pa) / dist
+                    _face_update(self.u, (k * n + j) * (n + 1) + i, self.phi, self.p, cb - 1, cb, dx, dt)
         for k in range(n):
             for j in range(1, n):
                 for i in range(n):
-                    var ca = (k * n + j - 1) * n + i
                     var cb = (k * n + j) * n + i
-                    var a = self._liquid(i, j - 1, k)
-                    var b = self._liquid(i, j, k)
-                    if not a and not b:
-                        continue
-                    var pa = self.p[ca]
-                    var pb = self.p[cb]
-                    var dist = dx
-                    if a and not b:
-                        var th = max(self.phi[ca] / (self.phi[ca] - self.phi[cb]), Real(0.01))
-                        pb = 0
-                        dist = th * dx
-                    elif b and not a:
-                        var th = max(self.phi[cb] / (self.phi[cb] - self.phi[ca]), Real(0.01))
-                        pa = 0
-                        dist = th * dx
-                    self.v[(k * (n + 1) + j) * n + i] -= dt * (pb - pa) / dist
+                    _face_update(self.v, (k * (n + 1) + j) * n + i, self.phi, self.p, cb - n, cb, dx, dt)
         for k in range(1, n):
             for j in range(n):
                 for i in range(n):
-                    var ca = ((k - 1) * n + j) * n + i
                     var cb = (k * n + j) * n + i
-                    var a = self._liquid(i, j, k - 1)
-                    var b = self._liquid(i, j, k)
-                    if not a and not b:
-                        continue
-                    var pa = self.p[ca]
-                    var pb = self.p[cb]
-                    var dist = dx
-                    if a and not b:
-                        var th = max(self.phi[ca] / (self.phi[ca] - self.phi[cb]), Real(0.01))
-                        pb = 0
-                        dist = th * dx
-                    elif b and not a:
-                        var th = max(self.phi[cb] / (self.phi[cb] - self.phi[ca]), Real(0.01))
-                        pa = 0
-                        dist = th * dx
-                    self.w[(k * n + j) * n + i] -= dt * (pb - pa) / dist
+                    _face_update(self.w, cb, self.phi, self.p, cb - n * n, cb, dx, dt)
         # outlet faces: Dirichlet p = 0 at dx / 2 from the liquid cell
         var half = 0.5 * dx
         for k in range(n):
@@ -418,9 +336,9 @@ struct LevelSetWater3(Movable):
                     var wall = (k == 0 and not self.open[4]) or (k == n and not self.open[5])
                     kw[(k * n + j) * n + i] = wall or self._liquid(i, j, k - 1) or self._liquid(i, j, k)
         for _ in range(self.extrap):
-            ku = _ring(ku, self.u, n, n + 1, n, n)
-            kv = _ring(kv, self.v, n, n, n + 1, n)
-            kw = _ring(kw, self.w, n, n, n, n + 1)
+            ku = _ring[3](ku, self.u, n, n + 1, n, n)
+            kv = _ring[3](kv, self.v, n, n, n + 1, n)
+            kw = _ring[3](kw, self.w, n, n, n, n + 1)
 
     def _redistance(mut self):
         """Fast sweeping for |grad phi| = 1 over the eight sweep orders; the
