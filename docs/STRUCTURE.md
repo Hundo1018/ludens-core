@@ -764,12 +764,15 @@ counted, not listed.
 - `def lerp_vec3(a: SIMD[.float32, 4], b: SIMD[.float32, 4], t: Float32) -> Vec3`
 - aliases: `EASE_BACK_IN`, `EASE_BACK_INOUT`, `EASE_BACK_OUT`, `EASE_BOUNCE_IN`, `EASE_BOUNCE_INOUT`, `EASE_BOUNCE_OUT`, `EASE_CIRC_IN`, `EASE_CIRC_INOUT`, `EASE_CIRC_OUT`, `EASE_COUNT`, `EASE_CUBIC_IN`, `EASE_CUBIC_INOUT`, `EASE_CUBIC_OUT`, `EASE_ELASTIC_IN`, `EASE_ELASTIC_INOUT`, `EASE_ELASTIC_OUT`, `EASE_EXPO_IN`, `EASE_EXPO_INOUT`, `EASE_EXPO_OUT`, `EASE_LINEAR`, `EASE_QUAD_IN`, `EASE_QUAD_INOUT`, `EASE_QUAD_OUT`, `EASE_QUART_IN`, `EASE_QUART_INOUT`, `EASE_QUART_OUT`, `EASE_QUINT_IN`, `EASE_QUINT_INOUT`, `EASE_QUINT_OUT`, `EASE_SINE_IN`, `EASE_SINE_INOUT`, `EASE_SINE_OUT`, `PI`, `Value`
 
-## spatial (layer 2) — 6 modules, 13 public declarations
+## spatial (layer 2) — 7 modules, 14 public declarations
 
 ### `spatial/bvh.mojo`
 - struct `BVH` : Defaultable — 9 methods
 - `def morton_order[D: Int](boxes: List[AABB[D]]) -> List[Int]`
 - aliases: `SAH_BINS`
+
+### `spatial/cell_sort.mojo`
+- struct `CellSort` — 1 methods
 
 ### `spatial/gpu_lbvh.mojo`
 - `def bitonic_kernel[LT: TensorLayout](codes: TileTensor[.uint32, LT, MutAnyOrigin], idx: TileTensor[.uint32, LT, MutAnyOrigin], npad: Int32, k: Int32, j: Int32)`
@@ -865,7 +868,7 @@ counted, not listed.
 - aliases: `fdt`, `idt`
 
 ### `collision/hull.mojo`
-- struct `HullShape` — 8 methods
+- struct `HullShape` — 10 methods
 - `def hull_manifold(a_in: ConvexPoly[Int(3)], b_in: ConvexPoly[Int(3)], faces_a: List[Float32], faces_b: List[Float32], margin: Float32 = Float32("0")) -> ContactManifold[Int(3)]`
 
 ### `collision/manifold.mojo`
@@ -1161,7 +1164,7 @@ counted, not listed.
 - struct `UtilityAI` — 4 methods
 - aliases: `CURVE_LINEAR`, `CURVE_LOGISTIC`, `CURVE_POLY`, `CURVE_STEP`, `CURVE_STEP_BELOW`
 
-## physics (layer 4) — 92 modules, 513 public declarations
+## physics (layer 4) — 92 modules, 517 public declarations
 
 ### `physics/actuator.mojo`
 - struct `Actuator` — 7 methods
@@ -1516,19 +1519,21 @@ counted, not listed.
 - `def square_samples(half_side: Float32, dx: Float32) -> Tuple[List[Float32], List[Float32]]`
 
 ### `physics/mac_fluid.mojo`
-- struct `MacFluid2` — 10 methods
+- struct `MacFluid` — 19 methods
 - struct `Smoke2` — 3 methods
 - `def warm_start_or_zero[Op: LinearOperator](op: Op, rhs: List[Float32], mut x: List[Float32])`
+- aliases: `MG`, `MacFluid2`, `Vec`
 
 ### `physics/mac_fluid3.mojo`
-- struct `MacFluid3` — 15 methods
 - struct `Smoke3` — 2 methods
+- aliases: `MacFluid3`
 
 ### `physics/mac_levelset.mojo`
-- struct `LevelSetWater2` — 7 methods
+- struct `LevelSetWater` — 10 methods
+- aliases: `LevelSetWater2`
 
 ### `physics/mac_levelset3.mojo`
-- struct `LevelSetWater3` — 7 methods
+- aliases: `LevelSetWater3`
 
 ### `physics/mac_levelset_particles.mojo`
 - struct `LevelSetParticles` — 5 methods
