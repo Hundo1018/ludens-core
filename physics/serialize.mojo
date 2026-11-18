@@ -33,6 +33,8 @@ every body/joint index it reads.
 from geometry.vec import Real, Vec3, WorldType
 from physics.rigid6 import QuatBody6
 from physics.solver6 import ContactScene6, write_state, read_state
+from collision.broadphase import BroadPhase
+from collision.bp_bvh import BVHBroadPhase
 from physics.state_io import StateWriter, StateReader
 
 comptime _VERSION = 6
@@ -136,18 +138,18 @@ struct _TextReader(StateReader, Movable, Deinitable):
         return Vec3(x, y, z, 0)
 
 
-def scene_to_string(sc: ContactScene6[QuatBody6]) raises -> String:
+def scene_to_string[BP: BroadPhase](sc: ContactScene6[QuatBody6, BP]) raises -> String:
     var w = _TextWriter()
     w.wi(_VERSION)
     write_state(sc, w)
     return w.s.copy()
 
 
-def scene_from_string(data: String) raises -> ContactScene6[QuatBody6]:
+def scene_from_string[BP: BroadPhase = BVHBroadPhase[3]](data: String) raises -> ContactScene6[QuatBody6, BP]:
     var r = _TextReader(data)
     if r.ri() != _VERSION:
         raise Error("scene format version mismatch")
-    var sc = ContactScene6[QuatBody6]()
+    var sc = ContactScene6[QuatBody6, BP]()
     read_state(sc, r)
     return sc^
 
@@ -213,7 +215,7 @@ struct BinReader(StateReader, Movable, Deinitable):
         return Vec3(x, y, z, 0)
 
 
-def scene_to_bytes(sc: ContactScene6[QuatBody6]) -> List[UInt8]:
+def scene_to_bytes[BP: BroadPhase](sc: ContactScene6[QuatBody6, BP]) -> List[UInt8]:
     """Exact binary snapshot (same fields and guarantees as `scene_to_string`)."""
     var w = BinWriter()
     w.wi(_VERSION)
@@ -221,10 +223,10 @@ def scene_to_bytes(sc: ContactScene6[QuatBody6]) -> List[UInt8]:
     return w.b.copy()
 
 
-def scene_from_bytes(var data: List[UInt8]) raises -> ContactScene6[QuatBody6]:
+def scene_from_bytes[BP: BroadPhase = BVHBroadPhase[3]](var data: List[UInt8]) raises -> ContactScene6[QuatBody6, BP]:
     var r = BinReader(data^)
     if r.ri() != _VERSION:
         raise Error("scene format version mismatch")
-    var sc = ContactScene6[QuatBody6]()
+    var sc = ContactScene6[QuatBody6, BP]()
     read_state(sc, r)
     return sc^

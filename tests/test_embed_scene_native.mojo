@@ -11,6 +11,8 @@ hulls, triangle meshes, heightfields, and joint limits, motors, springs and brea
   joints     a hinged pendulum with limits [-0.2, 0.2] stays inside them; a velocity motor spins a wheel at its
              target; a heavy weight on a joint with a break threshold releases it.
   extreme    bad inputs raise and add nothing.
+  broadphase EmbedWorldOf[BP] on SAP, DBVH and the spatial hash gives the default world's hash after 120 ticks of a
+             pile of boxes, spheres and capsules (17.98: the broad phase is a parameter, the pair order is not).
 """
 
 from std.math import atan2, sqrt
@@ -18,7 +20,11 @@ from harness.runner import Suite
 from geometry.vec import Real, Vec3
 from geometry.quat import Quat
 from diag.counters import GAMELOOP_DEBT_DROPPED
-from embed.world import EmbedWorld
+from embed.world import EmbedWorld, EmbedWorldOf
+from collision.broadphase import BroadPhase
+from collision.bp_sap import SapBroadPhase
+from collision.bp_dbvh import DbvhBroadPhase
+from collision.bp_hashgrid import SpatialHashBroadPhase
 
 
 def _v(x: Real, y: Real, z: Real) -> Vec3:
@@ -35,6 +41,25 @@ def _run(mut w: EmbedWorld, n: Int) raises:
     for _ in range(n):
         _ = w.ticks_due(0.0)
         w.physics_tick()
+
+
+def _pile_hash[BP: BroadPhase]() raises -> UInt64:
+    """A pile of 12 bodies (boxes, spheres, capsules) dropped on the ground, hashed after 120 ticks."""
+    var w = EmbedWorldOf[BP](1.0 / 60.0, _v(0, -9.8, 0))
+    _ = w.add_box(_v(0, -0.5, 0), _v(20, 0.5, 20), 0, True)
+    for i in range(12):
+        var x = Real(i % 3) * 0.7 - 0.7
+        var z = Real((i // 3) % 2) * 0.6 - 0.3
+        var p = _v(x, 0.6 + Real(i) * 0.55, z)
+        if i % 3 == 0:
+            _ = w.add_box(p, _v(0.25, 0.25, 0.25), 1, False)
+        elif i % 3 == 1:
+            _ = w.add_sphere(p, 0.25, 1, False)
+        else:
+            _ = w.add_capsule(p, 0.15, 0.2, 1, False)
+    for _ in range(120):
+        w.physics_tick()
+    return w.hash()
 
 
 def _has(hs: List[Int64], h: Int64) -> Bool:
@@ -209,4 +234,10 @@ def main() raises:
     var due_long = dw.ticks_due(1.0)
     s.check(due_ok == 3 and before == 0 and due_long == 4 and dw.scene.counters.get(GAMELOOP_DEBT_DROPPED) == 1,
             "a 1 s frame with max_steps 4 runs 4 ticks and bumps gameloop_debt_dropped once; a 3-tick frame does not")
+    # ---- broadphase: a parameter of the world, the same result on every backend
+    var h_bvh = _pile_hash[EmbedWorld.BP]()
+    s.check(_pile_hash[SapBroadPhase[3]]() == h_bvh, "EmbedWorldOf[SapBroadPhase[3]] gives the default world's hash")
+    s.check(_pile_hash[DbvhBroadPhase[3]]() == h_bvh, "EmbedWorldOf[DbvhBroadPhase[3]] gives the default world's hash")
+    s.check(_pile_hash[SpatialHashBroadPhase[3]]() == h_bvh, "EmbedWorldOf[SpatialHashBroadPhase[3]] gives the default world's hash")
+
     s.finish()

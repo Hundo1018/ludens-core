@@ -584,7 +584,7 @@ lattice: 50 / 50  ring: 12
 --- tests/test_embed_ragdoll.mojo ---
 [PASS] embed_ragdoll - 8 / 8 checks
 --- tests/test_embed_scene_native.mojo ---
-[PASS] embed_scene_native - 18 / 18 checks
+[PASS] embed_scene_native - 21 / 21 checks
 --- tests/test_embed_touching.mojo ---
 [PASS] embed_touching - 6 / 6 checks
 --- tests/test_entity_change_undo.mojo ---

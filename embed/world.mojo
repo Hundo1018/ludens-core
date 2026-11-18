@@ -29,6 +29,8 @@ from physics.body_set import BodyId
 from physics.rigid6 import Inertia3, Pose6, QuatBody6
 from physics.joints6 import JOINT_BROKEN, Joint6
 from physics.solver6 import ContactScene6
+from collision.broadphase import BroadPhase
+from collision.bp_bvh import BVHBroadPhase
 from physics.solver_config import SolverConfig, UnitScale
 from physics.serialize import scene_to_bytes, scene_from_bytes
 from physics.capture import Capture
@@ -222,8 +224,13 @@ struct BubbleRec(Copyable, ImplicitlyCopyable, Movable):
     var v: Float32
 
 
-struct EmbedWorld(Movable):
-    var scene: ContactScene6[QuatBody6]
+struct EmbedWorldOf[BP: BroadPhase = BVHBroadPhase[3]](Movable):
+    """The host-facing world (12.1) over a broad phase `BP` (`collision.bp_*`; `test_solver_bp_seam` checks that every
+    backend yields the same pair sequence). `EmbedWorld` below is the default instance, the one the C ABI, Python, wasm
+    and the `embed` helpers (`scene_io`, `undo`, `transfer`, `ragdoll`) take. The body type stays `QuatBody6`:
+    fracture (`physics.fracture`) builds `QuatBody6` fragments and `embed.scene_io` writes its fields."""
+
+    var scene: ContactScene6[QuatBody6, Self.BP]
     var cfg: SolverConfig
     var per_meter: Real  # host length units per meter (17.78; `set_unit_scale`)
     var gravity: Vec3
@@ -259,7 +266,7 @@ struct EmbedWorld(Movable):
             raise Error("world: gravity must be finite")
         if max_steps < 1:
             raise Error("world: max_steps must be >= 1")
-        self.scene = ContactScene6[QuatBody6]()
+        self.scene = ContactScene6[QuatBody6, Self.BP]()
         self.scene.events_on = True
         self.capturing = False
         self.capture = Capture(60)
@@ -998,7 +1005,7 @@ struct EmbedWorld(Movable):
                 frac_at = pos - 8
             else:
                 raise Error("load: unknown trailer")
-        var sc = scene_from_bytes(body^)
+        var sc = scene_from_bytes[Self.BP](body^)
         sc.events_on = True
         if frac_at >= 0:
             var fp = frac_at + 8
@@ -1012,7 +1019,7 @@ struct EmbedWorld(Movable):
                 raise Error("load: fracture trailer length mismatch")
             # rebuild the fragments and welds (shapes, volumes, bond topology) from the same arguments in a scratch
             # scene, then point them at the loaded scene's bodies and joints and restore what changed since
-            var scratch = ContactScene6[QuatBody6]()
+            var scratch = ContactScene6[QuatBody6, Self.BP]()
             var pos3 = Vec3(Real(params[0]), Real(params[1]), Real(params[2]), 0)
             var half3 = Vec3(Real(params[3]), Real(params[4]), Real(params[5]), 0)
             var f = FractureSet(Real(params[7]), 0)
@@ -1069,6 +1076,10 @@ struct EmbedWorld(Movable):
         return fnv1a(b)
 
 
+comptime EmbedWorld = EmbedWorldOf[]
+"""The world with the default broad phase (`BVHBroadPhase[3]`)."""
+
+
 def save_excludes() -> List[String]:
     """World state that save / load and hash do not carry (tests/test_save_coverage.mojo checks this list, ROADMAP 17.95).
 
@@ -1081,8 +1092,10 @@ def save_excludes() -> List[String]:
     return out^
 
 
-def _build_fracture(
-    mut sc: ContactScene6[QuatBody6], mut f: FractureSet, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real,
+
+
+def _build_fracture[BP: BroadPhase](
+    mut sc: ContactScene6[QuatBody6, BP], mut f: FractureSet, pos: Vec3, half: Vec3, pieces: Int, seed: Int, stress: Real,
     density: Real,
 ) raises -> Int:
     """add_fracture_box's construction into `f`: Voronoi fragments of the box, welded along shared faces. Returns the

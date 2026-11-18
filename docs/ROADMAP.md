@@ -4495,7 +4495,7 @@
 >    `impulse_estimator` 每個子步讀一次(`solver6.mojo` `IMPULSE_LAST_SUBSTEP` 分支)、`broadphase` 每步讀一次,改成 trait 不會移除任何逐對分支。
 > 3. `QuatBody6[I: SpinIntegrator]`:不做。`SpinIntegrator.step(pose, wb, inertia, dt)` 一次推進速度與姿態;`QuatBody6` 分兩段
 >    (`integrate_force`,約束,`integrate_pose`)且在世界座標,要接上須另立兩段式 trait,只有一個實作、沒有呼叫端選別的。
-> 4. `EmbedWorldOf[BP: BroadPhase]`,`EmbedWorld = EmbedWorldOf[]`(見其 PR)。物體型別不參數化:`physics.fracture` 建 `QuatBody6`
+> 4. `EmbedWorldOf[BP: BroadPhase]` ✅,`EmbedWorld = EmbedWorldOf[]`:既有宿主、C ABI、Python、wasm 型別不變;`test_embed_scene_native` 中 12 個物體的堆疊在 SAP、DBVH、空間雜湊上 120 tick 後雜湊等於預設世界;`wasm-gate`、`fma-parity` 通過。物體型別不參數化:`physics.fracture` 建 `QuatBody6`
 >    碎片、`embed.scene_io` 寫其欄位。水世界改 `Optional`:不做,`FlipWater2(2, 2, 1)` 的配置量不到可量的程度。
 > 5. 固定大小值:`quantize_rotation` 不改,是引擎網路程式使用的公開 API(回傳 `List[Int]`);`hull_faces_d` 的呼叫端緩衝待量測
 >    (每個 hull 對另外還建兩個 `ConvexPoly`)。

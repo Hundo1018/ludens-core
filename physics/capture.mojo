@@ -35,6 +35,7 @@ from geometry.vec import Real, Vec3
 from geometry.aabb import AABB
 from physics.rigid6 import QuatBody6
 from physics.solver6 import ContactScene6
+from collision.broadphase import BroadPhase
 from physics.solver_config import SolverConfig
 from physics.serialize import BinWriter, BinReader, scene_to_bytes, scene_from_bytes
 from physics.contact6 import island_color
@@ -129,7 +130,7 @@ struct Capture(Movable):
     def _inside(self, p: Vec3) -> Bool:
         return not self.has_region or self.region.contains_point(p)
 
-    def record(mut self, sc: ContactScene6[QuatBody6]):
+    def record[BP: BroadPhase](mut self, sc: ContactScene6[QuatBody6, BP]):
         """Append the scene's current state as the next frame."""
         if self.delta:
             self._record_delta(sc)
@@ -181,7 +182,7 @@ struct Capture(Movable):
             self.keys.append(scene_to_bytes(sc))
         self.frames.append(w.b.copy())
 
-    def _record_delta(mut self, sc: ContactScene6[QuatBody6]):
+    def _record_delta[BP: BroadPhase](mut self, sc: ContactScene6[QuatBody6, BP]):
         var full = len(self.frames) % self.key_every == 0
         var n = len(sc.bset.bodies)
         var w = BinWriter()
@@ -485,7 +486,7 @@ struct CaptureReader(Movable):
         return best
 
 
-def _same_bodies(f: CaptureFrame, sc: ContactScene6[QuatBody6]) -> Bool:
+def _same_bodies[BP: BroadPhase](f: CaptureFrame, sc: ContactScene6[QuatBody6, BP]) -> Bool:
     for k in range(len(f.slot)):
         var i = f.slot[k]
         if i >= len(sc.bset.bodies):
