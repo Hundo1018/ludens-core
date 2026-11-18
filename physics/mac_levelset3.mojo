@@ -36,8 +36,8 @@ three-axis root.
 
 from std.math import floor, sqrt
 from geometry.vec import Real
-from numerics.sparse import LinearOperator
 from numerics.cg import pcg, CgResult
+from .mac_levelset import _LiquidPoisson
 
 
 def _godunov(a: Real, b: Real, c: Real, dx: Real) -> Real:
@@ -57,71 +57,6 @@ def _godunov(a: Real, b: Real, c: Real, dx: Real) -> Real:
     var s1 = x0 + x1 + x2
     var s2 = x0 * x0 + x1 * x1 + x2 * x2
     return (s1 + sqrt(s1 * s1 - 3 * (s2 - dx * dx))) / 3
-
-
-struct _LiquidPoisson3(LinearOperator, Movable):
-    """-lap p over the liquid cells (index map `cell` -> unknown) with
-    Neumann walls and ghost-fluid Dirichlet air neighbours; dx^2 = 1."""
-
-    var n: Int
-    var unk: List[Int]  # per cell: unknown index or -1
-    var cells: List[Int]  # per unknown: cell
-    var diag: List[Real]
-    var nb: List[Int]  # per unknown: 6 neighbour unknowns (-1: none / not liquid)
-
-    def __init__(out self, n: Int, phi: List[Real], open: List[Bool]):
-        self.n = n
-        var nn = n * n * n
-        self.unk = List[Int](length=nn, fill=-1)
-        self.cells = List[Int]()
-        for c in range(nn):
-            if phi[c] < 0:
-                self.unk[c] = len(self.cells)
-                self.cells.append(c)
-        var m = len(self.cells)
-        self.diag = List[Real](length=m, fill=0)
-        self.nb = List[Int](length=6 * m, fill=-1)
-        for k in range(m):
-            var c = self.cells[k]
-            var i = c % n
-            var j = (c // n) % n
-            var kz = c // (n * n)
-            var d = Real(0)
-            for s in range(6):
-                var ii = i + (1 if s == 0 else (-1 if s == 1 else 0))
-                var jj = j + (1 if s == 2 else (-1 if s == 3 else 0))
-                var kk = kz + (1 if s == 4 else (-1 if s == 5 else 0))
-                if ii < 0 or ii >= n or jj < 0 or jj >= n or kk < 0 or kk >= n:
-                    # solid wall: no flux. Open wall: Dirichlet p = 0 at
-                    # dx / 2, so 1 / theta = 2. Side index: 0 left, 1 right,
-                    # 2 bottom, 3 top, 4 back, 5 front; s ^ 1 maps the step.
-                    if open[s ^ 1]:
-                        d += 2
-                    continue
-                var o = (kk * n + jj) * n + ii
-                if phi[o] < 0:
-                    d += 1
-                    self.nb[6 * k + s] = self.unk[o]
-                else:
-                    var th = max(phi[c] / (phi[c] - phi[o]), Real(0.01))
-                    d += 1 / th
-            self.diag[k] = d
-
-    def size(self) -> Int:
-        return len(self.cells)
-
-    def apply(self, x: List[Real], mut out: List[Real]):
-        for k in range(len(self.cells)):
-            var a = self.diag[k] * x[k]
-            for s in range(6):
-                var o = self.nb[6 * k + s]
-                if o >= 0:
-                    a -= x[o]
-            out[k] = a
-
-    def diagonal(self, mut out: List[Real]):
-        for k in range(len(self.cells)):
-            out[k] = self.diag[k]
 
 
 def _ring(known: List[Bool], mut f: List[Real], n: Int, nx: Int, ny: Int, nz: Int) -> List[Bool]:
@@ -355,7 +290,7 @@ struct LevelSetWater3(Movable):
     def _project(mut self, dt: Real) -> CgResult:
         var n = self.n
         var dx = self.dx
-        var op = _LiquidPoisson3(n, self.phi, self.open)
+        var op = _LiquidPoisson[3](n, self.phi, self.open)
         var m = op.size()
         var rhs = List[Real](length=m, fill=0)
         for q in range(m):
