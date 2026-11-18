@@ -629,107 +629,132 @@ struct MacFluid[D: Int](Movable):
         and each sub-step is itself a conservative flux update, so the total is
         still conserved. Without sub-cycling the 17.61 k = 5 run goes to NaN
         within 3 steps (face speeds reach 1000 m/s against dx / dt = 3.75)."""
-        var umax = Real(0)
-        for c in range(self.cells()):
-            comptime if Self.D == 2:
+        comptime if Self.D == 2:
+
+            var umax = Real(0)
+            for c in range(self.n * self.n):
                 umax = max(umax, max(abs(self.u[c]), abs(self.v[c])))
-            else:
+            var need = 2 * umax * dt / self.dx
+            var sub = 1
+            if need > 1:
+                sub = Int(ceil(need))
+            var h = dt / Real(sub) / self.dx
+            self.flux_substeps += sub
+            for _ in range(sub):
+                self._flux_once(h)
+        else:
+
+            var umax = Real(0)
+            for c in range(self.cells()):
                 umax = max(umax, max(abs(self.u[c]), max(abs(self.v[c]), abs(self.w[c]))))
-        var need = Real(Self.D) * umax * dt / self.dx
-        var sub = 1
-        if need > 1:
-            sub = Int(ceil(need))
-        var h = dt / Real(sub) / self.dx
-        self.flux_substeps += sub
-        for _ in range(sub):
-            self._flux_once(h)
+            var need = 3 * umax * dt / self.dx
+            var sub = 1
+            if need > 1:
+                sub = Int(ceil(need))
+            var h = dt / Real(sub) / self.dx
+            self.flux_substeps += sub
+            for _ in range(sub):
+                self._flux_once(h)
 
     def _flux_once(mut self, h: Real):
-        """One conservative flux update with step h = sub-step / dx. The z sides (3-D) are added
-        after the x and y sides, as in each solver's original sum."""
-        var n = self.n
-        var nz = self._nz()
-        var m = self.cells()
-        var u0 = self.u.copy()
-        var v0 = self.v.copy()
-        var w0 = self.w.copy()
-        var nu_ = List[Real](length=m, fill=0)
-        var nv_ = List[Real](length=m, fill=0)
-        var nw_ = List[Real](length=len(self.w), fill=0)
-        for k in range(nz):
-            var km = (k + nz - 1) % nz
-            var kp = (k + 1) % nz
+        """One conservative flux update with step h = sub-step / dx. Each dimension keeps its own
+        body as it was before the merge: written as one, the flux tests changed on aarch64 (FMA contraction)."""
+        comptime if Self.D == 2:
+
+            var n = self.n
+            var u0 = self.u.copy()
+            var v0 = self.v.copy()
+            var nu_ = List[Real](length=n * n, fill=0)
+            var nv_ = List[Real](length=n * n, fill=0)
             for j in range(n):
-                var jm = (j + n - 1) % n
-                var jp = (j + 1) % n
+                var jm = self._w(j - 1)
+                var jp = self._w(j + 1)
                 for i in range(n):
-                    var im = (i + n - 1) % n
-                    var ip = (i + 1) % n
-                    var c = (k * n + j) * n + i
-                    var c_xm = (k * n + j) * n + im
-                    var c_xp = (k * n + j) * n + ip
-                    var c_ym = (k * n + jm) * n + i
-                    var c_yp = (k * n + jp) * n + i
+                    var im = self._w(i - 1)
+                    var ip = self._w(i + 1)
                     # u face: east / west sides at x = i +- 1/2, speed from u
-                    var ue = 0.5 * (u0[c] + u0[c_xp])
-                    var fe = ue * (u0[c] if ue > 0 else u0[c_xp])
-                    var uw = 0.5 * (u0[c_xm] + u0[c])
-                    var fw = uw * (u0[c_xm] if uw > 0 else u0[c])
-                    # north / south sides at y = j + 1, j, speed from v at x = i +- 1/2
-                    var vn = 0.5 * (v0[(k * n + jp) * n + im] + v0[c_yp])
-                    var fnorth = vn * (u0[c] if vn > 0 else u0[c_yp])
-                    var vs = 0.5 * (v0[c_xm] + v0[c])
-                    var fs = vs * (u0[c_ym] if vs > 0 else u0[c])
-                    var acc = (fe - fw) + (fnorth - fs)
-                    comptime if Self.D == 3:
-                        var c_zm = (km * n + j) * n + i
-                        var c_zp = (kp * n + j) * n + i
-                        var wt = 0.5 * (w0[(kp * n + j) * n + im] + w0[c_zp])
-                        var ft = wt * (u0[c] if wt > 0 else u0[c_zp])
-                        var wb = 0.5 * (w0[c_xm] + w0[c])
-                        var fb = wb * (u0[c_zm] if wb > 0 else u0[c])
-                        acc = acc + (ft - fb)
-                    nu_[c] = u0[c] - h * acc
+                    var c = j * n + i
+                    var ue = 0.5 * (u0[c] + u0[j * n + ip])
+                    var fe = ue * (u0[c] if ue > 0 else u0[j * n + ip])
+                    var uw = 0.5 * (u0[j * n + im] + u0[c])
+                    var fw = uw * (u0[j * n + im] if uw > 0 else u0[c])
+                    # u face: north / south sides at y = j + 1, j, speed from v at x = i +- 1/2
+                    var vn = 0.5 * (v0[jp * n + im] + v0[jp * n + i])
+                    var fnorth = vn * (u0[c] if vn > 0 else u0[jp * n + i])
+                    var vs = 0.5 * (v0[j * n + im] + v0[j * n + i])
+                    var fs = vs * (u0[jm * n + i] if vs > 0 else u0[c])
+                    nu_[c] = u0[c] - h * ((fe - fw) + (fnorth - fs))
                     # v face: east / west sides at x = i + 1, i, speed from u at y = j +- 1/2
-                    ue = 0.5 * (u0[(k * n + jm) * n + ip] + u0[c_xp])
-                    fe = ue * (v0[c] if ue > 0 else v0[c_xp])
-                    uw = 0.5 * (u0[c_ym] + u0[c])
-                    fw = uw * (v0[c_xm] if uw > 0 else v0[c])
-                    # north / south sides at y = j + 1/2, j - 1/2, speed from v
-                    var vnv = 0.5 * (v0[c] + v0[c_yp])
-                    fnorth = vnv * (v0[c] if vnv > 0 else v0[c_yp])
-                    var vsv = 0.5 * (v0[c_ym] + v0[c])
-                    fs = vsv * (v0[c_ym] if vsv > 0 else v0[c])
-                    acc = (fe - fw) + (fnorth - fs)
-                    comptime if Self.D == 3:
-                        var c_zm = (km * n + j) * n + i
-                        var c_zp = (kp * n + j) * n + i
-                        var wt = 0.5 * (w0[(kp * n + jm) * n + i] + w0[c_zp])
-                        var ft = wt * (v0[c] if wt > 0 else v0[c_zp])
-                        var wb = 0.5 * (w0[c_ym] + w0[c])
-                        var fb = wb * (v0[c_zm] if wb > 0 else v0[c])
-                        acc = acc + (ft - fb)
-                    nv_[c] = v0[c] - h * acc
-                    comptime if Self.D == 3:
+                    var ve = 0.5 * (u0[jm * n + ip] + u0[j * n + ip])
+                    var ge = ve * (v0[c] if ve > 0 else v0[j * n + ip])
+                    var vw = 0.5 * (u0[jm * n + i] + u0[j * n + i])
+                    var gw = vw * (v0[j * n + im] if vw > 0 else v0[c])
+                    # v face: north / south sides at y = j + 1/2, j - 1/2, speed from v
+                    var vv_n = 0.5 * (v0[c] + v0[jp * n + i])
+                    var gn = vv_n * (v0[c] if vv_n > 0 else v0[jp * n + i])
+                    var vv_s = 0.5 * (v0[jm * n + i] + v0[c])
+                    var gs = vv_s * (v0[jm * n + i] if vv_s > 0 else v0[c])
+                    nv_[c] = v0[c] - h * ((ge - gw) + (gn - gs))
+            self.u = nu_^
+            self.v = nv_^
+        else:
+
+            var m = self.cells()
+            var u0 = self.u.copy()
+            var v0 = self.v.copy()
+            var w0 = self.w.copy()
+            var nu_ = List[Real](length=m, fill=0)
+            var nv_ = List[Real](length=m, fill=0)
+            var nw_ = List[Real](length=m, fill=0)
+            for k in range(self.n):
+                for j in range(self.n):
+                    for i in range(self.n):
+                        # u face: x sides speed from u; y sides from v; z sides from w
+                        var c = self.idx(i, j, k)
+                        var ue = 0.5 * (u0[c] + u0[self.idx(i + 1, j, k)])
+                        var fe = ue * (u0[c] if ue > 0 else u0[self.idx(i + 1, j, k)])
+                        var uw = 0.5 * (u0[self.idx(i - 1, j, k)] + u0[c])
+                        var fw = uw * (u0[self.idx(i - 1, j, k)] if uw > 0 else u0[c])
+                        var vn = 0.5 * (v0[self.idx(i - 1, j + 1, k)] + v0[self.idx(i, j + 1, k)])
+                        var fnorth = vn * (u0[c] if vn > 0 else u0[self.idx(i, j + 1, k)])
+                        var vs = 0.5 * (v0[self.idx(i - 1, j, k)] + v0[c])
+                        var fs = vs * (u0[self.idx(i, j - 1, k)] if vs > 0 else u0[c])
+                        var wt = 0.5 * (w0[self.idx(i - 1, j, k + 1)] + w0[self.idx(i, j, k + 1)])
+                        var ft = wt * (u0[c] if wt > 0 else u0[self.idx(i, j, k + 1)])
+                        var wb = 0.5 * (w0[self.idx(i - 1, j, k)] + w0[c])
+                        var fb = wb * (u0[self.idx(i, j, k - 1)] if wb > 0 else u0[c])
+                        nu_[c] = u0[c] - h * ((fe - fw) + (fnorth - fs) + (ft - fb))
+                        # v face: x sides speed from u; y sides from v; z sides from w
+                        ue = 0.5 * (u0[self.idx(i + 1, j - 1, k)] + u0[self.idx(i + 1, j, k)])
+                        fe = ue * (v0[c] if ue > 0 else v0[self.idx(i + 1, j, k)])
+                        uw = 0.5 * (u0[self.idx(i, j - 1, k)] + u0[c])
+                        fw = uw * (v0[self.idx(i - 1, j, k)] if uw > 0 else v0[c])
+                        var vnv = 0.5 * (v0[c] + v0[self.idx(i, j + 1, k)])
+                        fnorth = vnv * (v0[c] if vnv > 0 else v0[self.idx(i, j + 1, k)])
+                        var vsv = 0.5 * (v0[self.idx(i, j - 1, k)] + v0[c])
+                        fs = vsv * (v0[self.idx(i, j - 1, k)] if vsv > 0 else v0[c])
+                        wt = 0.5 * (w0[self.idx(i, j - 1, k + 1)] + w0[self.idx(i, j, k + 1)])
+                        ft = wt * (v0[c] if wt > 0 else v0[self.idx(i, j, k + 1)])
+                        wb = 0.5 * (w0[self.idx(i, j - 1, k)] + w0[c])
+                        fb = wb * (v0[self.idx(i, j, k - 1)] if wb > 0 else v0[c])
+                        nv_[c] = v0[c] - h * ((fe - fw) + (fnorth - fs) + (ft - fb))
                         # w face: x sides speed from u; y sides from v; z sides from w
-                        var c_zm = (km * n + j) * n + i
-                        var c_zp = (kp * n + j) * n + i
-                        ue = 0.5 * (u0[(km * n + j) * n + ip] + u0[c_xp])
-                        fe = ue * (w0[c] if ue > 0 else w0[c_xp])
-                        uw = 0.5 * (u0[c_zm] + u0[c])
-                        fw = uw * (w0[c_xm] if uw > 0 else w0[c])
-                        vn = 0.5 * (v0[(km * n + jp) * n + i] + v0[c_yp])
-                        fnorth = vn * (w0[c] if vn > 0 else w0[c_yp])
-                        vs = 0.5 * (v0[c_zm] + v0[c])
-                        fs = vs * (w0[c_ym] if vs > 0 else w0[c])
-                        var wtw = 0.5 * (w0[c] + w0[c_zp])
-                        var ft = wtw * (w0[c] if wtw > 0 else w0[c_zp])
-                        var wbw = 0.5 * (w0[c_zm] + w0[c])
-                        var fb = wbw * (w0[c_zm] if wbw > 0 else w0[c])
+                        ue = 0.5 * (u0[self.idx(i + 1, j, k - 1)] + u0[self.idx(i + 1, j, k)])
+                        fe = ue * (w0[c] if ue > 0 else w0[self.idx(i + 1, j, k)])
+                        uw = 0.5 * (u0[self.idx(i, j, k - 1)] + u0[c])
+                        fw = uw * (w0[self.idx(i - 1, j, k)] if uw > 0 else w0[c])
+                        vn = 0.5 * (v0[self.idx(i, j + 1, k - 1)] + v0[self.idx(i, j + 1, k)])
+                        fnorth = vn * (w0[c] if vn > 0 else w0[self.idx(i, j + 1, k)])
+                        vs = 0.5 * (v0[self.idx(i, j, k - 1)] + v0[c])
+                        fs = vs * (w0[self.idx(i, j - 1, k)] if vs > 0 else w0[c])
+                        var wtw = 0.5 * (w0[c] + w0[self.idx(i, j, k + 1)])
+                        ft = wtw * (w0[c] if wtw > 0 else w0[self.idx(i, j, k + 1)])
+                        var wbw = 0.5 * (w0[self.idx(i, j, k - 1)] + w0[c])
+                        fb = wbw * (w0[self.idx(i, j, k - 1)] if wbw > 0 else w0[c])
                         nw_[c] = w0[c] - h * ((fe - fw) + (fnorth - fs) + (ft - fb))
-        self.u = nu_^
-        self.v = nv_^
-        self.w = nw_^
+            self.u = nu_^
+            self.v = nv_^
+            self.w = nw_^
 
     # ------------------------------------------------------- 3-D confinement
     def _centre_velocity(self) -> Tuple[List[Real], List[Real], List[Real]]:
