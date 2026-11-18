@@ -4500,7 +4500,7 @@
 > 5. 固定大小值:`quantize_rotation` 不改,是引擎網路程式使用的公開 API(回傳 `List[Int]`);`hull_faces_d` 的呼叫端緩衝待量測
 >    (每個 hull 對另外還建兩個 `ConvexPoly`)。
 > 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
->    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
+>    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測(**2026-11-18 量測,不做**:`Quat` 的 `__mul__` / `conjugate` / `norm` / `normalized` / `rotate` 加上後 `icount` 572 568 685–572 906 894,未加 572 568 281–572 905 845,在散佈 3.4e5 內;LLVM 已自行內聯,`Motor3` 原本已是 `@always_inline`);`geometry/vec.mojo` 模組文件已更正(本 PR)。
 > 7. 2D / 3D 合併:不屬於位元不變的範圍,移到改變結果的整併(另開 PR,附前後數字)。`physics/flip.mojo` 的取樣是巢狀線性插值
 >    (`lo = f00·(1−ax) + f10·ax`,`lo·(1−ay) + hi·ay`),`flip3.mojo` 是 8 個權重乘積的和;共用一個 `FlipWater[D]` 會改變 2D 水的結果
 >    (golden 與 wasm 閘門的 `water` 雜湊 `2507d4f1a5ca688d`),保留兩種算式則每個函式都要 `comptime if`,沒有合併到任何東西。
@@ -4510,6 +4510,10 @@
 >    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
 >      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
+> 8. 粒子網格的計數排序 ✅(2026-11-18):`spatial.cell_sort.CellSort`(`build(cid, cells)` → `start` / `items`,穩定、只用整數)
+>    取代 `physics/pbf.mojo`、`pbf_unified.mojo`、`sph_rigid.mojo`、`ai/steering.mojo`、`nav/crowd.mojo` 的五份副本;各處仍用自己的格子規則
+>    (截斷或 floor、夾限與否、2D / 3D),只共用分組。用到這五個模組的 9 個測試 golden 段相同(`test_continuum` 只差 gate 濾掉的耗時行)。
+>    原計畫把「PBF / SPH 共用網格」列為改變結果的項目;只共用排序、不動格子規則與走訪順序時結果不變。
 
 ## 編號索引
 

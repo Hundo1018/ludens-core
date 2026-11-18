@@ -28,6 +28,7 @@ the box height; slope 0.82 against the ideal 1).
 from std.math import sqrt
 from geometry.vec import Real, Vec3
 from geometry.mat import Mat3
+from spatial.cell_sort import CellSort
 from .pbf import H
 from .fem import polar_rotation
 
@@ -225,7 +226,6 @@ struct UnifiedPbf(Movable):
         var gx = Int((self.hi[0] - self.lo[0]) / self.h) + 1
         var gy = Int((self.hi[1] - self.lo[1]) / self.h) + 1
         var gz = Int((self.hi[2] - self.lo[2]) / self.h) + 1
-        var start = List[Int](length=gx * gy * gz + 1, fill=0)
         var cell = List[Int](length=n, fill=0)
         for k in range(n):
             var q = self.p[k] - self.lo
@@ -233,14 +233,8 @@ struct UnifiedPbf(Movable):
             var b = min(max(Int(q[1] / self.h), 0), gy - 1)
             var c = min(max(Int(q[2] / self.h), 0), gz - 1)
             cell[k] = (c * gy + b) * gx + a
-            start[cell[k] + 1] += 1
-        for i in range(gx * gy * gz):
-            start[i + 1] += start[i]
-        var fill = start.copy()
-        var items = List[Int](length=n, fill=0)
-        for k in range(n):
-            items[fill[cell[k]]] = k
-            fill[cell[k]] += 1
+        var grid = CellSort()
+        grid.build(cell, gx * gy * gz)
         var out = List[List[Int]]()
         var h2 = self.h * self.h
         for k in range(n):
@@ -253,8 +247,8 @@ struct UnifiedPbf(Movable):
                 for b in range(max(b0 - 1, 0), min(b0 + 2, gy)):
                     for a in range(max(a0 - 1, 0), min(a0 + 2, gx)):
                         var cc = (c * gy + b) * gx + a
-                        for t in range(start[cc], start[cc + 1]):
-                            var j = items[t]
+                        for t in range(grid.start[cc], grid.start[cc + 1]):
+                            var j = grid.items[t]
                             if j == k:
                                 continue
                             var d = self.p[k] - self.p[j]

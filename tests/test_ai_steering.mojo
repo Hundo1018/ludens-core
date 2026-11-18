@@ -1,4 +1,4 @@
-# tier: unit
+# tier: unit  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """Steering, flocking, formations (ROADMAP 17.15).
 
 Ordinary: arrive stops on the target; pursue catches a moving quarry sooner

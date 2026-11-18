@@ -37,6 +37,7 @@ producing NaN.
 from std.math import sqrt, floor, exp, pi
 from geometry.trig import cos, sin
 from geometry.vec import Real, Vec2, Vec3, dot
+from spatial.cell_sort import CellSort
 from nav.navmesh import NavMesh, dist3
 from nav.path import NavPath, PolyFunnel, PATH_OFFMESH
 
@@ -400,8 +401,7 @@ struct Crowd[A: Avoidance](Movable, Sized):
     # scratch
     var _p2: List[Vec2]
     var _new_vel: List[Vec2]
-    var _cell_start: List[Int]
-    var _cell_items: List[Int]
+    var _cells: CellSort  # agents by cell (spatial.cell_sort)
     var _neigh: List[Int]
     var _nd: List[Real]
     var blocked_moves: Int  # moves shortened by the mesh constraint (diagnostic)
@@ -424,8 +424,7 @@ struct Crowd[A: Avoidance](Movable, Sized):
         self.finder = PolyFunnel()
         self._p2 = List[Vec2]()
         self._new_vel = List[Vec2]()
-        self._cell_start = List[Int]()
-        self._cell_items = List[Int]()
+        self._cells = CellSort()
         self._neigh = List[Int]()
         self._nd = List[Real]()
         self.blocked_moves = 0
@@ -476,17 +475,10 @@ struct Crowd[A: Avoidance](Movable, Sized):
         var gx = max(1, Int(Real(w) * mesh.field.cs / cs) + 1)
         var gz = max(1, Int(Real(mesh.field.depth) * mesh.field.cs / cs) + 1)
         var n = len(self.pos)
-        self._cell_start = List[Int](length=gx * gz + 1, fill=0)
-        self._cell_items = List[Int](length=n, fill=0)
+        var cid = List[Int](length=n, fill=0)
         for i in range(n):
-            self._cell_start[self._cell(mesh, i, gx, gz) + 1] += 1
-        for c in range(gx * gz):
-            self._cell_start[c + 1] += self._cell_start[c]
-        var fill = self._cell_start.copy()
-        for i in range(n):
-            var c = self._cell(mesh, i, gx, gz)
-            self._cell_items[fill[c]] = i
-            fill[c] += 1
+            cid[i] = self._cell(mesh, i, gx, gz)
+        self._cells.build(cid, gx * gz)
 
     def _cell(self, mesh: NavMesh, i: Int, gx: Int, gz: Int) -> Int:
         var cs = self.params.neighbor_dist
@@ -509,8 +501,8 @@ struct Crowd[A: Avoidance](Movable, Sized):
         for z in range(max(cz - 1, 0), min(cz + 1, gz - 1) + 1):
             for x in range(max(cx - 1, 0), min(cx + 1, gx - 1) + 1):
                 var cell = x + z * gx
-                for k in range(self._cell_start[cell], self._cell_start[cell + 1]):
-                    var j = self._cell_items[k]
+                for k in range(self._cells.start[cell], self._cells.start[cell + 1]):
+                    var j = self._cells.items[k]
                     if j == i:
                         continue
                     var d = self._p2[j] - self._p2[i]
