@@ -1,4 +1,4 @@
-# tier: unit
+# tier: unit  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """Position-Based Fluids: physical gates, not pictures.
 
 A fluid solver is easy to make look plausible and hard to make correct, so the

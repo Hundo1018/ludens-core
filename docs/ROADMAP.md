@@ -4505,7 +4505,7 @@
 >    任一半邊長 < 1e-3 走原路徑)取代之。總指令 713 789 331 → 694 434 489(−2.71 %)。`test_hull` 新增一項:300 個盒子(半邊長 2e-4–3 m、
 >    隨機姿態)共 12 600 個值與凸包路徑逐位元相同。
 > 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
->    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
+>    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測(**2026-11-18 量測,不做**:`Quat` 的 `__mul__` / `conjugate` / `norm` / `normalized` / `rotate` 加上後 `icount` 572 568 685–572 906 894,未加 572 568 281–572 905 845,在散佈 3.4e5 內;LLVM 已自行內聯,`Motor3` 原本已是 `@always_inline`);`geometry/vec.mojo` 模組文件已更正(本 PR)。
 > 7. 2D / 3D 合併:不屬於位元不變的範圍,移到改變結果的整併(另開 PR,附前後數字)。`physics/flip.mojo` 的取樣是巢狀線性插值
 >    (`lo = f00·(1−ax) + f10·ax`,`lo·(1−ay) + hi·ay`),`flip3.mojo` 是 8 個權重乘積的和;共用一個 `FlipWater[D]` 會改變 2D 水的結果
 >    (golden 與 wasm 閘門的 `water` 雜湊 `2507d4f1a5ca688d`),保留兩種算式則每個函式都要 `comptime if`,沒有合併到任何東西。
@@ -4529,6 +4529,10 @@
       `_advect_flux` / `_flux_once` 先寫成一份時,aarch64 上三個通量式測試改變(`test_fluid_flux` KE flux 1.7181101 → 3.5310867,FMA 合併位置不同),
       改為兩維各保留原式(`comptime if`)。本機以有 FMA 的 x86 目標驗證:三個測試的輸出與 main 的程式在同一目標上逐位元相同。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
+> 8. 粒子網格的計數排序 ✅(2026-11-18):`spatial.cell_sort.CellSort`(`build(cid, cells)` → `start` / `items`,穩定、只用整數)
+>    取代 `physics/pbf.mojo`、`pbf_unified.mojo`、`sph_rigid.mojo`、`ai/steering.mojo`、`nav/crowd.mojo` 的五份副本;各處仍用自己的格子規則
+>    (截斷或 floor、夾限與否、2D / 3D),只共用分組。用到這五個模組的 9 個測試 golden 段相同(`test_continuum` 只差 gate 濾掉的耗時行)。
+>    原計畫把「PBF / SPH 共用網格」列為改變結果的項目;只共用排序、不動格子規則與走訪順序時結果不變。
 
 ## 編號索引
 

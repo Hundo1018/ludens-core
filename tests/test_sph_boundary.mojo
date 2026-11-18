@@ -1,4 +1,4 @@
-# tier: component
+# tier: component  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """SPH boundary particles vs clamped walls (ROADMAP 17.42 d).
 
   seam parity  with no boundary particles `sph_step_boundary` is

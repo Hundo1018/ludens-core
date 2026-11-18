@@ -33,6 +33,7 @@ particle count and settles — rather than eyeballing a picture.
 
 from std.math import sqrt
 from geometry.vec import Real, Vec3
+from spatial.cell_sort import CellSort
 
 comptime H: Real = 0.1
 """Kernel support radius. Public (not `_H`): `physics/sph.mojo` imports it
@@ -84,8 +85,7 @@ struct PbfFluid(Movable):
     var lo: Vec3
     var hi: Vec3
     # uniform grid
-    var cell_start: List[Int]
-    var cell_items: List[Int]
+    var grid: CellSort  # particles by cell (spatial.cell_sort)
     var nx: Int
     var ny: Int
     var nz: Int
@@ -104,8 +104,7 @@ struct PbfFluid(Movable):
         self.lam = List[Real]()
         self.lo = lo
         self.hi = hi
-        self.cell_start = List[Int]()
-        self.cell_items = List[Int]()
+        self.grid = CellSort()
         self.nx = Int((hi[0] - lo[0]) / H) + 1
         self.ny = Int((hi[1] - lo[1]) / H) + 1
         self.nz = Int((hi[2] - lo[2]) / H) + 1
@@ -157,9 +156,6 @@ struct PbfFluid(Movable):
         """Counting sort into a uniform grid over the PREDICTED positions."""
         var ncell = self.nx * self.ny * self.nz
         var n = self.count()
-        var counts = List[Int]()
-        for _ in range(ncell + 1):
-            counts.append(0)
         var cid = List[Int]()
         for i in range(n):
             var cx = self._clampi(Int((self.px[i] - self.lo[0]) / H), self.nx)
@@ -167,18 +163,7 @@ struct PbfFluid(Movable):
             var cz = self._clampi(Int((self.pz[i] - self.lo[2]) / H), self.nz)
             var c = self._cell_of(cx, cy, cz)
             cid.append(c)
-            counts[c + 1] += 1
-        for c in range(1, ncell + 1):
-            counts[c] += counts[c - 1]
-        self.cell_start = counts.copy()
-        self.cell_items = List[Int]()
-        for _ in range(n):
-            self.cell_items.append(0)
-        var cursor = counts.copy()
-        for i in range(n):
-            var c = cid[i]
-            self.cell_items[cursor[c]] = i
-            cursor[c] += 1
+        self.grid.build(cid, ncell)
 
     def _neighbors(self, i: Int, mut out: List[Int]):
         out.clear()
@@ -198,8 +183,8 @@ struct PbfFluid(Movable):
                     if x2 < 0 or x2 >= self.nx:
                         continue
                     var c = self._cell_of(x2, y2, z2)
-                    for k in range(self.cell_start[c], self.cell_start[c + 1]):
-                        var j = self.cell_items[k]
+                    for k in range(self.grid.start[c], self.grid.start[c + 1]):
+                        var j = self.grid.items[k]
                         if j == i:
                             continue
                         var ddx = self.px[i] - self.px[j]

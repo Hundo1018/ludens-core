@@ -1,4 +1,4 @@
-# tier: component
+# tier: component  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """SPH physical gates, and the CFL limit that separates it from PBF.
 
 The same containment / conservation / settling checks PBF gets, run on the same
