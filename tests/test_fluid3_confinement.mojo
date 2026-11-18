@@ -1,4 +1,4 @@
-# tier: integration
+# tier: unit
 """3-D vorticity confinement on `MacFluid3` (ROADMAP 17.60,
 `physics.mac_fluid3` `set_confinement`). 16^3 periodic box, dx 1/16,
 dt 1/60, nu 0, 120 steps (2 s).

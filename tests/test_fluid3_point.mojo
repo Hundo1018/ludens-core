@@ -1,4 +1,4 @@
-# tier: integration
+# tier: unit
 """Point drag in 3-D on `MacFluid3` (ROADMAP 17.61 in 3-D): the 3-D counterpart of
 `test_fluid_flux` / `test_fluid_momentum`.
 

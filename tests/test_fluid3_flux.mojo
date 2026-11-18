@@ -1,4 +1,4 @@
-# tier: integration
+# tier: unit
 """Flux-form (conservative) advection on `MacFluid3` (ROADMAP 17.61 in 3-D,
 `MacFluid3.use_flux_advection`, first-order upwind finite volume).
 

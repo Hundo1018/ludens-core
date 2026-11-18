@@ -4509,6 +4509,13 @@
 >      判斷單側,3D 以 `min + dx ≤ max`)兩處要 `comptime if`,其餘逐式相同;1007 行可減約 350–400 行。
 >    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
 >      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
+      **進度(2026-11-18)** ✅:`MacFluid[D]`(`physics/mac_fluid.mojo`;`MacFluid2` / `MacFluid3` 為別名,`mac_fluid3.mojo` 只剩別名與 `Smoke3`)。
+      `_NegLaplacian[D]`;陣列以 `(k n + j) n + i` 編號、2D 只有一層 z;每個和照原本 x、y、z 的順序寫,2D 是 3D 少掉 z 項。
+      仍分維度:取樣與 `add_impulse` 的展開(雙線性 / 三線性)、`momentum` 的 dx^D 乘法順序、黏滯穩定上限(1/4、1/6)、multigrid 型別
+      (結構內的 `comptime MG = ... if D == 2 else ...`,以 `rebind` 取用)、2D 的固體遮罩與動量修正、3D 的渦度約束(`comptime assert` 擋錯誤維度)。
+      3D 迴圈改用預先算好的週期鄰居索引(原為每次 `idx()` 取模):固定工作量(2D 32² 與 3D 12³ 各 8 步、半拉格朗日與通量式各一次)
+      callgrind 指令數 564 016 852 → 533 507 447 與 533 807 146(兩次建置,−5.4 %)。兩檔 1189 → 1101 行。18 個用到流體的測試 golden 段逐位元相同;
+      四個 3D 測試的 tier 依規則由 integration 改為 unit(`mac_fluid3` 不再直接 import `numerics`)。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
 
 ## 編號索引
