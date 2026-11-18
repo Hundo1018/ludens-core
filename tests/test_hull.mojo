@@ -28,6 +28,7 @@ from harness.runner import Suite
 from geometry.vec import Real, Vec3, length, dot
 from geometry.gjk import ConvexPoly
 from collision.hull import HullShape, hull_manifold
+from geometry.quat import Quat
 from collision.manifold import box_box_manifold, ContactManifold
 from physics.rigid6 import Inertia3, QuatBody6
 from physics.solver6 import ContactScene6
@@ -325,6 +326,50 @@ def case_flat() -> List[Real]:
     return out^
 
 
+def case_box_fast() -> List[Int]:
+    """`HullShape.box_world` / `box_world_normals` against the hull they replace, on 300 boxes with half
+    extents from 2e-4 to 3 m (the ones under 1e-3 take the hull path) at random orientations and positions.
+    Returns [values compared, values whose bits differ]."""
+    var seed = UInt64(12345)
+    var compared = 0
+    var differ = 0
+    for _ in range(300):
+        var r = List[Real](capacity=10)
+        for _ in range(10):
+            seed = seed * 6364136223846793005 + 1442695040888963407
+            r.append(Real(Float64(seed >> 11) / 9007199254740992.0))
+        var half = Vec3(Real(2e-4) + r[0] * r[0] * 3, Real(2e-4) + r[1] * r[1] * 3, Real(2e-4) + r[2] * r[2] * 3, 0)
+        var q = Quat.from_euler(r[3] * 6.28, r[4] * 6.28, r[5] * 6.28)
+        var ax0 = q.rotate(Vec3(1, 0, 0, 0))
+        var ax1 = q.rotate(Vec3(0, 1, 0, 0))
+        var ax2 = q.rotate(Vec3(0, 0, 1, 0))
+        var pos = Vec3(r[6] * 10 - 5, r[7] * 10 - 5, r[8] * 10 - 5, 0)
+        var hull = HullShape.box(half)
+        var want_n = hull.world_normals(ax0, ax1, ax2)
+        var got_n = HullShape.box_world_normals(half, ax0, ax1, ax2)
+        compared += len(want_n)
+        if len(got_n) != len(want_n):
+            differ += len(want_n)
+        else:
+            for k in range(len(want_n)):
+                if got_n[k].to_bits() != want_n[k].to_bits():
+                    differ += 1
+        var want_p = hull.world(pos, ax0, ax1, ax2)
+        var got_p = HullShape.box_world(half, pos, ax0, ax1, ax2)
+        compared += 3 * len(want_p.points)
+        if len(got_p.points) != len(want_p.points):
+            differ += 3 * len(want_p.points)
+        else:
+            for k in range(len(want_p.points)):
+                for c in range(3):
+                    if got_p.points[k][c].to_bits() != want_p.points[k][c].to_bits():
+                        differ += 1
+    var out = List[Int](capacity=2)
+    out.append(compared)
+    out.append(differ)
+    return out^
+
+
 def main() raises:
     var s = Suite("hull")
 
@@ -395,5 +440,9 @@ def main() raises:
     print("  near-flat hull: hit", fl[0], " worst depth", fl[1])
     s.check(fl[0] > 0, "a near-flat hull still collides")
     s.check(Float64(fl[1]) < 1.0, "near-flat hull depths stay bounded")
+
+    var bf = case_box_fast()
+    print("  box fast path: values compared", bf[0], " bits differing", bf[1])
+    s.check(bf[1] == 0, "box_world / box_world_normals give the hull's bits")
 
     s.finish()

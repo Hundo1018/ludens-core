@@ -886,7 +886,8 @@ query_host[Tag](Health, Mana): 13 entities
   coincident-hull worst depth: 1.0
   point cloud (35 in) -> kept 8.0  count 4.0  |n.y| 1.0
   near-flat hull: hit 1.0  worst depth 5.0008297e-05
-[PASS] hull - 24 / 24 checks
+  box fast path: values compared 12600  bits differing 0
+[PASS] hull - 25 / 25 checks
 --- tests/test_hull_irregular.mojo ---
   prism apex-down: lowest vertex -0.0003291964530944824 asleep 1.0
   14-vertex balls: rested 6 of 6, asleep 6

@@ -787,7 +787,7 @@ struct ColliderSet(Movable, Deinitable):
             hs = Vec3(d.half[0] + mr, d.half[0] + mr, d.half[0] + mr, 0)
         elif k == SHAPE_CAPSULE:
             hs = Vec3(d.half[0] + mr, d.half[1] + d.half[0] + mr, d.half[0] + mr, 0)
-        return HullShape.box(hs).world_normals(ax[0], ax[1], ax[2])
+        return HullShape.box_world_normals(hs, ax[0], ax[1], ax[2])
 
     def as_hull(self, i: Int, pose: Pose3, infl: Vec3, mr: Real) -> ConvexPoly[3]:
         return self.as_hull_d(self.desc(i), pose, infl, mr)
@@ -824,7 +824,7 @@ struct ColliderSet(Movable, Deinitable):
             hs = Vec3(d.half[0] + mr, d.half[0] + mr, d.half[0] + mr, 0)
         elif k == SHAPE_CAPSULE:
             hs = Vec3(d.half[0] + mr, d.half[1] + d.half[0] + mr, d.half[0] + mr, 0)
-        return HullShape.box(hs).world(pose.position, ax[0], ax[1], ax[2])
+        return HullShape.box_world(hs, pose.position, ax[0], ax[1], ax[2])
 
     def hull_is_bent_by_inflation(self, i: Int) -> Bool:
         return self.hull_is_bent_by_inflation_d(self.desc(i))

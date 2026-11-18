@@ -4499,6 +4499,11 @@
 >    碎片、`embed.scene_io` 寫其欄位。水世界改 `Optional`:不做,`FlipWater2(2, 2, 1)` 的配置量不到可量的程度。
 > 5. 固定大小值:`quantize_rotation` 不改,是引擎網路程式使用的公開 API(回傳 `List[Int]`);`hull_faces_d` 的呼叫端緩衝待量測
 >    (每個 hull 對另外還建兩個 `ConvexPoly`)。
+>    **進度(2026-11-18)** ✅:量測顯示成本不在 `List` 配置,而在盒子路徑每次呼叫 `HullShape.box(hs)` 建整個凸包(56 個頂點三元組的面搜尋)。
+>    40 個凸包堆在盒子地板上(60 步,callgrind):`as_hull_d` 3.38 %、`hull_faces_d` 1.94 %(其中 `world_normals` 0.54 %)。
+>    `HullShape.box_world`(只用頂點,同 `world`)與 `box_world_normals`(六個面依原搜尋的順序,各用同一組頂點三元組、同一組算式;
+>    任一半邊長 < 1e-3 走原路徑)取代之。總指令 713 789 331 → 694 434 489(−2.71 %)。`test_hull` 新增一項:300 個盒子(半邊長 2e-4–3 m、
+>    隨機姿態)共 12 600 個值與凸包路徑逐位元相同。
 > 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
 >    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
 > 7. 2D / 3D 合併:不屬於位元不變的範圍,移到改變結果的整併(另開 PR,附前後數字)。`physics/flip.mojo` 的取樣是巢狀線性插值
