@@ -38,6 +38,7 @@ With no coupled bodies `sph_rigid_step` moves the fluid exactly as
 from std.math import sqrt, pi, floor
 from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, cross, length, dot
+from spatial.cell_sort import CellSort
 from .pbf import PbfFluid, poly6, spiky_grad, H
 from .sph import BoundaryParticles, visc_lap
 from .body_set import BodyId
@@ -207,21 +208,14 @@ def _candidates(f: PbfFluid, pts: List[Vec3], mut start: List[Int], mut out: Lis
     var ny = Int((hi[1] - lo[1]) / H) + 1
     var nz = Int((hi[2] - lo[2]) / H) + 1
     var cells = nx * ny * nz
-    var count = List[Int](length=cells + 1, fill=0)
     var cid = List[Int](length=ns, fill=0)
     for s in range(ns):
         var cx = min(Int((pts[s][0] - lo[0]) / H), nx - 1)
         var cy = min(Int((pts[s][1] - lo[1]) / H), ny - 1)
         var cz = min(Int((pts[s][2] - lo[2]) / H), nz - 1)
         cid[s] = (cz * ny + cy) * nx + cx
-        count[cid[s] + 1] += 1
-    for c in range(cells):
-        count[c + 1] += count[c]
-    var fill = count.copy()
-    var sorted = List[Int](length=ns, fill=0)
-    for s in range(ns):  # ascending within each cell
-        sorted[fill[cid[s]]] = s
-        fill[cid[s]] += 1
+    var grid = CellSort()
+    grid.build(cid, cells)  # ascending within each cell
     out.clear()
     var tmp = List[Int]()
     for i in range(n):
@@ -234,8 +228,8 @@ def _candidates(f: PbfFluid, pts: List[Vec3], mut start: List[Int], mut out: Lis
             for cy in range(max(gy - 1, 0), min(gy + 2, ny)):
                 for cx in range(max(gx - 1, 0), min(gx + 2, nx)):
                     var c = (cz * ny + cy) * nx + cx
-                    for k in range(count[c], count[c + 1]):
-                        tmp.append(sorted[k])
+                    for k in range(grid.start[c], grid.start[c + 1]):
+                        tmp.append(grid.items[k])
         sort(tmp)
         for k in range(len(tmp)):
             out.append(tmp[k])

@@ -1,4 +1,4 @@
-# tier: integration
+# tier: unit
 """3-D multigrid pressure solve on `MacFluid3` (ROADMAP 17.60,
 `numerics.multigrid3` `PeriodicPoissonMG3`, the 3-D counterpart of 17.84).
 

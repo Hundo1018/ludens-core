@@ -236,6 +236,69 @@ struct HullShape(Movable, Deinitable):
                     v.append(half[2] * (Real(1) if sz == 1 else Real(-1)))
         return Self(v)
 
+    @staticmethod
+    def box_world(half: Vec3, pos: Vec3, ax0: Vec3, ax1: Vec3, ax2: Vec3) -> ConvexPoly[3]:
+        """`HullShape.box(half).world(pos, ax0, ax1, ax2)` without building the hull's faces: `world` reads only
+        the vertices, and a box keeps all eight, in the order `box` lists them (sx, sy, sz). Same arithmetic,
+        so the same bits; `test_hull` checks it against the hull for random boxes."""
+        var p = ConvexPoly[3]()
+        for sx in range(2):
+            for sy in range(2):
+                for sz in range(2):
+                    var w = Vec3(
+                        half[0] * (Real(1) if sx == 1 else Real(-1)),
+                        half[1] * (Real(1) if sy == 1 else Real(-1)),
+                        half[2] * (Real(1) if sz == 1 else Real(-1)),
+                        0,
+                    )
+                    p.add(pos + ax0 * w[0] + ax1 * w[1] + ax2 * w[2])
+        return p^
+
+    @staticmethod
+    def box_world_normals(half: Vec3, ax0: Vec3, ax1: Vec3, ax2: Vec3) -> List[Real]:
+        """`HullShape.box(half).world_normals(ax0, ax1, ax2)` without the O(n^3) face search. For a box whose half
+        extents are all >= 1e-3, `_build_faces` accepts exactly the six face planes, first from the vertex
+        triples (0,1,2) -x, (0,1,4) -y, (0,2,4) -z, (1,3,5) +z, (2,3,6) +y, (4,5,6) +x (vertex index
+        4 sx + 2 sy + sz); each normal is computed here from that triple with the same expressions. Smaller
+        boxes take the hull path: there the absolute tolerances (1e-9, 1e-5) are within reach of the
+        geometry. `test_hull` checks the two against each other."""
+        if half[0] < 1e-3 or half[1] < 1e-3 or half[2] < 1e-3:
+            return HullShape.box(half).world_normals(ax0, ax1, ax2)
+        var v = List[Vec3](capacity=8)
+        var cen = Vec3(0, 0, 0, 0)
+        for sx in range(2):
+            for sy in range(2):
+                for sz in range(2):
+                    var w = Vec3(
+                        half[0] * (Real(1) if sx == 1 else Real(-1)),
+                        half[1] * (Real(1) if sy == 1 else Real(-1)),
+                        half[2] * (Real(1) if sz == 1 else Real(-1)),
+                        0,
+                    )
+                    v.append(w)
+                    cen = cen + w
+        cen = cen / Real(8)
+        var out = List[Real](capacity=18)
+        comptime TRIPLES = (0, 1, 2, 0, 1, 4, 0, 2, 4, 1, 3, 5, 2, 3, 6, 4, 5, 6)
+        comptime for f in range(6):
+            var vi = v[TRIPLES[3 * f]]
+            var e1 = v[TRIPLES[3 * f + 1]] - vi
+            var e2 = v[TRIPLES[3 * f + 2]] - vi
+            var c = Vec3(
+                e1[1] * e2[2] - e1[2] * e2[1],
+                e1[2] * e2[0] - e1[0] * e2[2],
+                e1[0] * e2[1] - e1[1] * e2[0],
+                0,
+            )
+            var nrm = c / length(c)
+            if dot(nrm, vi - cen) < 0:
+                nrm = -nrm
+            var r = ax0 * nrm[0] + ax1 * nrm[1] + ax2 * nrm[2]
+            out.append(r[0])
+            out.append(r[1])
+            out.append(r[2])
+        return out^
+
     def world(self, pos: Vec3, ax0: Vec3, ax1: Vec3, ax2: Vec3) -> ConvexPoly[3]:
         var p = ConvexPoly[3]()
         for i in range(self.nv()):

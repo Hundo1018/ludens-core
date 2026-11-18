@@ -22,6 +22,7 @@ i)` gives slot i in the world; followers `arrive` at their slots.
 from std.math import sqrt, floor
 from geometry.trig import cos, sin
 from geometry.vec import Real, Vec3, dot
+from spatial.cell_sort import CellSort
 
 comptime FORMATION_LINE = 0
 comptime FORMATION_COLUMN = 1
@@ -151,8 +152,7 @@ struct Flock(Movable, Sized):
     var pos: List[Vec3]
     var vel: List[Vec3]
     var goal_force: List[Vec3]  # extra steering per boid (seek a goal, ...)
-    var _cell_start: List[Int]
-    var _items: List[Int]
+    var _cells: CellSort  # agents by cell (spatial.cell_sort)
     var _lo: Vec3
     var _gx: Int
     var _gz: Int
@@ -163,8 +163,7 @@ struct Flock(Movable, Sized):
         self.pos = List[Vec3]()
         self.vel = List[Vec3]()
         self.goal_force = List[Vec3]()
-        self._cell_start = List[Int]()
-        self._items = List[Int]()
+        self._cells = CellSort()
         self._lo = Vec3(0)
         self._gx = 1
         self._gz = 1
@@ -199,17 +198,10 @@ struct Flock(Movable, Sized):
         self._gx = Int((hi[0] - lo[0]) / self.p.radius) + 1
         self._gz = Int((hi[2] - lo[2]) / self.p.radius) + 1
         var nc = self._gx * self._gz
-        self._cell_start = List[Int](length=nc + 1, fill=0)
-        self._items = List[Int](length=n, fill=0)
+        var cid = List[Int](length=n, fill=0)
         for i in range(n):
-            self._cell_start[self._cell(self.pos[i]) + 1] += 1
-        for c in range(nc):
-            self._cell_start[c + 1] += self._cell_start[c]
-        var fill = self._cell_start.copy()
-        for i in range(n):
-            var c = self._cell(self.pos[i])
-            self._items[fill[c]] = i
-            fill[c] += 1
+            cid[i] = self._cell(self.pos[i])
+        self._cells.build(cid, nc)
 
     def step(mut self, dt: Real):
         var n = len(self.pos)
@@ -228,8 +220,8 @@ struct Flock(Movable, Sized):
             for z in range(max(cz - 1, 0), min(cz + 1, self._gz - 1) + 1):
                 for x in range(max(cx - 1, 0), min(cx + 1, self._gx - 1) + 1):
                     var cell = x + z * self._gx
-                    for k in range(self._cell_start[cell], self._cell_start[cell + 1]):
-                        var j = self._items[k]
+                    for k in range(self._cells.start[cell], self._cells.start[cell + 1]):
+                        var j = self._cells.items[k]
                         if j == i:
                             continue
                         self.neighbour_checks += 1

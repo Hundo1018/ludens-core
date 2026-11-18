@@ -1,4 +1,4 @@
-# tier: component
+# tier: component  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """Crowd + avoidance seam parity (ROADMAP 17.14): Orca / SampledRvo / SocialForce.
 
 Scenarios, each run with all three variants:

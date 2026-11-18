@@ -1,4 +1,4 @@
-# tier: unit
+# tier: unit  (override: spatial.cell_sort is the solver's internal neighbour grouping, not a second package under test)
 """Fluid and rigid bodies in one position-based solve (ROADMAP 17.59,
 `physics.pbf_unified`).
 

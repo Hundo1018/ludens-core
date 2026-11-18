@@ -4499,17 +4499,40 @@
 >    碎片、`embed.scene_io` 寫其欄位。水世界改 `Optional`:不做,`FlipWater2(2, 2, 1)` 的配置量不到可量的程度。
 > 5. 固定大小值:`quantize_rotation` 不改,是引擎網路程式使用的公開 API(回傳 `List[Int]`);`hull_faces_d` 的呼叫端緩衝待量測
 >    (每個 hull 對另外還建兩個 `ConvexPoly`)。
+>    **進度(2026-11-18)** ✅:量測顯示成本不在 `List` 配置,而在盒子路徑每次呼叫 `HullShape.box(hs)` 建整個凸包(56 個頂點三元組的面搜尋)。
+>    40 個凸包堆在盒子地板上(60 步,callgrind):`as_hull_d` 3.38 %、`hull_faces_d` 1.94 %(其中 `world_normals` 0.54 %)。
+>    `HullShape.box_world`(只用頂點,同 `world`)與 `box_world_normals`(六個面依原搜尋的順序,各用同一組頂點三元組、同一組算式;
+>    任一半邊長 < 1e-3 走原路徑)取代之。總指令 713 789 331 → 694 434 489(−2.71 %)。`test_hull` 新增一項:300 個盒子(半邊長 2e-4–3 m、
+>    隨機姿態)共 12 600 個值與凸包路徑逐位元相同。
 > 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
->    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
+>    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測(**2026-11-18 量測,不做**:`Quat` 的 `__mul__` / `conjugate` / `norm` / `normalized` / `rotate` 加上後 `icount` 572 568 685–572 906 894,未加 572 568 281–572 905 845,在散佈 3.4e5 內;LLVM 已自行內聯,`Motor3` 原本已是 `@always_inline`);`geometry/vec.mojo` 模組文件已更正(本 PR)。
 > 7. 2D / 3D 合併:不屬於位元不變的範圍,移到改變結果的整併(另開 PR,附前後數字)。`physics/flip.mojo` 的取樣是巢狀線性插值
 >    (`lo = f00·(1−ax) + f10·ax`,`lo·(1−ay) + hi·ay`),`flip3.mojo` 是 8 個權重乘積的和;共用一個 `FlipWater[D]` 會改變 2D 水的結果
 >    (golden 與 wasm 閘門的 `water` 雜湊 `2507d4f1a5ca688d`),保留兩種算式則每個函式都要 `comptime if`,沒有合併到任何東西。
 >    `MacFluid` / `LevelSetWater` 不同:3D 取樣也是巢狀插值(先 x、再 y、再 z),在 2D 退化成 2D 的算式。逐函式比對(只讀程式碼):
 >    - `LevelSetWater[D]`:除 `_extrapolate`(鄰居相加順序:2D −x, +x, −y, +y;3D +x, −x, …)與 `_redistance`(2D 以 `|a−b| ≥ dx`
 >      判斷單側,3D 以 `min + dx ≤ max`)兩處要 `comptime if`,其餘逐式相同;1007 行可減約 350–400 行。
+      **進度(2026-11-18)** ✅:先抽出 `_LiquidPoisson[D]`(#144)、`_ring[D]` 與 `_face_update`(#145),再合併為
+      `LevelSetWater[D]`(`physics/mac_levelset.mojo`;`LevelSetWater2` / `LevelSetWater3` 為別名,`mac_levelset3.mojo` 只剩別名與 3D 說明)。
+      所有陣列以 `(k ny + j) nx + i` 編號、2D 取 nz = 1;仍分維度的只有取樣(雙線性 / 三線性,2D 值即 3D 的第一個平面)、
+      重新距離化的更新式,以及 `set_box` / `set_open` / `velocity` 兩組多載(`comptime assert` 擋錯誤維度)。2D 新增 `sweeps` 欄位(預設 4)。
+      兩檔 951 → 694 行(main 比較)。6 個 level-set 測試(x86-64、`-D ASSERT=all`)的 golden 段逐位元相同。
 >    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
 >      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
+      **進度(2026-11-18)** ✅:`MacFluid[D]`(`physics/mac_fluid.mojo`;`MacFluid2` / `MacFluid3` 為別名,`mac_fluid3.mojo` 只剩別名與 `Smoke3`)。
+      `_NegLaplacian[D]`;陣列以 `(k n + j) n + i` 編號、2D 只有一層 z;每個和照原本 x、y、z 的順序寫,2D 是 3D 少掉 z 項。
+      仍分維度:取樣與 `add_impulse` 的展開(雙線性 / 三線性)、`momentum` 的 dx^D 乘法順序、黏滯穩定上限(1/4、1/6)、multigrid 型別
+      (結構內的 `comptime MG = ... if D == 2 else ...`,以 `rebind` 取用)、2D 的固體遮罩與動量修正、3D 的渦度約束(`comptime assert` 擋錯誤維度)。
+      3D 迴圈改用預先算好的週期鄰居索引(原為每次 `idx()` 取模):固定工作量(2D 32² 與 3D 12³ 各 8 步、半拉格朗日與通量式各一次)
+      callgrind 指令數 564 016 852 → 534 545 472(−5.2 %)。兩檔 1189 → 1101 行。18 個用到流體的測試 golden 段逐位元相同;
+      四個 3D 測試的 tier 依規則由 integration 改為 unit(`mac_fluid3` 不再直接 import `numerics`)。
+      `_advect_flux` / `_flux_once` 先寫成一份時,aarch64 上三個通量式測試改變(`test_fluid_flux` KE flux 1.7181101 → 3.5310867,FMA 合併位置不同),
+      改為兩維各保留原式(`comptime if`)。本機以有 FMA 的 x86 目標驗證:三個測試的輸出與 main 的程式在同一目標上逐位元相同。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
+> 8. 粒子網格的計數排序 ✅(2026-11-18):`spatial.cell_sort.CellSort`(`build(cid, cells)` → `start` / `items`,穩定、只用整數)
+>    取代 `physics/pbf.mojo`、`pbf_unified.mojo`、`sph_rigid.mojo`、`ai/steering.mojo`、`nav/crowd.mojo` 的五份副本;各處仍用自己的格子規則
+>    (截斷或 floor、夾限與否、2D / 3D),只共用分組。用到這五個模組的 9 個測試 golden 段相同(`test_continuum` 只差 gate 濾掉的耗時行)。
+>    原計畫把「PBF / SPH 共用網格」列為改變結果的項目;只共用排序、不動格子規則與走訪順序時結果不變。
 > 9. 改變結果的整併(計畫第 3 階段)先量上界(2026-11-18;`scripts/fn_share.py`,探針在 `benchmarks/probes/`),四項都不做:
 >    - 關節依種類分桶:`joint_probe.mojo`(12 條 6 節的鏈,球 / 鉸鏈 / 距離關節交替,60 步)總指令 990 137 128,`joint_sweep` 自身 7.88 %,
 >      但其中多數是內聯的各種類算式;逐關節的種類判斷約 8 次比較,共 80 640 次關節迭代(`joint_axis` 241 920 次呼叫 ÷ 每輪 216),
