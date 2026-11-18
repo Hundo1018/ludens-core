@@ -68,8 +68,8 @@ class Native:
 class Wasm:
     def __init__(self, path):
         rt_root = Path(os.environ.get("LUDENS_WASM_RT", Path(__file__).resolve().parents[3] / "ludens-wasm-rt"))
-        sys.path.insert(0, str(rt_root / "tests"))
-        from wasmtime_host import Rt
+        sys.path.insert(0, str(rt_root))
+        from ludens_wasm_rt.wasmtime_host import Rt
         self.rt = Rt(Path(path))
 
     def call(self, name, *a):

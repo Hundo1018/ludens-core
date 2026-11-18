@@ -15,6 +15,10 @@ cd "$(dirname "$0")/.."
 RT="$(cd "${LUDENS_WASM_RT:-../ludens-wasm-rt}" && pwd)"
 export LUDENS_WASM_RT="$RT"
 export LUDENS_WASM_RT_HOST="$RT/ludens_wasm_rt/host.mjs"
+# CI checks out the ludens-wasm-rt commit in tools/wasm/wasm_rt.rev; say so when a local checkout is another one
+PIN="$(cat tools/wasm/wasm_rt.rev)"
+HAVE="$(git -C "$RT" rev-parse HEAD 2>/dev/null || echo unknown)"
+[ "$HAVE" = "$PIN" ] || echo "wasm-gate: ludens-wasm-rt at $RT is $HAVE, CI tests with $PIN (tools/wasm/wasm_rt.rev)" >&2
 GOLDEN=tests/golden/wasm_scenes.txt
 RTRUN=(pixi run --manifest-path "$RT/pixi.toml")
 mkdir -p build

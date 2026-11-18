@@ -84,9 +84,13 @@ jobs:
       LUDENS_WASM_RT: ${{ github.workspace }}/ludens-wasm-rt
     steps:
       - uses: actions/checkout@v4
+      - name: the ludens-wasm-rt commit this repository is tested with (tools/wasm/wasm_rt.rev)
+        id: rt
+        run: echo "rev=$(cat tools/wasm/wasm_rt.rev)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           repository: Hundo1018/ludens-wasm-rt
+          ref: ${{ steps.rt.outputs.rev }}
           path: ludens-wasm-rt
       - uses: ./.github/actions/pixi-install
       - name: wasm gate (scenes native vs wasmtime, worlds native vs node)
