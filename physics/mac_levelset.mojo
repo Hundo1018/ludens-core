@@ -45,46 +45,55 @@ from numerics.sparse import LinearOperator
 from numerics.cg import pcg, CgResult
 
 
-struct _LiquidPoisson(LinearOperator, Movable):
+struct _LiquidPoisson[D: Int](LinearOperator, Movable):
     """-lap p over the liquid cells (index map `cell` -> unknown) with
-    Neumann walls and ghost-fluid Dirichlet air neighbours; dx^2 = 1."""
+    Neumann walls and ghost-fluid Dirichlet air neighbours; dx^2 = 1. D is 2
+    (LevelSetWater2) or 3 (LevelSetWater3): cells are [(k n + j) n + i] with k
+    = 0 in 2D, and the sides are visited in the order +x, -x, +y, -y (+z, -z),
+    so the diagonal sums the same terms in the same order in both."""
 
+    comptime SIDES = 2 * Self.D
     var n: Int
     var unk: List[Int]  # per cell: unknown index or -1
     var cells: List[Int]  # per unknown: cell
     var diag: List[Real]
-    var nb: List[Int]  # per unknown: 4 neighbour unknowns (-1: none / not liquid)
+    var nb: List[Int]  # per unknown: SIDES neighbour unknowns (-1: none / not liquid)
 
     def __init__(out self, n: Int, phi: List[Real], open: List[Bool]):
         self.n = n
-        self.unk = List[Int](length=n * n, fill=-1)
+        var nn = n
+        comptime for _ in range(Self.D - 1):
+            nn *= n
+        self.unk = List[Int](length=nn, fill=-1)
         self.cells = List[Int]()
-        for c in range(n * n):
+        for c in range(nn):
             if phi[c] < 0:
                 self.unk[c] = len(self.cells)
                 self.cells.append(c)
         var m = len(self.cells)
         self.diag = List[Real](length=m, fill=0)
-        self.nb = List[Int](length=4 * m, fill=-1)
+        self.nb = List[Int](length=Self.SIDES * m, fill=-1)
         for k in range(m):
             var c = self.cells[k]
             var i = c % n
-            var j = c // n
+            var j = (c // n) % n
+            var kz = c // (n * n)
             var d = Real(0)
-            for s in range(4):
+            for s in range(Self.SIDES):
                 var ii = i + (1 if s == 0 else (-1 if s == 1 else 0))
                 var jj = j + (1 if s == 2 else (-1 if s == 3 else 0))
-                if ii < 0 or ii >= n or jj < 0 or jj >= n:
+                var kk = kz + (1 if s == 4 else (-1 if s == 5 else 0))
+                if ii < 0 or ii >= n or jj < 0 or jj >= n or kk < 0 or kk >= n:
                     # solid wall: no flux. Open wall: Dirichlet p = 0 at
                     # dx / 2, so 1 / theta = 2. Side index: 0 left, 1 right,
-                    # 2 bottom, 3 top; s ^ 1 maps the neighbour step to it.
+                    # 2 bottom, 3 top, 4 back, 5 front; s ^ 1 maps the step.
                     if open[s ^ 1]:
                         d += 2
                     continue
-                var o = jj * n + ii
+                var o = (kk * n + jj) * n + ii
                 if phi[o] < 0:
                     d += 1
-                    self.nb[4 * k + s] = self.unk[o]
+                    self.nb[Self.SIDES * k + s] = self.unk[o]
                 else:
                     var th = max(phi[c] / (phi[c] - phi[o]), Real(0.01))
                     d += 1 / th
@@ -96,8 +105,8 @@ struct _LiquidPoisson(LinearOperator, Movable):
     def apply(self, x: List[Real], mut out: List[Real]):
         for k in range(len(self.cells)):
             var a = self.diag[k] * x[k]
-            for s in range(4):
-                var o = self.nb[4 * k + s]
+            for s in range(Self.SIDES):
+                var o = self.nb[Self.SIDES * k + s]
                 if o >= 0:
                     a -= x[o]
             out[k] = a
@@ -258,7 +267,7 @@ struct LevelSetWater2(Movable):
     def _project(mut self, dt: Real) -> CgResult:
         var n = self.n
         var dx = self.dx
-        var op = _LiquidPoisson(n, self.phi, self.open)
+        var op = _LiquidPoisson[2](n, self.phi, self.open)
         var m = op.size()
         var rhs = List[Real](length=m, fill=0)
         for k in range(m):

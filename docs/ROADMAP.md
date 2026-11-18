@@ -4501,7 +4501,15 @@
 >    (每個 hull 對另外還建兩個 `ConvexPoly`)。
 > 6. 小項:trace 名稱改 `StaticString` 量得 588 774 217 → 588 735 207(−0.007 %,散佈 8.4e4 內),不做;`Quat` / `Motor3` 的
 >    `@always_inline` 會改變有 FMA 目標上的合併位置(17.96),需另行量測;`geometry/vec.mojo` 模組文件已更正(本 PR)。
-> 7. 2D / 3D 合併:`FlipWater[D]`、`MacFluid[D]`、`LevelSetWater[D]`,待做。
+> 7. 2D / 3D 合併:不屬於位元不變的範圍,移到改變結果的整併(另開 PR,附前後數字)。`physics/flip.mojo` 的取樣是巢狀線性插值
+>    (`lo = f00·(1−ax) + f10·ax`,`lo·(1−ay) + hi·ay`),`flip3.mojo` 是 8 個權重乘積的和;共用一個 `FlipWater[D]` 會改變 2D 水的結果
+>    (golden 與 wasm 閘門的 `water` 雜湊 `2507d4f1a5ca688d`),保留兩種算式則每個函式都要 `comptime if`,沒有合併到任何東西。
+>    `MacFluid` / `LevelSetWater` 不同:3D 取樣也是巢狀插值(先 x、再 y、再 z),在 2D 退化成 2D 的算式。逐函式比對(只讀程式碼):
+>    - `LevelSetWater[D]`:除 `_extrapolate`(鄰居相加順序:2D −x, +x, −y, +y;3D +x, −x, …)與 `_redistance`(2D 以 `|a−b| ≥ dx`
+>      判斷單側,3D 以 `min + dx ≤ max`)兩處要 `comptime if`,其餘逐式相同;1007 行可減約 350–400 行。
+>    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
+>      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
+>    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
 
 ## 編號索引
 
