@@ -4507,6 +4507,11 @@
 >    `MacFluid` / `LevelSetWater` 不同:3D 取樣也是巢狀插值(先 x、再 y、再 z),在 2D 退化成 2D 的算式。逐函式比對(只讀程式碼):
 >    - `LevelSetWater[D]`:除 `_extrapolate`(鄰居相加順序:2D −x, +x, −y, +y;3D +x, −x, …)與 `_redistance`(2D 以 `|a−b| ≥ dx`
 >      判斷單側,3D 以 `min + dx ≤ max`)兩處要 `comptime if`,其餘逐式相同;1007 行可減約 350–400 行。
+      **進度(2026-11-18)** ✅:先抽出 `_LiquidPoisson[D]`(#144)、`_ring[D]` 與 `_face_update`(#145),再合併為
+      `LevelSetWater[D]`(`physics/mac_levelset.mojo`;`LevelSetWater2` / `LevelSetWater3` 為別名,`mac_levelset3.mojo` 只剩別名與 3D 說明)。
+      所有陣列以 `(k ny + j) nx + i` 編號、2D 取 nz = 1;仍分維度的只有取樣(雙線性 / 三線性,2D 值即 3D 的第一個平面)、
+      重新距離化的更新式,以及 `set_box` / `set_open` / `velocity` 兩組多載(`comptime assert` 擋錯誤維度)。2D 新增 `sweeps` 欄位(預設 4)。
+      兩檔 951 → 694 行(main 比較)。6 個 level-set 測試(x86-64、`-D ASSERT=all`)的 golden 段逐位元相同。
 >    - `MacFluid[D]`:`momentum`(2D `(sx·dx)·dx`,3D `sx·(dx·dx·dx)`)、multigrid 型別(`PeriodicPoissonMG` / `MG3`)、2D 獨有的
 >      固體遮罩與動量修正、3D 獨有的渦度約束要分支;`Smoke2` / `Smoke3` 的約束演算法與浮力平均(f32 / f64)不同,保持分開。
 >    - `mac_levelset_particles` 2D / 3D 刻意不同的方案,保持分開。
