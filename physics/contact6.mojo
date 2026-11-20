@@ -551,7 +551,7 @@ def warm_start_contacts[B: Body6](
     """Apply the accumulated impulses at each anchor (Box2D v3 scheme: the
     soft solve's `-impulseScale·acc` term is what balances this out)."""
     for c in range(lo, hi):
-        var pr = pairs[c]
+        ref pr = pairs[c]
         if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
             continue
         var n = pr.m.normal
@@ -720,7 +720,7 @@ def solve_contact[B: Body6, F: Int](
     comptime MODEL = (F & CF_MODEL) != 0
     comptime ELL = (F & CF_ELLIPTIC) != 0
     comptime BLOCK = (F & CF_BLOCK) != 0
-    var pr = pairs[c]
+    ref pr = pairs[c]
     if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
         return
     var n = pr.m.normal
@@ -923,7 +923,6 @@ def solve_contact[B: Body6, F: Int](
                     bset.bodies[pr.b].apply_impulse(jt * _cs(bset, pr.b), pwb)
     comptime if MODEL:
         _solve_rolling(bset, pr, n)
-    pairs[c] = pr
 
 
 def _block_normal[B: Body6](
@@ -1173,7 +1172,7 @@ def restitution_pass[B: Body6](
     `vn = -e·vn0` (its own clamped accumulator, so sweeps can correct)."""
     for _ in range(iters):
         for c in range(lo, hi):
-            var pr = pairs[c]
+            ref pr = pairs[c]
             # ROADMAP 17.23: combined via each body's own
             # `restitution_combine` (default `COMBINE_MAX` for every
             # body -- `combine`'s docstring), so an all-default scene's
@@ -1223,7 +1222,6 @@ def restitution_pass[B: Body6](
                         bset.bodies[pr.a].apply_impulse(-j * _cs(bset, pr.a), pwa)
                     if bset.is_dynamic(pr.b):
                         bset.bodies[pr.b].apply_impulse(j * _cs(bset, pr.b), pwb)
-            pairs[c] = pr
 
 
 struct _ColorTask[B: Body6, F: Int](Task):
@@ -1319,7 +1317,7 @@ def apply_rules[B: Body6](
         return
     var kept = List[ContactConstraint](capacity=len(pairs))
     for c in range(len(pairs)):
-        var pr = pairs[c]
+        ref pr = pairs[c]
         var keep = True
         for r in range(len(rules)):
             ref ru = rules[r]
