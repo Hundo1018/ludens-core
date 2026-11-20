@@ -214,6 +214,9 @@ struct TimerHeap(TimerQueue):
         return TimerHandle(seq)
 
     def cancel(mut self, handle: TimerHandle):
+        """Mark the timer; its entry is dropped, and the mark with it, when `advance` reaches it. Cancelling a handle
+        that has already fired (a one-shot) or was already dropped leaves a mark that nothing removes: one Dict entry
+        per such call."""
         self.canceled[handle.seq] = True
 
     def advance(mut self, n_ticks: Int, mut fired: List[TimerFire]) raises:
@@ -225,6 +228,8 @@ struct TimerHeap(TimerQueue):
             while len(self.entries) > 0 and self.entries[0].due_tick <= self.tick:
                 var e = self._pop()
                 if e.seq in self.canceled:
+                    # the entry is gone for good (a repeating one is not pushed again), so its mark can go too
+                    _ = self.canceled.pop(e.seq, False)
                     continue
                 batch.append(TimerFire(TimerHandle(e.seq), e.id, self.tick))
                 if e.repeat_every > 0:
@@ -308,6 +313,9 @@ struct TimerWheel(TimerQueue):
         return TimerHandle(seq)
 
     def cancel(mut self, handle: TimerHandle):
+        """Mark the timer; its entry is dropped, and the mark with it, when `advance` reaches it. Cancelling a handle
+        that has already fired (a one-shot) or was already dropped leaves a mark that nothing removes: one Dict entry
+        per such call."""
         self.canceled[handle.seq] = True
 
     def _cascade(mut self, t: Int):
@@ -321,6 +329,7 @@ struct TimerWheel(TimerQueue):
         for i in range(len(bucket)):
             var e = bucket[i]
             if e.seq in self.canceled:
+                _ = self.canceled.pop(e.seq, False)  # dropped for good: the mark can go
                 continue
             self._insert(e)
 
@@ -338,6 +347,7 @@ struct TimerWheel(TimerQueue):
             for i in range(len(bucket)):
                 var e = bucket[i]
                 if e.seq in self.canceled:
+                    _ = self.canceled.pop(e.seq, False)  # dropped for good: the mark can go
                     continue
                 if e.due_tick == self.tick:
                     batch.append(TimerFire(TimerHandle(e.seq), e.id, self.tick))
