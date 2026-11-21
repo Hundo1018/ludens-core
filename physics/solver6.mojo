@@ -2272,7 +2272,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         # 3. Gauss-Seidel sweeps of accumulated per-point normal impulses.
         for _ in range(iters):
             for c in range(len(pairs)):
-                var pr = pairs[c]
+                ref pr = pairs[c]
                 for k in range(pr.m.count):
                     pr.acc[k] = solve_point(
                         self.bset,
@@ -2284,7 +2284,6 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                         dt,
                         pr.acc[k],
                     )
-                pairs[c] = pr
         # 4. Advance poses.
         for i in range(len(self.bset.bodies)):
             if not self.bset.is_static(i):
