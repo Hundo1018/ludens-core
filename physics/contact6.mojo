@@ -20,7 +20,7 @@ from collision.manifold import ContactManifold
 from collision.contact_gen import RawContact
 from collision.contact_events import pack_key
 from collision.collider_set import ColliderSet, SHAPE_SPHERE, SHAPE_CAPSULE, SHAPE_ELLIPSOID, SHAPE_COMPOUND, SHAPE_TRIMESH, SHAPE_HEIGHTFIELD, SHAPE_SDF
-from .rigid6 import Body6
+from .rigid6 import Body6, InvInertiaW
 from .body_set import BodySet
 from .material import combine
 
@@ -556,6 +556,15 @@ def warm_start_contacts[B: Body6](
             continue
         var n = pr.m.normal
         var tb = tangent_basis(n)
+        # ROADMAP 17.100 item 1: the same world inverse inertia `prepare_into`
+        # builds from the same pose, so this path and `warm_start_prepared`
+        # give the same bits (serial vs island-parallel / coloured parity).
+        var iwa = InvInertiaW.zero()
+        var iwb = InvInertiaW.zero()
+        if bset.is_dynamic(pr.a):
+            iwa = InvInertiaW.of(bset.bodies[pr.a].rotation(), bset.bodies[pr.a].get_inertia())
+        if bset.is_dynamic(pr.b):
+            iwb = InvInertiaW.of(bset.bodies[pr.b].rotation(), bset.bodies[pr.b].get_inertia())
         for k in range(pr.m.count):
             var j = (
                 n * pr.acc[k]
@@ -563,12 +572,12 @@ def warm_start_contacts[B: Body6](
                 + tb[1] * pr.acc_t2[k]
             )
             if bset.is_dynamic(pr.a):
-                bset.bodies[pr.a].apply_impulse(
-                    -j * _cs(bset, pr.a), anchor_world(bset, pr.a, pr.ra[k], pr.oa[k], pr.ea, n)
+                bset.bodies[pr.a].apply_impulse_iw(
+                    -j * _cs(bset, pr.a), anchor_world(bset, pr.a, pr.ra[k], pr.oa[k], pr.ea, n), iwa
                 )
             if bset.is_dynamic(pr.b):
-                bset.bodies[pr.b].apply_impulse(
-                    j * _cs(bset, pr.b), anchor_world(bset, pr.b, pr.rb[k], pr.ob[k], pr.eb, -n)
+                bset.bodies[pr.b].apply_impulse_iw(
+                    j * _cs(bset, pr.b), anchor_world(bset, pr.b, pr.rb[k], pr.ob[k], pr.eb, -n), iwb
                 )
         if bset.any_contact_model:
             var l = pr.roll_acc + n * pr.spin_acc
@@ -599,9 +608,9 @@ def warm_start_prepared[B: Body6](
                 + tb1 * pr.acc_t2[k]
             )
             if bset.is_dynamic(pr.a):
-                bset.bodies[pr.a].apply_impulse(-j * _cs(bset, pr.a), cache.pwa[4 * co + k])
+                bset.bodies[pr.a].apply_impulse_iw(-j * _cs(bset, pr.a), cache.pwa[4 * co + k], cache.iwa[co])
             if bset.is_dynamic(pr.b):
-                bset.bodies[pr.b].apply_impulse(j * _cs(bset, pr.b), cache.pwb[4 * co + k])
+                bset.bodies[pr.b].apply_impulse_iw(j * _cs(bset, pr.b), cache.pwb[4 * co + k], cache.iwb[co])
         if bset.any_contact_model:
             var l = pr.roll_acc + n * pr.spin_acc
             if bset.is_dynamic(pr.a):
@@ -683,6 +692,8 @@ struct SweepCache(Movable):
     var dt2: List[Real]
     var t1: List[Vec3]  # 1 per pair
     var t2: List[Vec3]
+    var iwa: List[InvInertiaW]  # 1 per pair: world inverse inertia of `a` (17.100 item 1)
+    var iwb: List[InvInertiaW]  # 1 per pair: of `b`
 
     def __init__(out self, lo: Int, hi: Int):
         var n = max(hi - lo, 0)
@@ -694,6 +705,8 @@ struct SweepCache(Movable):
         self.dt2 = List[Real](length=4 * n, fill=0)
         self.t1 = List[Vec3](length=n, fill=Vec3(0, 0, 0, 0))
         self.t2 = List[Vec3](length=n, fill=Vec3(0, 0, 0, 0))
+        self.iwa = List[InvInertiaW](length=n, fill=InvInertiaW.zero())
+        self.iwb = List[InvInertiaW](length=n, fill=InvInertiaW.zero())
 
 
 @always_inline
@@ -743,6 +756,8 @@ def prepare_into[B: Body6](
         sc.dt2.resize(4 * n, 0)
         sc.t1.resize(n, Vec3(0, 0, 0, 0))
         sc.t2.resize(n, Vec3(0, 0, 0, 0))
+        sc.iwa.resize(n, InvInertiaW.zero())
+        sc.iwb.resize(n, InvInertiaW.zero())
     for c in range(lo, hi):
         ref pr = pairs[c]
         if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
@@ -750,6 +765,13 @@ def prepare_into[B: Body6](
         var n = pr.m.normal
         var tb = tangent_basis(n)
         var o = c - lo
+        # ROADMAP 17.100 item 1: world inverse inertia of each dynamic end at
+        # the current pose, per pair (a body in several pairs is rebuilt from
+        # the same inputs, so every pair sees the same value).
+        if bset.is_dynamic(pr.a):
+            sc.iwa[o] = InvInertiaW.of(bset.bodies[pr.a].rotation(), bset.bodies[pr.a].get_inertia())
+        if bset.is_dynamic(pr.b):
+            sc.iwb[o] = InvInertiaW.of(bset.bodies[pr.b].rotation(), bset.bodies[pr.b].get_inertia())
         sc.t1[o] = tb[0]
         sc.t2[o] = tb[1]
         for k in range(pr.m.count):
@@ -992,9 +1014,9 @@ def solve_contact[B: Body6, F: Int](
             if dl != 0:
                 var j = n * dl
                 if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse(-j * _cs(bset, pr.a), pwa)
+                    bset.bodies[pr.a].apply_impulse_iw(-j * _cs(bset, pr.a), pwa, cache.iwa[co])
                 if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse(j * _cs(bset, pr.b), pwb)
+                    bset.bodies[pr.b].apply_impulse_iw(j * _cs(bset, pr.b), pwb, cache.iwb[co])
         # Coulomb friction: tangent impulses clamped to pair_mu * lambda_n.
         # an adhesive point's normal impulse may be negative; it gives no grip
         var lam = pr.acc[k] if pr.acc[k] > 0 else Real(0)
@@ -1038,9 +1060,9 @@ def solve_contact[B: Body6, F: Int](
             if dtl != 0:
                 var jt = t * dtl
                 if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse(-jt * _cs(bset, pr.a), pwa)
+                    bset.bodies[pr.a].apply_impulse_iw(-jt * _cs(bset, pr.a), pwa, cache.iwa[co])
                 if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse(jt * _cs(bset, pr.b), pwb)
+                    bset.bodies[pr.b].apply_impulse_iw(jt * _cs(bset, pr.b), pwb, cache.iwb[co])
         if disk:
             var t1 = pr.acc_t1[k]
             var t2 = pr.acc_t2[k]
@@ -1051,9 +1073,9 @@ def solve_contact[B: Body6, F: Int](
                 pr.acc_t2[k] = t2 * sc
                 var jt = tb0 * (t1 * sc - t1) + tb1 * (t2 * sc - t2)
                 if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse(-jt * _cs(bset, pr.a), pwa)
+                    bset.bodies[pr.a].apply_impulse_iw(-jt * _cs(bset, pr.a), pwa, cache.iwa[co])
                 if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse(jt * _cs(bset, pr.b), pwb)
+                    bset.bodies[pr.b].apply_impulse_iw(jt * _cs(bset, pr.b), pwb, cache.iwb[co])
     comptime if MODEL:
         _solve_rolling(bset, pr, n)
 
