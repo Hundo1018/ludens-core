@@ -57,15 +57,15 @@
 | [剛體動力學、接觸與關節](#剛體動力學接觸與關節) | physics:solver6、接觸、最大座標關節、islands / sleeping、材質 | 23 | 1 | 1 | 0 |
 | [碰撞形狀、寬窄相與世界查詢](#碰撞形狀寬窄相與世界查詢) | collision、spatial | 15 | 0 | 0 | 0 |
 | [縮座標關節體與致動](#縮座標關節體與致動) | chain(ABA / RNEA)、致動器、腱、感測器、統一約束 | 11 | 0 | 0 | 0 |
-| [軟體、布料、連續體與流體](#軟體布料連續體與流體) | softbody、cloth、FEM / MPM / SPH / PBF、LBM、繩索 | 16 | 5 | 1 | 1 |
+| [軟體、布料、連續體與流體](#軟體布料連續體與流體) | softbody、cloth、FEM / MPM / SPH / PBF、LBM、繩索 | 16 | 0 | 0 | 7 |
 | [可微模擬、批次世界與數值深化](#可微模擬批次世界與數值深化) | diffsim、diffsolver、tape、批次、稀疏線代 | 7 | 0 | 0 | 1 |
-| [GPU 計算](#gpu-計算) | GPU kernels 與單一 device context | 2 | 1 | 0 | 0 |
+| [GPU 計算](#gpu-計算) | GPU kernels 與單一 device context | 2 | 0 | 0 | 1 |
 | [動畫與程序化](#動畫與程序化) | procedural:anim / IK / tween / spline / noise / FSM / PCG | 11 | 0 | 0 | 0 |
-| [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 1 | 0 | 1 |
-| [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 1 | 0 | 0 |
-| [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 20 | 2 | 0 | 0 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 5 | 5 | 2 | 0 |
-| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 12 | 2 | 0 | 0 |
+| [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 0 | 0 | 2 |
+| [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 0 | 0 | 1 |
+| [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 21 | 1 | 0 | 0 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 1 | 1 | 3 |
+| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 13 | 0 | 0 | 1 |
 
 ## 原則與決策
 
@@ -120,7 +120,7 @@
 | 滑鼠點選物件(picking) | 17.13 raycast / shapecast | ✅ |
 | 跨存讀穩定的物件身分(選取、參照不因重載失效) | 17.0g `BodyId` · ECS entity id · 3.3 relationships(階層 / outliner) | ✅ |
 | 編輯即時反映(欄位變更推播給視圖) | 4.4 push-based observers | ✅ |
-| Undo / redo | 17.43(`EmbedWorld` 物體與關節:`embed/undo.mojo`;ECS 實體的刪除、元件變更與交易:`ecs/entity_undo.mojo`) | 🔶 物體(方塊 / 球體 / 膠囊 / 運動學)、關節的 `UndoLog` 與 `SnapshotUndo`,以及實體刪除、元件變更 / 移除與交易的復原已完成;地形編輯、凸殼 / 網格、bench 列未做 |
+| Undo / redo | 17.43(`EmbedWorld` 物體與關節:`embed/undo.mojo`;ECS 實體的刪除、元件變更與交易:`ecs/entity_undo.mojo`) | ✅ 物體(方塊 / 球體 / 膠囊 / 運動學)、關節的 `UndoLog` 與 `SnapshotUndo`,以及實體刪除、元件變更 / 移除與交易的復原;地形編輯、凸殼 / 網格隨 17.97 的切片做(2026-11-22 整理) |
 | Play-in-editor:進入播放、停止後還原 | 6.10 快照 / 17.40 存檔 | ✅ |
 | 時間軸拖動 / 回看模擬 | 17.39 `seek` / `first_divergence` | ✅ |
 | Profiler 面板 | 17.10 trace(Chrome trace 匯出)· 17.80(執行期追蹤開關、物理擷取檔與回看) | ✅(runtime 開關與擷取檔 → 17.80 ⬜) |
@@ -130,9 +130,30 @@
 | 曲線 / 路徑的控制點編輯 | 17.36 樣條(控制點資料模型) | ✅ |
 | 資產匯入(glTF / USD) | 17.12 對照組所列 · 17.45 碰撞網格烘焙(焊接 / 修復 / 簡化、mesh → SDF)· 17.63 模擬快取 / 稀疏體積交換 | ⬜(同 17.12;平台方向 C 下為主要場景來源) |
 
-擋住外部編輯器的是 **17.12 場景 / prefab 格式**(2026-11-02 排程,第一片完成)與 **17.43 undo 交易層**(2026-11-02 排程,第一片完成),其次是 17.21 的 live 調校。
+擋住外部編輯器的是 **17.97 宿主入口**(實體、`ChildOf`、換關卡;17.12 core 端剩下的切片併入)與 ludens-engine 的場景格式實作(#125);17.43 的核心 API 已完成(2026-11-22 整理)。
 
 ## 優先序
+
+### 2026-11-22 整理(取代下方各節的未竟部分)
+
+未完成的 23 條依條目內已寫下的決定與前提分成四類。下方 2026-10-09 / 2026-10-13 的順序保留為紀錄;
+其中未完成的條目都已歸入以下四類。
+
+**已完成,只是狀態未更新(改 ✅)**:17.89 wasm 平台、17.90 音訊與視訊(核心側;出聲與畫面在獨立 repo)、
+17.98 編譯期參數化、17.43 Undo / redo(headless 核心 API)。
+
+**受環境限制(改不排,附解除條件)**:17.17(GPU 主機)、17.63(外部樣本檔)、17.83(固定主機的牆鐘閘門)、
+17.78(Godot / Unity 實機)、17.76(macOS runner 每次被取消)、17.91(aarch64 只能經 CI 驗證)。
+
+**依前提不排**:13.9 ⏸(等 RL 平台需求,2026-10-09);17.58、17.60、17.61、17.62、17.70、17.74、17.86:
+[ludens-engine docs/capability-gaps.md](https://github.com/Hundo1018/ludens-engine/blob/main/docs/capability-gaps.md) 的結論是先補遊戲製作缺口、再擴模擬廣度,而這七條目前沒有消費者。
+
+**剩下的工作(依序)**:
+1. 17.100 接觸求解器的遊戲規模效能(golden 破例已同意;含 17.19 移來的兩個預設)。
+2. 17.97 宿主入口切片 1–5(實體、`ChildOf`、事件冒泡、群組、換關卡),17.12 core 端剩下的切片併入;
+   這是 ludens-engine 場景格式實作(#125)與編輯器命令層的前置。
+3. 17.19 求解器硬化剩餘(增量 broadphase 與 17.100 第 5 項一起做;依負載的接觸勁度;未入睡凸殼的振盪)。
+4. 17.96 FMA 決定論(研究,非必要;是否進行由使用者決定)。
 
 ### 已決定的剩餘順序(2026-10-09,2026-10-10 修訂)
 1. 17.14 導航
@@ -324,6 +345,8 @@
 > **歷史**:原「現況」寫「`Joint6` 僅 ball / distance / hinge **等式約束**;無限制/馬達/彈簧/滑軌/焊接」。其中焊接(weld)後來由 17.5 交付(見上)。
 
 #### 17.19 生產級 solver 硬化
+
+> **整理(2026-11-22)**:🔶(2026-11-22 整理):剩餘:島嶼簿記略超線性(增量 broadphase 已列入 17.100,一起做)、依負載的接觸勁度、未入睡凸殼的振盪。`max_mass_ratio` 與網格接觸 reduction 是否預設開啟,在 17.100 中一起決定(使用者,2026-11-22),因為兩者都會改變既有場景的結果。
 > **進度註(2026-10-28,第二輪分流:未核對列的終態與實跑證據)**:
 > - **會計熱點(coloring / 逐幀 BVH / CCD)**:`experiments/exp_solver_hotspot.mojo`(N = 4050,20 步)。BVH 建樹改用 SAH(`collision/bp_bvh.mojo:25`,`build_boxes(sah=True)`)做了一次交錯量測,5 組各一次,每步毫秒:基線 38.68 / 38.76 / 39.82 / 40.56 / 41.71(中位數 39.82);SAH 38.38 / 39.28 / 40.71 / 41.33 / 42.76(中位數 40.71)。無改善(+2.2 %,在雜訊內),**已還原**。負面結果。**cachegrind 前後(2026-10-28,`pixi run icount`,各 3 次)**:SAH 446 980 896 / 446 995 538 / 446 997 394(均值 446 991 276);還原後的基線 446 970 570 / 446 992 110 / 446 973 280(均值 446 978 653)。差 12 623 條,2.8e-5 相對,落在單次散佈(4.8e-5 相對)內。讀法:`icount_probe` 不經寬相,預期無變化,量測與之相符;這不是 SAH 的效能證據,只說明本 probe 看不見此改動。同一原始碼在本次建置為 446.97 M,與 17.83 注記的 446.57 M 相差 0.09 %,表示跨建置的指令數有此量級的漂移,差異小於 0.1 % 時不作為訊號。
 > - **凸殼振盪(body 14,未入睡)**:`tests/` 與 `experiments/` 內無此重現(grep `body 14|body14|rocking` 只命中 `test_ellipsoid.mojo` 的橢球搖擺與 `test_solver6.mojo` 的注釋)。終態 **deferred**:先寫重現場景與逐步接觸夥伴的實驗,之後才能判定是接觸翻動或軟體節點推動。
@@ -754,6 +777,7 @@
 > 4. 預設迭代數改 4 子步 × 1 次 + 放鬆(Box2D v3 的預設),先做穩定性測試(10 層堆疊、20 層金字塔、布娃娃、playground 的場景)。
 > 5. 增量 broadphase:BVH 目前每 tick 重建(1 × 4、200 箱時佔 14 %),改 refit / 增量更新,候選配對順序保持決定性。
 > 6. 原生 island 平行:`cfg.parallel` 預設關;4 核心 1000 箱 16.2 → 9.2 ms,但雜湊與循序不同;決定平行是否必須與循序相同並照辦,或寫明差異。
+> 7. 兩個改變既有場景結果的預設(由 17.19 移來,使用者 2026-11-22 決定在本項一起決定):`max_mass_ratio` 是否預設開啟、網格接觸 reduction 是否預設開啟;各附開 / 關的穩定性與成本對照。
 > **驗收**(每個 PR):`phys-profile` 的成本表(原生循序、原生平行、wasm64;50 / 200 / 1000 醒著的箱子;4 × 4 與新預設)前後對照;穩定性:
 > 堆疊與金字塔漂移、布娃娃與關節鏈、playground 的 camp 與 quarry 場景,前後比較並在 PR 寫出界限;golden 只在改變它的 PR 重新產生,附理由。
 
@@ -1310,13 +1334,13 @@
 | 17.55 | [連續體步進契約](#1755-連續體步進契約--wave-b連續體前置) | ✅ | B | `ContinuumSolver` 契約、登記與排序、統一失敗政策、快照參與、耦合埠(coupling port)、單位與時間慣例 |
 | 17.56 | [布料](#1756-布料--wave-b) | ✅ | B | 任意三角網格布料、剪切 + 彎曲 + 拉伸上限、與場景碰撞、空氣動力、撕裂、網格自碰撞 |
 | 17.57 | [毛髮 / 肌肉](#1757-毛髮--肌肉--wave-c) | ✅ | C | 股線(FTL + 彎曲 + 根部附著 + 碰撞 / 體素交互)、Hill 型完整曲線與串聯腱、體積肌肉、可微肌肉控制、捲曲靜止形、Cosserat 扭轉桿;扭轉與股線的整合殘項見 17.86 |
-| 17.86 | [扭轉股線整合](#1786-扭轉股線整合--wave-c) | 🔶 | C | 扭轉與 `StrandSet` / `Rope` 的整合、扭轉驅動的螺旋 / plectoneme 屈曲量測、與流體 / 接觸的耦合 |
-| 17.58 | [體積軟體](#1758-體積軟體--wave-c) | 🔶 | C | FEM 進場景、本構模型庫、四面體網格化、塑性 / 黏彈、MPM 邊界、求解器變體 |
+| 17.86 | [扭轉股線整合](#1786-扭轉股線整合--wave-c) | 不排 | C | 扭轉與 `StrandSet` / `Rope` 的整合、扭轉驅動的螺旋 / plectoneme 屈曲量測、與流體 / 接觸的耦合 |
+| 17.58 | [體積軟體](#1758-體積軟體--wave-c) | 不排 | C | FEM 進場景、本構模型庫、四面體網格化、塑性 / 黏彈、MPM 邊界、求解器變體 |
 | 17.59 | [流固耦合](#1759-流固耦合--wave-c) | 不排 | C | LBM ↔ 移動剛體(含輕物體隱式阻力、跨週期邊界)、SPH ↔ 剛體、MPM ↔ 剛體已做;PBF 雙向、柔性體 ↔ 流體未做 |
-| 17.60 | [水面 / 網格流體](#1760-水面--網格流體--wave-c) | 🔶 | C | `WaterSurface` 水面查詢、歐拉式不可壓縮格網流體、氣體 / 煙霧、LBM 擴充、粒子 → 表面 |
-| 17.61 | [多物理](#1761-多物理--wave-c) | 🔶 | C | `Coupler` 抽象、熱場、布料 / 毛髮 ↔ 氣流雙向、多相流 / 顆粒 – 流體、子步比與時間插值 |
-| 17.62 | [GPU / 可微連續體](#1762-gpu--可微連續體--wave-cgpu--可微) | ⬜ | C | GPU 連續體求解器、持久裝置狀態、可微布料 / XPBD、可微 FEM / MPM、可微 LBM、批次 × 可微 × 連續體 |
-| 17.63 | [輸出 / 快取](#1763-輸出--快取--wave-c資產管線提供者) | 🔶 | C | 模擬快取(cache)、Alembic(Ogawa)寫出、OpenVDB / NanoVDB 稀疏體積交換、`CachePlayer`、大小 / 重算取捨、格式治理 |
+| 17.60 | [水面 / 網格流體](#1760-水面--網格流體--wave-c) | 不排 | C | `WaterSurface` 水面查詢、歐拉式不可壓縮格網流體、氣體 / 煙霧、LBM 擴充、粒子 → 表面 |
+| 17.61 | [多物理](#1761-多物理--wave-c) | 不排 | C | `Coupler` 抽象、熱場、布料 / 毛髮 ↔ 氣流雙向、多相流 / 顆粒 – 流體、子步比與時間插值 |
+| 17.62 | [GPU / 可微連續體](#1762-gpu--可微連續體--wave-cgpu--可微) | 不排 | C | GPU 連續體求解器、持久裝置狀態、可微布料 / XPBD、可微 FEM / MPM、可微 LBM、批次 × 可微 × 連續體 |
+| 17.63 | [輸出 / 快取](#1763-輸出--快取--wave-c資產管線提供者) | 不排 | C | 模擬快取(cache)、Alembic(Ogawa)寫出、OpenVDB / NanoVDB 稀疏體積交換、`CachePlayer`、大小 / 重算取捨、格式治理 |
 
 ### 已完成條目的遺留待辦
 
@@ -1626,6 +1650,8 @@
 > (對 OpenSim 資料)是 benchmark 軸,不是臨床宣稱;完整物理角色屬 17.66。
 
 #### 17.86 扭轉股線整合 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):同 17.58,目前沒有消費者。
 > **分流(2026-10-27)**:stale-done:StrandSet 扭轉、螺旋 / plectoneme 量測、球 / 盒 / 空氣耦合;deferred:Rope 扭轉整合、frame-reading 接觸 / 空氣模型、Greenhill 離散校正 B / C、`rod_from_strand` 鏈條 parity(量測為不等價)。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **來源**:17.57 收尾時的殘項(原為 17.57 的「未做」,17.41 已 ✅ 不再接收)。
 > **缺口**:(1)`CosseratRod` 的扭轉與 `StrandSet` / `Rope` 的整合,現為三個獨立型別;(2)扭轉驅動的螺旋 / plectoneme 屈曲量測(無量測即無結論);(3)與流體 / 接觸的耦合。
@@ -1647,6 +1673,8 @@
 
 > **進度註(2026-11-06,Rope 扭轉,#101 的第一項)**:`physics/rope_twist.mojo` 的 `RopeTwist`:每個繩粒子一個扭轉角,段間為扭轉彈簧 k = GJ / dl,節點極慣量 I,可選阻尼;根端驅動(`set_root`),尖端自由或固定。`tests/test_rope_twist.mojo`(unit,6/6):21 節、GJ = 2、phi = 1 rad;固定尖端穩態為線性剖面(最大誤差 < 1e-3)、根扭矩 = GJ phi / L(相對 < 1e-3);自由尖端全部收斂到 phi、扭矩 → 0;根端階躍的波前到第 80 節的時間與 m sqrt(I / k) 相差 < 10 %;無阻尼能量偏差在 dt = 0.01 max_dt 為 7.8e-3、0.005 max_dt 為 3.9e-3(與 dt 成正比,不漂移)。第一次用 0.2 max_dt 測得 0.18,是 symplectic Euler 的一階振盪,不是漏能。**未做**:扭轉與彎曲的耦合(plectoneme 需要帶框架的 `CosseratRod` / `StrandSet.twist`)、frame-reading 接觸 / 空氣、Greenhill B / C、`rod_from_strand` parity。#101 仍開著。
 #### 17.58 體積軟體 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):[ludens-engine docs/capability-gaps.md](https://github.com/Hundo1018/ludens-engine/blob/main/docs/capability-gaps.md) 的結論是先補遊戲製作缺口(自動化合約、文字、輸入、資料表等),再擴模擬廣度;本條目前沒有消費者。
 > **進度註(2026-10-27,沙能量帳)**:`MpmSolver.measure_loss`(預設關)累計回切移除的能量 Σ vol(ψ 前 − ψ 後),ψ 為 `elastic_energy(F)` 的 固定共旋轉能量 μΣ(σᵢ−1)² + λ/2 (J−1)²(與 `step_ext` 散佈的應力同一能量;先前版本用 Hencky 能量,與應力不一致,已改)。`experiments/exp_sand_budget.mojo` 跑 `test_mpm_sand` 的砂柱(600 步、0.3 s),E0 = 155.53 J。0° 為對照(無砂、回切為 0)。
 >
 > | 摩擦角 | KE (J) | 彈性 ψ (J) | 重力 PE (J) | 總耗散 Q (J) | 回切移除 (J) | 其餘 Q − 回切 (J) |
@@ -1941,6 +1969,8 @@
 > 流體渲染 / 泡沫著色屬宿主;載具浮筒 / 船體屬 17.74。
 
 #### 17.60 水面 / 網格流體 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):同 17.58;另外剩餘三項條目自己記為「未歸因 / 沒有量測動機」。
 > **進度註(2026-10-28,第二輪分流:已實作項的校正)**:本條列的三項未做皆已在程式碼中,設計與範圍見 `docs/design/17.60-remainders.md`:
 > (1) ω3 / 三階 cumulant:`fluid/lbm_cumulant.mojo` `Lbm27.omega3`(1937bc1),`tests/test_lbm_omega3.mojo` 5/5。
 > (2) MAC 網格 3-D 水位:`physics/mac_levelset3.mojo` `LevelSetWater3`,`tests/test_levelset3.mojo` 6/6(閉合箱)。
@@ -2119,6 +2149,8 @@
 > 具體機制屬 17.59。
 
 #### 17.61 多物理 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):同 17.58,目前沒有消費者。
 > **進度註(2026-10-28,第二輪分流:未核對列)**:(1)氣體容器壁:`tests/test_multiphase.mojo` 3/3(靜水壓力與容器壁作用的檢查通過;底部兩層平均壓力 2833.9 Pa,靜水估計 2528.4 Pa)。終態 **stale-done**。(2)布料 + 空氣動量缺口:`tests/test_cloth_air.mojo` 9/9;釘住的布料在 0.4 m/s 上升氣流中,空氣動量變化 −0.0045566 對衝量 −0.0045550,相對差 3.5e-4。此數與 ROADMAP 上方的「2.8 %」不同,後者未重新量測;在這個測試的量測下,缺口已遠小於 2.8 %。終態 **stale-done**(以本測試為準,ROADMAP 的 2.8 % 數字應另行核對)。(3)多相假流:終態 **stale-done**,由 (1) 的測試覆蓋。
 > **分流(2026-10-27)**:doable:股線 / 布料 ↔ Smoke2 雙向;done(本輪):糊狀顆粒剪應力乘 (1 − φ)、`MacFluid2` 固體格遮罩(見下方進度註 2026-10-27);unverified:氣體容器壁、布料+空氣 2.8 % 動量缺口、多相假流;deferred:火 / 燃燒;stale-done:3-D 點源。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **進度註(2026-10-27,固體格遮罩)**:`MacFluid2.set_solid(mask)`(opt-in;預設空表不變)。被固體格碰到的面在每次投影前把法向速度歸零(`_zero_solid_faces`),投影的 Laplacian 換成 `_MaskedNegLaplacian`:兩個流體格之間的面才耦合,固體格為單位列,平均只對流體格取。拒絕:遮罩長度不為 n²、流體格沒有流體鄰格、全固體、與多重網格併用。`tests/test_fluid_solid.mojo` 7/7(integration,32² 週期格、dx 1/32、dt 1/120、1 s,8×8 固體方塊,入流 u = 1 + 0.3 sin(2πi/n)、v = 0.3 sin(2πj/n))。量測:固體相鄰面的最大法向速度 0.0(120 步);流體格散度最大 4.8e-5(預先寫的界 0.032);方塊前後平均 u 0.207 與 −0.034(界只要求 < 1,即方塊有阻擋);全流體遮罩對無遮罩路徑,10 步最大 |Δu| 6.0e-8(界 1e-5)。**作廢的第一次執行**:入流為均勻 u = 1,散度為零,投影解的是零右端項,全流體對照得 0.0,未測到運算子,故改為有散度的入流重跑。動量不守恆於有固體的情況,未量測;格子為階梯式,未做無滑移邊界。
@@ -2210,6 +2242,8 @@
 > **進度註(2026-11-06,火 / 燃燒,#95 的格子部分)**:`physics/combustion.mojo` 的 `FireGrid` = `HeatGrid` 加每格燃料;每步先傳導,再讓 T ≥ t_ignite 且有燃料的格燃燒 `burned = fuel (1 - exp(-k dt))`、`T += heat_per_fuel * burned`(指數形式使步長無關)。`tests/test_combustion.mojo`(unit,13/13):單格無傳導燒到 T0 + heat_per_fuel x fuel(700 + 300 x 2 = 1300 K,相對誤差 < 1e-5)、放熱 = heat_per_fuel x 損失燃料、一步 2dt = 兩步 dt;低於著火溫度不燃、無燃料不蔓延。200 格一維棒(α = 1e-3,dx = 0.01 m,20 s):火前沿 k = 1 為 84 格(前 10 s 41 格,後 10 s 43 格,速度穩定),k = 4 為 164 格,比值 1.95(√ 標度預期 2)。首次用 α = 1e-4 時比值只有 1.25:燃燒率 20 /s 遠大於格間傳導率 α/dx² = 1 /s,前沿受離散限制而非連續極限,故測試改用 α/dx² = 10 /s。燃料守恆以 Float32 格累加,誤差界為 1e-4 相對。**未做**:火焰浮力、煙、輻射(需氣體求解器 `physics.mac_*`)、氧氣限制。
 #### 17.62 GPU / 可微連續體 — Wave C(GPU / 可微)
 
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提與環境):同 17.58,且需要 GPU 主機(第 7 層)。
+
 > **現況**:**GPU**:連續體裡只有三塊在裝置上——布料 XPBD(`physics/gpu_cloth.mojo:35`、`:75`、`:139`、`:163` 四個 kernel)與
 > VBD(`physics/vbd_cloth.mojo:114`、`:160`、`:228`),以及 LBM(`fluid/lbm_gpu.mojo:149`,BGK + 體力 + 風洞進出口,
 > 不含 LES / 插值 bounce-back / 動量交換歸約,`:11-14`);剛體 GPU 求解器遇軟體直接拒絕
@@ -2255,6 +2289,8 @@
 > 渲染 / 網格輸出屬 17.63。
 
 #### 17.63 輸出 / 快取 — Wave C(資產管線提供者)
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘子項需要外部樣本檔(NanoVDB 參考檔、OpenVDB 壓縮檔、Alembic 讀回),2026-10-26 已決定不列為待做。
 > **進度註(2026-10-28,第二輪分流:大小與重算取捨)**:`benchmarks/bench_sim_cache.mojo` 實跑。256 點布料 × 240 幀:誤差上限 1 cm 時 3.05 bytes/點幀,1 mm 時 3.21,0.1 mm 時 3.80,無損(0 m)時 12.05(原始 12)。取第 200 幀:快取解碼(關鍵幀 192 + 8 個差分)22.2 µs;快照 192 + 重算 9 幀 8.22 ms。快取約快 370 倍。終態 **done**(量測完成;取捨的建議值仍由宿主決定)。
 > **分流(2026-10-27)**:doable:讀回自寫 `.vdb`(zlib inflate)、主動 tile 讀取、Alembic 讀回;env-blocked:NanoVDB(需參考檔與規格);unverified:大小 vs 重算取捨;deferred:點數變化時強制 keyframe;stale-done:sim cache、Alembic / VDB 寫入。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **進度註(2026-10-13)**:點快取先行。`physics/sim_cache.mojo`:`PointCacheWriter`(量化到 2·err、關鍵幀存 zig-zag varint、差分幀存整數差 → 無漂移;
@@ -2524,7 +2560,7 @@
 |---|---|:-:|:-:|---|
 | 3.2 | [GPU 物理(Mojo kernels)](ROADMAP_HISTORY.md#32-gpu-物理mojo-kernels) | ✅ |  | 引擎首個 GPU 常駐物理:gather 式 Jacobi XPBD 布料 4 kernels、`has_accelerator` 守衛,CPU/GPU parity 2.4e-6,RTX 3060 上 16k 粒子 8.3×、65k 粒子 1.08 ms/step。 |
 | 4.3 | [GPU 物理擴張:VBD 原型](ROADMAP_HISTORY.md#43-gpu-物理擴張vbd-原型) | ✅ |  | VBD 布料原型(每頂點 3×3 局部 Newton、棋盤 2 著色 Gauss-Seidel、4 個 kernel)與 XPBD 同場景比較:在簡單布料上 XPBD 收斂較快較省;另修好多 DeviceContext 掛死問題(共享單 context,128² XPBD GPU 28×)。 |
-| 17.17 | [GPU 剛體 / articulation solver](#1717-gpu-剛體--articulation-solver) | 🔶 | B | `GpuContactSolver` 把 `ContactScene6` 著色模式的接觸子步迴圈搬到 GPU(CPU 保留收集、island、著色與簿記),以量測出的擾動界通過 parity 測試 22/22。2026-10-12 加上批次 articulation(ABA,每個 thread 一個實例,支援轉動 / 滑動關節)與批次 narrowphase(box / sphere / capsule),裝置程式碼已為 sm_86 編譯並檢查 PTX,但尚未在 GPU 主機上執行。 |
+| 17.17 | [GPU 剛體 / articulation solver](#1717-gpu-剛體--articulation-solver) | 不排 | B | `GpuContactSolver` 把 `ContactScene6` 著色模式的接觸子步迴圈搬到 GPU(CPU 保留收集、island、著色與簿記),以量測出的擾動界通過 parity 測試 22/22。2026-10-12 加上批次 articulation(ABA,每個 thread 一個實例,支援轉動 / 滑動關節)與批次 narrowphase(box / sphere / capsule),裝置程式碼已為 sm_86 編譯並檢查 PTX,但尚未在 GPU 主機上執行。 |
 
 ### 已完成條目的遺留待辦
 
@@ -2537,6 +2573,8 @@
 ### 待辦與部分完成條目
 
 #### 17.17 GPU 剛體 / articulation solver
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘只有在 GPU 主機上實跑 `test_gpu_artic` 的裝置半段與 bench 的裝置列。本工作環境沒有加速器;有 GPU 主機時再排。
 
 > **狀態**:🔶 部分完成(Wave B;GPU 剛體接觸 ✅ 2026-09-29;GPU articulation / narrowphase 程式碼 2026-10-12 交付,**裝置端尚未在 GPU 上執行** —— 本機無加速器,見下方進度;剩餘順序第 (7) 項)
 > **缺口**:GPU 端 contact solver(著色 / Jacobi PGS)、GPU narrowphase / manifold、GPU articulation(Featherstone on device),以及 CPU↔GPU parity。
@@ -2751,7 +2789,7 @@
 | 17.67 | [移動模式](#1767-移動模式--wave-b) | ✅ | B | 模式機、加速度模型、跳躍手感、任意向上軸、外部速度 / 衝量累加器、移動平台完整繼承 |
 | 17.68 | [攝影機 / 序列](#1768-攝影機--序列--wave-bheadless-資料--邏輯) | ✅ | B | 鏡頭資料與 rig、鏡頭混合與優先序、震動、視錐數學(模擬端用途)、序列 / 時間軸 |
 | 17.71 | [戰鬥物理](#1771-戰鬥物理--wave-b) | ✅ | B | 受擊 / 攻擊體積、近戰掃掠、hitscan 與穿透 / 跳彈、彈道投射物、爆炸、受擊反應 |
-| 17.74 | [載具家族](#1774-載具家族--wave-c) | 🔶 | C | 履帶車、水上載具、飛行器、懸浮 / 推進器陣列、機車 / 自行車、通用服務 |
+| 17.74 | [載具家族](#1774-載具家族--wave-c) | 不排 | C | 履帶車、水上載具、飛行器、懸浮 / 推進器陣列、機車 / 自行車、通用服務 |
 | 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | ✅ | B | `embed/ragdoll.mojo` 經 EmbedWorld 公開 API 建 / 移除布娃娃(`RagdollSpec`、`EmbedRagdoll`);`gameplay.skin_link.fit_group_boxes` 依關節群組擬合剛體 |
 
 ### 已完成條目的遺留待辦
@@ -2980,6 +3018,8 @@
 > 由世界姿勢建蒙皮調色盤:`geometry.skinning.bind_palette` 已提供。
 
 #### 17.74 載具家族 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):同 17.58;剩餘項 2026-10-17 已評估為技術債,後續條目皆不依賴。
 > **進度註(2026-10-27,水上舵升力)**:`gameplay/watercraft.mojo` `Rudder[W]`:以 `Wing` 實作,流體密度 1000,弦沿船前向 (1,0,0),升力參考沿船側向 (0,0,1),偏角 d 於 x-z 面旋轉弦與法線。位於水面以下才受力;水流取 `water.velocity`。`tests/test_force_elements.mojo` rudder 段 5 項事前寫定的預測(寫於測試區塊註解)全部通過,force_elements 19/19。量測(0.3 m²、船速 3 m/s、中心在水面下 1 m):d = ±10° 的側向力為 ∓1480.44 N,與 q A 2π d = 1480.44 N 相符(相對誤差 < 1e-4);d = 0 為 0 N;船靜止為 0 N;中心在水面上為 0。符號:正偏角(後緣朝 +z)的側向力朝 −z,與板把流體轉向時的反作用一致。未做:舵與船體的交互(尾流遮蔽)、螺旋槳後流。
 > **分流(2026-10-27)**:done(本輪):水上舵升力(`gameplay/watercraft.mojo` `Rudder`);stale-done:陡坡、履帶、浮力 / 推進器 / 翼面、Gerstner 波面、機車 / 直升機 / 座位;deferred:轎車元件拆分、Runtime 擁有 Vehicle、地形壓痕、懸浮 / RCS 陣列;deferred(子代理未重 grep):快照軸陣列、17.85 分級。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **進度註(2026-10-13)**:力元件骨架先行。`gameplay/force_element.mojo`:`ForceElement` trait(`apply(scene, id, t)` 累積力並回傳)與 `Thruster`;
@@ -3028,7 +3068,7 @@
 | 17.14 | [導航](#1714-導航) | ✅ | C | 新套件 `nav`(layer 3):navmesh bake(體素 → 緊湊場 → 侵蝕 → tile 矩形)、尋路 seam(多邊形 A* + funnel / 格 A* / 流場 / HPA*)、off-mesh link、動態障礙增量挖洞、crowd 與避讓 seam(ORCA / 取樣 RVO / 社會力)、3D 體積導航(稀疏體素八叉樹 A* vs 稠密體素 A*)。 |
 | 17.15 | [AI 框架](#1715-ai-框架) | ✅ | C | 新套件 `ai`(layer 4):blackboard、behavior tree(迭代 tick)、utility AI、GOAP / HTN、決策 seam(BT / FSM / utility / GOAP)、感知(視錐 + 宿主視線批次、聽覺、記憶)、EQS、轉向 / 群聚 / 隊形、smart objects、影響力圖與隊伍戰爭迷霧。 |
 | 17.16 | [網路 / rollback](#1716-網路--rollback) | ✅ | C | `gameplay/netcode.mojo`:`NetSim` 契約、預測策略 seam(`LockstepPeer` / `RollbackPeer` / `SnapshotServer` + `SnapshotClient`)、位元組訊息(冗餘輸入 + ack、XOR + RLE 差分快照)、雜湊交換失步偵測、輸入驗證、延遲補償(`PoseRing` + `rewind_ray_cast`);傳輸層交宿主。 |
-| 17.70 | [規則框架](#1770-規則框架--wave-c) | 🔶 | C | 屬性集、Gameplay tags、效果、技能、傷害管線、資料驅動 |
+| 17.70 | [規則框架](#1770-規則框架--wave-c) | 不排 | C | 屬性集、Gameplay tags、效果、技能、傷害管線、資料驅動 |
 | 17.72 | [流程服務](#1772-流程服務--wave-c) | ✅ | C | 流程狀態堆疊、全域旗標 / 黑板、任務 / 目標圖、對話 / 敘事狀態、關卡切換協定、檢查點 / 重生 |
 | 17.73 | [營運邊界](#1773-營運邊界--wave-c) | ✅ | C | 對外 outbox、遙測分流、成就 / 統計計數、本地化鍵、入站資料決定論、黑盒記錄器 |
 | 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | ✅ | C | 可在 teleport → state 往返後不變的量化旋轉(`quantize_rotation`);含破碎物件的 `EmbedWorld.save` / `load` |
@@ -3143,6 +3183,8 @@
 > **歷史**:原標「部分 gated」—— 傳輸層 / 線路格式綁定平台整合(同 13.9 / 17.12);原缺口列有「lockstep 傳輸層」與「跨平台決定論(不同編譯器 / 架構 —— 目前只保證同工具鏈,16 章鎖版本是半個答案)」。2026-10-09 決定後兩者改為交宿主 / 不做。
 
 #### 17.70 規則框架 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,依前提):同 17.58;遊戲側的資料驅動規則由 ludens-engine #119(資料表與 schema)先決定形態。
 > **分流(2026-10-27)**:stale-done:元件化子集(`rules_ecs`)、oop 對 rules 計時比較;deferred:完整框架元件化、Runtime 擁有 Rules。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **進度註(2026-10-27,`oop` 對照的 parity)**:`oop/rules_oop.mojo` 以物件擁有效果實作 `gameplay/rules.mojo` 的 buff 與週期傷害子集(`OopCharacter.advance` / `speed`,同一定點與 tick 順序)。`tests/test_rules_oop.mojo` 4/4:500 角色、同一負載(+20 % 速度 300 tick、每 30 tick 10 點傷害 300 tick、共 400 tick):兩邊在 tick 150 速度皆為 6.000、tick 301 皆為 5.000,血量皆於 0 並死亡,逐欄位 0 不一致。子集不含 tag、堆疊模式、抗性與護盾。**未做**:計時比較(測試不計時,報告中也沒有這對的 bench 列,故不作效能主張)與 (a) 元件化至 `ecs/` 的變體。
 > **進度註(2026-10-27,`oop` 對照的計時)**:`benchmarks/bench_rules_oop.mojo`(報告列於 `BENCHMARK_REPORT.md`「Rules layout」)只計 400 tick 迴圈,同一 buff + DoT 負載,ns 每 actor-tick,同一次執行內兩者交替。N = 1000:rules 10.1–16.3 ns、OOP 10.9–20.8 ns(四次執行重疊,無可分勝負)。N = 10000:rules 17.8–25.1 ns、OOP 11.5–14.1 ns,四次執行中 rules 皆慢(約 1.3–2 倍)。**原因未診斷**(推測:`Actor` 內 `List` 的指標追逐與每 tick 的 `step` 掃描,未以 icount / profile 驗證);本條不宣稱 SoA 較快或較慢。報告的快取列來自 2.10 GHz 主機,本次重跑的表頭為 2.80 GHz,兩組列不可跨列比較。
@@ -3300,7 +3342,7 @@
 | 17.38 | [遊戲事件匯流排 / 訊息系統](ROADMAP_HISTORY.md#1738-遊戲事件匯流排--訊息系統--wave-a) | ✅ | A | `scheduler/events.mojo` 提供 `EventChannel` seam:`Channel[E]`(pull,正式路徑)對照 `PushChannel[E]`(fan-out),投遞依呼叫序決定、雙緩衝、每個讀者有自己的游標,未讀而丟棄的事件計入 `diag.counters`;測試有 `test_events` / `test_events_gameloop` / `test_events_contacts`,bench 為 `bench_events`。 |
 | 17.39 | [輸入錄製 / 決定論回放(QA・ghost,非網路)](ROADMAP_HISTORY.md#1739-輸入錄製--決定論回放qaghost非網路--wave-b) | ✅ | B | `gameplay/replay.mojo` 提供 `SimState` / `Recorder`(錄製輸入、定期存快照、每 tick 存 FNV-1a 狀態雜湊)以及 `replay_from_start` / `seek` / `first_divergence` / `ghost`;`test_replay` 8/8 驗證 seek 與全程重跑逐位相同;`bench_replay` 在快照間隔 10 時尋位只要 0.10 ms,全程重跑則是 32.6 ms。 |
 | 17.40 | [存檔系統(相對於決定論快照)](ROADMAP_HISTORY.md#1740-存檔系統相對於決定論快照--wave-b) | ✅ | B | `gameplay/save.mojo` 建在 17.11 schema 上,提供 `SaveWriter` / `SaveReader`:具名區段,按欄位名載入,處理新增、刪除、改型的欄位並以 `ReadReport` 回報;`save_bodies` / `load_bodies` 只存動態體的姿態與速度;`test_save` 11/11 驗證存檔涵蓋的欄位與 6.10 快照逐位相同;`bench_save` 的存檔大小為 74 KB,快照為 932 KB。 |
-| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | 🔶 | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;物體、關節的交易層與實體的刪除、元件變更、交易復原已完成(`embed/undo.mojo`、`ecs/entity_undo.mojo`),地形編輯、凸殼 / 網格與 bench 列未做。 |
+| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | ✅ | B | 規劃在 `CommandBuffer`(4.4)與 17.11 `TypeSchema` 之上建交易式 undo / redo 層(begin/commit/abort、反向操作記錄、物理場景 inverse op),以 `UndoLog` 差分 vs `SnapshotUndo` 全快照為 seam;物體、關節的交易層與實體的刪除、元件變更、交易復原已完成(`embed/undo.mojo`、`ecs/entity_undo.mojo`),地形編輯、凸殼 / 網格與 bench 列未做。 |
 | 17.77 | [ECS 表達力](#1777-ecs-表達力--wave-b) | ✅ | B | N 元查詢與迭代、過濾器、變更偵測、單例 / 資源、有狀態系統與使用者系統註冊、延遲結構變更補齊 |
 | 17.79 | [資源治理](#1779-資源治理--wave-b) | ✅ | B | 記憶體記帳、容量上限與滿載政策、預留與穩態零配置、收縮、執行緒 / GPU 資源政策、資源上限觸發的退讓 |
 | 17.80 | [觀測](#1780-觀測--wave-b工具執行期追蹤開關物理擷取檔與回看) | ✅ | B | (a)runtime 追蹤開關、(b)緩衝政策、(c)多執行緒與 GPU 軌、(d)counter 軌、(e)物理擷取檔、(f)回看 |
@@ -3372,6 +3414,8 @@
 
 #### 17.12 可編輯場景 / prefab / 實例化
 
+> **整理(2026-11-22)**:🔶(2026-11-22 整理):檔案格式已由 [ludens-engine docs/scene-format.md](https://github.com/Hundo1018/ludens-engine/blob/main/docs/scene-format.md) 定義(v2,2026-11-22 合併)。core 端剩下的切片隨 17.97 一起做。
+
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 第一片完成:方塊 / 球體物體、設定、列級 diff / apply;第二片:膠囊、運動學;第三片:材質表;第四片:關節;凸殼、網格為後續片)
 > **決定(2026-10-09,已被取代)**:平台方向 C → 場景格式跟宿主走(glTF / USD 匯入),不自訂檔案格式;場景(作者資料)與決定論快照分開,以 parity 連結。屬編輯器相關,本輪不做。
 > **決定(2026-11-02)**:編輯器放在 ludens-engine;場景檔案格式由 ludens-engine 定義(ludens-engine #9)。引擎只提供 schema 讀寫、列級 diff / apply 與和決定論快照的 parity,不自訂檔案格式,也不綁 glTF / USD(匯入屬資產管線,ludens-engine #12)。
@@ -3396,6 +3440,8 @@
 
 > **進度註(2026-11-06,接觸查詢,#113)**:`EmbedWorld.touching(a, b)` 與 `touching_count()` 讀最近一個 physics tick 回報的 BEGAN / STAY 事件(ENDED 不算,兩種引數順序皆可),唯讀、不改世界雜湊,消費者是 ludens-engine 事件表的接觸條件(#24)。`tests/test_embed_touching.mojo`(unit,6/6):箱子從 0.5 m 落到地面,第 19 個 tick(解析:sqrt(2 x 0.5 / 9.81) = 0.319 s = 19.2 tick)回報接觸,其後靜止期間每 tick 為真且與遠處箱子無關;`touching_count` 等於該 tick 非 ENDED 事件數;查詢不改雜湊;向上拋離後回報 ENDED 的那個 tick 讀為 False。變異:不排除 ENDED 時該檢查失敗(第一版測試只檢查「任一 tick 為假」,沒抓到這個變異,已改成檢查 ENDED 當 tick)。
 #### 17.43 Undo / redo 交易層(編輯器前置)
+
+> **整理(2026-11-22)**:✅(2026-11-22 整理):headless 核心 API 已涵蓋 `EmbedWorld` 的物體與關節,以及 ECS 實體的刪除、元件變更與交易。地形、凸殼 / 網格的復原隨 17.97 / 17.12 的切片一起做;undo 歷史的 UI 依「邊界」屬編輯器(ludens-engine)。
 
 > **狀態**:🔶 部分完成(2026-11-02 改為排程;2026-11-06 完成:`EmbedWorld` 的物體(含膠囊、運動學)與關節、ECS 實體刪除的復原;2026-11-12 完成:實體元件變更 / 移除與交易的復原;地形編輯、凸殼 / 網格為後續片。原 2026-10-09 修訂列為不排,原標 Wave B)
 > **緣起**:2026-09-30 編輯器邊界分類找出的缺口 —— 外部編輯器依賴的 15 項核心能力中,除 17.12(gated)外唯一未編號者。編輯器邊界分類表把 Undo / redo 標為 🔶「零件在,交易 / 反向操作層未做」,並指出真正擋住外部編輯器的是 17.12 場景 / prefab 格式與 17.43 undo 交易層。
@@ -3740,11 +3786,11 @@
 | 12.2 | [Mojo / Python 雙腳本](#122-mojo--python-雙腳本) | ✅ | C | Python(`ludens` 套件,ctypes 包 12.1 C-ABI)與 Mojo 原生系統(`EmbedWorld`)雙腳本,同場景逐位相同;落地見 17.21。 |
 | 17.21 | [腳本層(Phase 12 落地)](#1721-腳本層phase-12-落地) | ✅ | C | `python/ludens`(ctypes 包 C-ABI)+ `python/build_wheel.py`(wheel 內含函式庫與 Mojo runtime);乾淨 venv 安裝測試;Python 系統 / 接觸訂閱、CVar(tick 邊界套用)、hot reload(保留狀態、失敗保留舊版)。 |
 | 17.75 | [嵌入契約](#1775-嵌入契約--wave-b平台方向-c-前提與-121-同期) | ✅ | B | 宿主 job system 注入、宿主配置器(分兩層)、非同步步進、單位與座標契約成文 + `UnitScale`、錯誤與執行緒契約 |
-| 17.76 | [平台可攜](#1776-平台可攜--wave-b平台方向-c-前提) | 🔶 | B | 目標矩陣 + 實測、每目標一份 golden + 跨目標容差表、浮點位元因子清單、降級矩陣、wasm 核心切分的機器檢查 |
-| 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 🔶 | C | per-host 適配層、批量 SoA 交換、POD 事件緩衝、宿主定義元件、綁定產生、多實例與執行緒 |
-| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 🔶 | B | 整套 C-ABI 編成 wasm64(外接 LLVM 23 + shim)、與原生無 FMA 建置逐位相同;`pixi run wasm`、序列派發建置、CI 閘門、JS / TS 與 WASI 封裝 |
-| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | ⬜ | C | 核心出資料(接觸 / 破碎 / 氣泡的音訊事件、影格匯出);瀏覽器優先、出聲、渲染與影片匯出皆要,放獨立 repo;綁定目標(wgpu-mojo / miniaudio-mojo)實測中 |
-| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 🔶 | B | 編輯器程式碼熱重載走「舊模組存、新模組載」:`embed/transfer.mojo` 的移交 blob(版本、純量寬度、設定雜湊、宿主材質、已註冊名稱、校驗和 + `save`)在載入前逐項檢查並回具名狀態碼,失敗時世界不變;兩個獨立建置之間移交後逐位相同(原生與 wasm64 皆已量測),C-ABI 0.7 提供 `ld_world_transfer_*`。 |
+| 17.76 | [平台可攜](#1776-平台可攜--wave-b平台方向-c-前提) | 不排 | B | 目標矩陣 + 實測、每目標一份 golden + 跨目標容差表、浮點位元因子清單、降級矩陣、wasm 核心切分的機器檢查 |
+| 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 不排 | C | per-host 適配層、批量 SoA 交換、POD 事件緩衝、宿主定義元件、綁定產生、多實例與執行緒 |
+| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | ✅ | B | 整套 C-ABI 編成 wasm64(外接 LLVM 23 + shim)、與原生無 FMA 建置逐位相同;`pixi run wasm`、序列派發建置、CI 閘門、JS / TS 與 WASI 封裝 |
+| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | ✅ | C | 核心出資料(接觸 / 破碎 / 氣泡的音訊事件、影格匯出);瀏覽器優先、出聲、渲染與影片匯出皆要,放獨立 repo;綁定目標(wgpu-mojo / miniaudio-mojo)實測中 |
+| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 不排 | B | 編輯器程式碼熱重載走「舊模組存、新模組載」:`embed/transfer.mojo` 的移交 blob(版本、純量寬度、設定雜湊、宿主材質、已註冊名稱、校驗和 + `save`)在載入前逐項檢查並回具名狀態碼,失敗時世界不變;兩個獨立建置之間移交後逐位相同(原生與 wasm64 皆已量測),C-ABI 0.7 提供 `ld_world_transfer_*`。 |
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | ✅ | B | `save_excludes()` 列出 `save` / `hash` 不帶的狀態與理由(重力、求解器、單位比例為宿主設定;宿主材質 id 由 17.91 移交);帶水的世界 `save` 寫入標記、`load` 拒絕;`hash` 涵蓋水粒子;`test_save_coverage` 逐項量測 |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | ⬜ | B | 保留 FMA 的效能,同時讓同一算式在每個呼叫點、每個建置得到相同位元:明確的 `fma` 呼叫 + 關閉隱式合併,量測速度與位元一致性 |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 🔶 | B | `EmbedWorld` 加入實體與 `ChildOf` 階層、事件冒泡與群組、正規化的換關卡;core 能力逐項開放到宿主入口(入口、存檔 / 雜湊、`scene_io`、C-ABI),以 `scripts/capability_table.py` 量測 |
@@ -3947,6 +3993,8 @@
 > tick 週期與逐 island 品質屬 17.85(`TieredScheduler`),本條只提供它可掛的派發器。
 
 #### 17.76 平台可攜 — Wave B(平台方向 C 前提)
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘只有把 `portability` 改為阻擋式,條件是兩平台連續兩次綠燈;macos-14 job 在每次執行都被取消(main 也是),所以條件無法達成。ARM 已連續通過(main 44999664466、#155)。
 > **分流(2026-10-27)**:done:wasm 核心 / 殼切分檢查(f0c2134);done(2026-10-28):ARM / macOS 分平台 golden 入庫與跨目標 fp-probe 比對(見進度註);wasm64 子句未解(需外部 llc,見 `docs/design/stage-triage-2026-10-27.md` 17.76 表;此條不標 env-blocked);GPU:AMD / Apple 路徑;stale-done:跨目標容差表與降級矩陣。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **狀態**:🔶 部分完成(2026-10-13:目標矩陣、per-platform golden 機制、CI 可攜工作、wasm leaf kernel 探針 ✅;ARM / macOS golden 待 CI 首跑記錄,浮點位元因子探針 ✅;跨目標容差表、降級矩陣 2026-10-17 ✅;2026-10-28 起 ARM / macOS golden 與跨架構 dump 比對 ✅;剩 `portability` 阻擋式化)。
 > - **2026-10-27 進度(wasm 核心 / 殼切分)**:`scripts/wasm_probe.py` 增加切分檢查:每個 kernel 的引擎匯入閉包不得抵達 `embed` / `harness` / `oop` / `benchmarks` / `examples` / `experiments`。selftest 6 / 6(含注入的兩層殼匯入);樹上三個 `tools/wasm` kernel 無違規;注入 `kernel_inject_probe` 匯入 `embed.capi` 時回報 `embed.capi`。此為靜態匯入掃描,不取代 llc 路徑的實測。
@@ -4037,6 +4085,8 @@
 > **env-blocked 標籤移除**:CI 矩陣已可執行 ARM 與 macOS,此項不再需要外部主機。
 
 #### 17.78 宿主整合 / 綁定 — Wave C
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘只有 Godot / Unity 實機適配,需要宿主引擎;依本條計畫列為發行檢查單,不進 CI。
 > **分流(2026-10-27)**:env-blocked:Godot / Unity 實機適配層;stale-done:批量 SoA 交換、POD 事件緩衝、宿主元件與查詢、綁定產生。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **狀態**:🔶 部分完成(2026-10-13:批量姿態寫入、診斷計數器經 C 讀出、宿主定義元件、跨語言的逐物件 vs 批量量測 ✅;2026-10-17:宿主對映(layer、user 值)、
 > 多實例與執行緒契約、綁定產生(Rust)✅;2026-10-18:C 邊界的單位轉換、C# 綁定、宿主元件進查詢與存檔 ✅;剩 Godot / Unity 實機適配(需要宿主引擎,依本條計畫列發行檢查單、不入 CI))。
@@ -4111,6 +4161,8 @@
 > 場景格式(17.12,跟宿主 glTF / USD)、網路傳輸(17.16,byte payload 交宿主)、編輯器 UI(`docs/ROADMAP.md` 編輯器邊界 (III))、宿主渲染皆不在本條。
 
 #### 17.89 wasm 平台 — Wave B
+
+> **整理(2026-11-22)**:✅(2026-11-22 整理):缺口 W0–W3 已交付。管線在 ludens-wasm-rt(`tools/wasm/wasm_rt.rev` 釘版本);序列派發建置(`scheduler.build_opts.SERIAL_ONLY`)。CI 的 `wasm` job 比對原生與 wasmtime / node 的場景雜湊。浮點政策採 (a):wasm64 與原生無 FMA 建置逐位相同。ludens-engine 的 Pages 站台以 wasm64 執行。只剩 W4(wasm32、原生 wasm 目標、WebGPU),等上游,不排。
 > **狀態**:🔶 部分完成(2026-11-01:可行性實測 ✅,PoC 入 `tools/wasm/poc/`;管線、閘門、封裝未做)。設計筆記 `docs/design/17.89-wasm-platform.md`。
 > **緣起**:使用者 2026-11-01 決定以 wasm 作為跨平台通用的交付形態。方向 C(被嵌入的函式庫)不變,wasm 是同一個 C-ABI 的另一種產物。
 > **現況**:Mojo 1.2.0 無 wasm 目標(`--target-triple wasm32-wasip1` 被拒,modular/modular #4729、#5367 未承諾)。實測路線:
@@ -4130,6 +4182,8 @@
 > **邊界**:不自建 wasm 後端;Safari 等 memory64 上線;GPU 路徑不進 wasm(WebGPU 屬 W4)。
 
 #### 17.90 音訊與視訊 — Wave C
+
+> **整理(2026-11-22)**:✅(2026-11-22 整理):核心側要出的資料都已交付:擴充接觸事件(ABI 0.6)、氣泡事件、破碎事件。依 2026-11-01 決定 (3),出聲與畫面放在獨立 repo:miniaudio-mojo、wgpu-mojo 的瀏覽器目標,以及 ludens-engine 網頁的音效與渲染,之後的工作在那些 repo 追蹤。下方「待決」五點已由同日的「決定」回答。
 > **狀態**:⬜ 未開始(2026-11-01 使用者定案方向,見下方「決定」;綁定目標待實測)。方案選項見 `docs/design/stage-plan-2026-11.md` §4。
 > **決定(使用者,2026-11-01)**:(1) 「視訊」= 影片媒體(錄製 / 匯出)與畫面輸出(渲染)兩者都要;(2) 要實際出聲,不只輸出事件資料;
 > (3) 音訊與畫面放獨立 repo;(4) 瀏覽器優先;(5) 授權:LGPL 可接受,H.264 可經平台或使用者自備 ffmpeg 使用。
@@ -4140,7 +4194,7 @@
 > **選項摘要**:核心側 —— 擴充接觸事件(法向衝量、切向速度、材質 id、持續接觸旗標)、破碎事件、流體氣泡生成事件,以及回放 / 影格匯出;
 > 可選參考 modal 合成器(harness 側,可上 golden)。宿主側 —— 混音 miniaudio(替代:SDL3、Web Audio + AudioWorklet);影片匯出交使用者的 ffmpeg 或瀏覽器 WebCodecs,
 > 預設 AV1 / VP9;渲染以獨立 repo 的 three.js 宿主讀 SoA 姿態與 `diag/draw.mojo` DrawQueue。
-> **待決**:「視訊」指影片媒體、畫面輸出或兩者;核心只出資料或另附參考合成器;宿主層是否另開 repo;瀏覽器優先或原生優先;編解碼器授權容忍度。
+> **待決(已回答)**:原列五點(視訊的意義、核心只出資料與否、是否另開 repo、瀏覽器或原生優先、編解碼器授權)已由上方 2026-11-01 的「決定」(1)–(5) 回答。
 > **核心側進度(2026-11-02,#77 第一段)**:ABI 0.6 追加 `ld_contact_event_ex`(104 B:法向衝量 / 力 / 接近速度 / 峰值 / 接觸點 / 法向 / 切向相對速度 / 材質 a、b / 持續接觸旗標)、`ld_world_get_events_ex`、`ld_body_set_material` / `get_material`(材質不存檔,載入後由宿主重設);`ContactEvent.tvel` 由求解器在事件步末只讀計算。`test_capi` 73/73(C 宿主驗欄位與 `abi_v0.txt` 僅追加)。**第二段**:`ld_world_add_fracture_box` / `ld_world_get_fragments` / `ld_world_get_fracture_events`(`FractureSet` 納入 `EmbedWorld`,焊接斷裂事件每次一筆;含破碎物的世界拒絕存讀檔,`LD_ERR_STATE`);`ld_world_frame_size` / `ld_world_export_frame`(自描述影格串流:姿態、速度、睡眠 / 靜態旗標、材質、user)。`test_capi` 86/86。**未做**:流體氣泡生成事件(`flip_diffuse` / FLIP 水尚無嵌入 API,需整套流體 C-ABI)、破碎物存讀檔。
 > **核心側進度(2026-11-02,#77 第二段)**:`ld_world_add_water`(2D FLIP 水槽,xy 平面,`FlipWater2` + `DiffuseParticles`)、`ld_world_bubble_event_count`、`ld_world_get_bubble_events`(`ld_bubble_event` 32 B:tick、x、y、u、v)—— 粒子在 `DiffuseParticles.update` 內由非氣泡轉為氣泡時記一筆(上限 65536 筆/步,超過丟最新並記入 `bubble_dropped`),不改任何既有輸出;含水槽的世界與含破碎物件的世界一樣拒絕存讀檔(`LD_ERR_STATE`)。`abi_v0.txt` 僅追加,`test_capi` C 宿主與 Python `World.add_water` / `bubble_events` 均有測。**驗收對照**:C 宿主收到新欄位 ✔、`abi_v0.txt` 只追加 ✔;「golden 其他段不變」被 #75 的 x86-64 重錄取代(整體末位改變,見 17.89)。
 > **下游追蹤(#77 驗收)**:綁定目標 —— wgpu-mojo [#15–#20](https://github.com/Hundo1018/wgpu-mojo/issues)、miniaudio-mojo [#4–#6](https://github.com/Hundo1018/miniaudio-mojo/issues);宿主側 —— ludens-engine [#1–#5](https://github.com/Hundo1018/ludens-engine/issues);工具鏈 —— ludens-wasm-rt [#1–#8](https://github.com/Hundo1018/ludens-wasm-rt/issues)。破碎物件 / 水槽世界的存讀檔仍拒絕,留待後續。
@@ -4148,6 +4202,8 @@
 ---
 
 #### 17.91 換模組世界移交(熱重載)
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘只有 aarch64 的實測,本工作環境是 x86-64,只能經 CI 的 arm runner 驗證;等有消費者需要 aarch64 熱重載時再排。
 
 > **狀態**:🔶 部分完成(2026-11-06 第一片:Mojo 端 API、測試、原生與 wasm64 跨建置實測、C-ABI 0.7;aarch64 與 Python 包裝未做)。消費者:ludens-engine #14(程式碼熱重載)。issue:ludens-core #84。
 > **做法**:殼把世界從舊模組存出、建立新模組實例、載入。`EmbedWorld.save` / `load` 只還原模擬狀態(設定、系統、宿主材質 id 不在其中),所以 `embed/transfer.mojo` 在外面包一層移交 blob:魔數、`TRANSFER_VERSION`、純量寬度、設定雜湊(dt、重力、單位比例、max_steps 與影響結果的 `SolverConfig` 欄位;`parallel` / `workers` / `dispatch` / `parallel_collision` 為執行方式,不計入)、宿主材質表、已註冊名稱集合的雜湊、payload 校驗和,最後是 `save` 的內容。
@@ -4177,6 +4233,8 @@
 
 #### 17.96 FMA 合併與決定論(研究)
 
+> **整理(2026-11-22)**:⬜(2026-11-22 整理):研究項。決定論承諾範圍是同工具鏈、同架構(2026-10-09),所以本條不是必要的。17.99 在 aarch64 改變末位(x86-64 不變)就是本條要處理的情況;是否進行由使用者決定。
+
 > **來源**:17.93 的 `teleport_rotation`:正規化四元數的 `x*x + y*y + z*z + w*w` 內聯到不同呼叫點時,編譯器各自決定是否合併成融合乘加(FMA,一次捨入)
 > 或先乘後加(兩次捨入),10 000 個隨機旋轉只有 8 882 個與 `state()` 讀回逐位相同;以 `@no_inline` 讓各處共用一份程式碼後 10 000 / 10 000。
 > 現況:`fp-probe`(17.76)量到只有 FMA 有無與 `-O0` 會改變模擬位元;wasm 閘門(17.89)與原生的「無 FMA 建置」比對;`flag-policy` 釘死目標與優化等級。
@@ -4193,6 +4251,8 @@
 > `Inertia3.box` 與 `hull_mass` 沒有量到差異,未加 `@no_inline`。
 
 #### 17.97 宿主入口:實體、ChildOf 階層、換關卡與能力開放
+
+> **整理(2026-11-22)**:🔶(2026-11-22 整理):剩餘的主要工作。設計已定案(設計筆記),未做的是切片 1–5:實體、`ChildOf`、事件冒泡、群組、換關卡。下方「待決」已由 [ludens-engine docs/scene-format.md](https://github.com/Hundo1018/ludens-engine/blob/main/docs/scene-format.md) 回答:資產以穩定的 `@<asset id>` 引用,內容雜湊放在資產資料庫的鎖檔,不寫入場景列。17.12 core 端剩下的切片(凸殼、網格)併在這裡做。
 
 > **來源**:ludens-playground 的引擎稽核反思(2026-11-16 / 17)。範例的 frontier 世界沒有用到 ECS;遊戲碼 8 處直接取用 `world.scene`;
 > 繩子、布料在世界之外;沒有換關卡。設計筆記 `docs/design/17.97-hierarchy-levels.md`(決定:`EmbedWorld` 加入實體、換關卡正規化、
@@ -4225,7 +4285,7 @@
 > 「應被拒絕」):trait 方法宣告 `ref [self]` 回傳;以 define 選擇 `WorldType`(`sin` 失去浮點型別的靜態證明),`mojo precompile` 也不接受 `-D`,所以
 > `build_f64.sh` 維持改寫原始碼。修正:`ContactScene6.set_restitution_combine` / `set_friction_combine` 原本不檢查索引與模式(越界寫入),現在會 raise;
 > `EmbedWorld` 丟棄的幀時間原本記在沒人讀的 `debt_dropped`,改記入 `scene.counters[GAMELOOP_DEBT_DROPPED]`(`ld_world_get_counters` 讀得到)。
-> **待決**:網格 / 高度場在 `scene_io` 的表示(直接寫入列,或資產內容雜湊)。B 批(繩、布料、角色控制、
+> **待決(已回答,2026-11-22)**:網格 / 高度場在 `scene_io` 的表示:以資產引用 `@<asset id>` 表示,不直接寫入列([ludens-engine docs/scene-format.md](https://github.com/Hundo1018/ludens-engine/blob/main/docs/scene-format.md))。B 批(繩、布料、角色控制、
 > 世界分區)排在設計筆記切片 1–2(實體、`ChildOf`)之後。
 > **未做**:實體、`ChildOf`、事件冒泡、群組、換關卡(設計筆記的工作切片 1–5)。
 
@@ -4245,10 +4305,10 @@
 | 17.22 | [範例覆蓋補完](ROADMAP_HISTORY.md#1722-範例覆蓋補完--wave-a文件) | ✅ | A | examples/ 新增 17_spin_integrators、18_cloth_xpbd_vbd、19_reactive_commands、21_runtime_character,讓 README / CATEGORY §2 列出的 seam swap 都有可跑的範例,且每支都印出兩條路徑的對照數字。 |
 | 17.81 | [CI / 授權 / 發行](#1781-ci--授權--發行--wave-a工程先於其他各項) | ✅ | A | CI 工作流、golden 跨機決定論探針、授權、發行管線、衛生、工具鏈升版金絲雀 |
 | 17.82 | [品質工具](#1782-品質工具--wave-a工程) | ✅ | A | 格式 / 靜態檢查決策、孤島 / 接線報告、路線圖 / 文件引用 linter、執行緒 / 記憶體檢查、種子掃描 fuzz、穩定性 / 決定論重跑 |
-| 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 🔶 | A | 基準結果的機器可讀輸出、比較工具、確定性閘門、牆鐘閘門、漸近斜率閘門、影格預算表 |
+| 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 不排 | A | 基準結果的機器可讀輸出、比較工具、確定性閘門、牆鐘閘門、漸近斜率閘門、影格預算表 |
 | 17.87 | [Hook 與文件生成](#1787-hook-與文件生成--wave-a工程) | ✅ | A | git hook(commit-msg / pre-commit / pre-push)、Claude Code hook(PreToolUse / PostToolUse)、`docs/STRUCTURE.md` 由架構索引產生、分層表與 ROADMAP 子系統表的同步檢查 |
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | ✅ | A | 精確鎖定 1.2.0 / 26.7.0、`match` / `if case` / `Defaultable` 採用、golden 逐段歸因、函式型參數結構體的編譯器問題與 `Tween` 改寫 |
-| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 🔶 | B | 執行期旗標每步分派一次到編譯期特化的核心;求解器 seam 改為 policy trait;`QuatBody6[I]`、`EmbedWorld[B, BP]`;固定大小值;每項 golden 逐段不變 |
+| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | ✅ | B | 執行期旗標每步分派一次到編譯期特化的核心;求解器 seam 改為 policy trait;`QuatBody6[I]`、`EmbedWorld[B, BP]`;固定大小值;每項 golden 逐段不變 |
 
 ### 已完成條目的遺留待辦
 
@@ -4387,6 +4447,8 @@
 >   1e6 元素的 `List` 與刻意洩漏的 64 個 4 KiB 區塊都不改變 valgrind 的堆積統計(兩者皆 499 allocs),乾淨報告不構成證據,故不加 memcheck 閘門。
 
 #### 17.83 效能治理 — Wave A(工程)
+
+> **整理(2026-11-22)**:不排(2026-11-22 整理,受環境限制):剩餘只有夜間牆鐘閘門,需要一台固定主機;確定性計數器、斜率、指令數(`icount`)閘門已在 CI。
 > **進度註(2026-10-28,第二輪分流:cachegrind 指令數)**:`pixi run icount -- --selftest` PASS(注入 +10 % 步數,指令數 +10.54 %,偵測通過)。`pixi run icount`:446 573 667 條指令,3 次,散佈 9.3e-4。量測對象是 `benchmarks/probes/icount_probe.mojo`(40 箱堆、`step_soft` 不經寬相),因此它看不到寬相或 BVH 的改動;寬相改動的量測見 ROADMAP 17.19 第二輪註。終態 **done**。
 > **分流(2026-10-27)**:done:注入等級 +5 / +10 / +25 %(2c5bc9c);stale-done:比較工具、斜率閘門、預算表、精確計數斷言(`tests/test_work_counters.mojo`);unverified:cachegrind 指令數代理(`scripts/icount.py` 未執行);deferred:每步配置次數;env-blocked:基準線檔、夜間牆鐘閘門。詳 `docs/design/stage-triage-2026-10-27.md`。
 > **狀態**:🔶 部分完成(2026-10-13:機器可讀輸出、比較工具、確定性計數器閘門、斜率閘門、影格預算表、報告治理、bisect 判定器、交錯 A/B harness ✅;cachegrind 指令數探針 ✅;夜間牆鐘閘門需固定主機)。
@@ -4525,6 +4587,8 @@
 > `portability` 仍為非阻擋式(`continue-on-error`)。
 
 #### 17.98 編譯期參數化(位元不變)
+
+> **整理(2026-11-22)**:✅(2026-11-22 整理):第 1、4、7、8 項完成;第 2 項由第 1 項涵蓋;其餘各項皆已量測,記為不做並附理由(第 3、5、6、9 項)。沒有未決項。
 
 > **來源**:2026-11-17 對 core / engine 的參數化稽核(Mojo 1.2.0 探針,core PR #138)。
 > 規則:每一項各一個 PR,golden 各段逐位元不變;熱路徑附 `icount` 或 benchmark 數字。改變結果的整併(關節 / 形狀分桶、SIMD 四元數)不在這裡。
@@ -4674,7 +4738,7 @@
 | 17.14 | [導航](#1714-導航) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.15 | [AI 框架](#1715-ai-框架) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.16 | [網路 / rollback](#1716-網路--rollback) | gameplay 服務、AI、導航與網路 | ✅ |
-| 17.17 | [GPU 剛體 / articulation solver](#1717-gpu-剛體--articulation-solver) | GPU 計算 | 🔶 |
+| 17.17 | [GPU 剛體 / articulation solver](#1717-gpu-剛體--articulation-solver) | GPU 計算 | 不排 |
 | 17.18 | [批次多世界步進(13.9 落地)](ROADMAP_HISTORY.md#1718-批次多世界步進139-落地--wave-b) | 可微模擬、批次世界與數值深化 | ✅ |
 | 17.19 | [生產級 solver 硬化](#1719-生產級-solver-硬化) | 剛體動力學、接觸與關節 | 🔶 |
 | 17.20 | [剛體 solver 可微化收尾(13.7)](ROADMAP_HISTORY.md#1720-剛體-solver-可微化收尾137--wave-b) | 可微模擬、批次世界與數值深化 | ✅ |
@@ -4700,7 +4764,7 @@
 | 17.40 | [存檔系統(相對於決定論快照)](ROADMAP_HISTORY.md#1740-存檔系統相對於決定論快照--wave-b) | ECS、排程、執行期與診斷 | ✅ |
 | 17.41 | [繩索 / 纜線約束](ROADMAP_HISTORY.md#1741-繩索--纜線約束--wave-b) | 軟體、布料、連續體與流體 | ✅ |
 | 17.42 | [LBM 風洞收尾(Phase 14 遺留併入)](ROADMAP_HISTORY.md#1742-lbm-風洞收尾phase-14-遺留併入--wave-b) | 軟體、布料、連續體與流體 | ✅ |
-| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | ECS、排程、執行期與診斷 | 🔶 |
+| 17.43 | [Undo / redo 交易層(編輯器前置)](#1743-undo--redo-交易層編輯器前置) | ECS、排程、執行期與診斷 | ✅ |
 | 17.44 | [複合形狀](#1744-複合形狀--wave-b) | 剛體動力學、接觸與關節 | ✅ |
 | 17.45 | [網格碰撞品質](#1745-網格碰撞品質--wave-a資產前處理) | 碰撞形狀、寬窄相與世界查詢 | ✅ |
 | 17.46 | [CCD 形狀覆蓋](#1746-ccd-形狀覆蓋--wave-b) | 碰撞形狀、寬窄相與世界查詢 | ✅ |
@@ -4715,42 +4779,42 @@
 | 17.55 | [連續體步進契約](#1755-連續體步進契約--wave-b連續體前置) | 軟體、布料、連續體與流體 | ✅ |
 | 17.56 | [布料](#1756-布料--wave-b) | 軟體、布料、連續體與流體 | ✅ |
 | 17.57 | [毛髮 / 肌肉](#1757-毛髮--肌肉--wave-c) | 軟體、布料、連續體與流體 | ✅ |
-| 17.86 | [扭轉股線整合](#1786-扭轉股線整合--wave-c) | 軟體、布料、連續體與流體 | 🔶 |
-| 17.58 | [體積軟體](#1758-體積軟體--wave-c) | 軟體、布料、連續體與流體 | 🔶 |
+| 17.86 | [扭轉股線整合](#1786-扭轉股線整合--wave-c) | 軟體、布料、連續體與流體 | 不排 |
+| 17.58 | [體積軟體](#1758-體積軟體--wave-c) | 軟體、布料、連續體與流體 | 不排 |
 | 17.59 | [流固耦合](#1759-流固耦合--wave-c) | 軟體、布料、連續體與流體 | 不排 |
-| 17.60 | [水面 / 網格流體](#1760-水面--網格流體--wave-c) | 軟體、布料、連續體與流體 | 🔶 |
-| 17.61 | [多物理](#1761-多物理--wave-c) | 軟體、布料、連續體與流體 | 🔶 |
-| 17.62 | [GPU / 可微連續體](#1762-gpu--可微連續體--wave-cgpu--可微) | 軟體、布料、連續體與流體 | ⬜ |
-| 17.63 | [輸出 / 快取](#1763-輸出--快取--wave-c資產管線提供者) | 軟體、布料、連續體與流體 | 🔶 |
+| 17.60 | [水面 / 網格流體](#1760-水面--網格流體--wave-c) | 軟體、布料、連續體與流體 | 不排 |
+| 17.61 | [多物理](#1761-多物理--wave-c) | 軟體、布料、連續體與流體 | 不排 |
+| 17.62 | [GPU / 可微連續體](#1762-gpu--可微連續體--wave-cgpu--可微) | 軟體、布料、連續體與流體 | 不排 |
+| 17.63 | [輸出 / 快取](#1763-輸出--快取--wave-c資產管線提供者) | 軟體、布料、連續體與流體 | 不排 |
 | 17.64 | [動畫執行期](#1764-動畫執行期--wave-b) | 動畫與程序化 | ✅ |
 | 17.65 | [形變資料](#1765-形變資料--wave-cheadless-資料--邏輯) | 動畫與程序化 | ✅ |
 | 17.66 | [物理角色](#1766-物理角色--wave-c) | 角色、載具、破壞與 gameplay 物理 | 不排 |
 | 17.67 | [移動模式](#1767-移動模式--wave-b) | 角色、載具、破壞與 gameplay 物理 | ✅ |
 | 17.68 | [攝影機 / 序列](#1768-攝影機--序列--wave-bheadless-資料--邏輯) | 角色、載具、破壞與 gameplay 物理 | ✅ |
 | 17.69 | [PCG](#1769-pcg--wave-c) | 動畫與程序化 | ✅ |
-| 17.70 | [規則框架](#1770-規則框架--wave-c) | gameplay 服務、AI、導航與網路 | 🔶 |
+| 17.70 | [規則框架](#1770-規則框架--wave-c) | gameplay 服務、AI、導航與網路 | 不排 |
 | 17.71 | [戰鬥物理](#1771-戰鬥物理--wave-b) | 角色、載具、破壞與 gameplay 物理 | ✅ |
 | 17.72 | [流程服務](#1772-流程服務--wave-c) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.73 | [營運邊界](#1773-營運邊界--wave-c) | gameplay 服務、AI、導航與網路 | ✅ |
-| 17.74 | [載具家族](#1774-載具家族--wave-c) | 角色、載具、破壞與 gameplay 物理 | 🔶 |
+| 17.74 | [載具家族](#1774-載具家族--wave-c) | 角色、載具、破壞與 gameplay 物理 | 不排 |
 | 17.75 | [嵌入契約](#1775-嵌入契約--wave-b平台方向-c-前提與-121-同期) | 嵌入、腳本與平台 | ✅ |
-| 17.76 | [平台可攜](#1776-平台可攜--wave-b平台方向-c-前提) | 嵌入、腳本與平台 | 🔶 |
+| 17.76 | [平台可攜](#1776-平台可攜--wave-b平台方向-c-前提) | 嵌入、腳本與平台 | 不排 |
 | 17.77 | [ECS 表達力](#1777-ecs-表達力--wave-b) | ECS、排程、執行期與診斷 | ✅ |
-| 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 嵌入、腳本與平台 | 🔶 |
+| 17.78 | [宿主整合 / 綁定](#1778-宿主整合--綁定--wave-c) | 嵌入、腳本與平台 | 不排 |
 | 17.79 | [資源治理](#1779-資源治理--wave-b) | ECS、排程、執行期與診斷 | ✅ |
 | 17.80 | [觀測](#1780-觀測--wave-b工具執行期追蹤開關物理擷取檔與回看) | ECS、排程、執行期與診斷 | ✅ |
 | 17.81 | [CI / 授權 / 發行](#1781-ci--授權--發行--wave-a工程先於其他各項) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.82 | [品質工具](#1782-品質工具--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
-| 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 工程、測試、效能與工具鏈 | 🔶 |
+| 17.83 | [效能治理](#1783-效能治理--wave-a工程) | 工程、測試、效能與工具鏈 | 不排 |
 | 17.87 | [Hook 與文件生成](#1787-hook-與文件生成--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | 工程、測試、效能與工具鏈 | ✅ |
-| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 嵌入、腳本與平台 | 🔶 |
-| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ⬜ |
-| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 🔶 |
+| 17.89 | [wasm 平台](#1789-wasm-平台--wave-b) | 嵌入、腳本與平台 | ✅ |
+| 17.90 | [音訊與視訊](#1790-音訊與視訊--wave-c) | 嵌入、腳本與平台 | ✅ |
+| 17.91 | [換模組世界移交(熱重載)](#1791-換模組世界移交熱重載) | 嵌入、腳本與平台 | 不排 |
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | 嵌入、腳本與平台 | ✅ |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 嵌入、腳本與平台 | ⬜ |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 嵌入、腳本與平台 | 🔶 |
-| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | 🔶 |
+| 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.99 | [接觸求解器:快取子步內不變的量(位元不變)](#1799-接觸求解器快取子步內不變的量位元不變) | 剛體動力學、接觸與關節 | ✅ |
 | 17.100 | [接觸求解器的遊戲規模效能(改變結果)](#17100-接觸求解器的遊戲規模效能改變結果) | 剛體動力學、接觸與關節 | ⬜ |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
