@@ -772,6 +772,10 @@
 > **來源**:17.99 的量測。issue #154。擁有者同意在這一項為求解器重新產生 golden(2026-11-22),條件是每個 PR 附前後比較。
 > **項目**(各一個 PR,先做第 1 項,它直接檢驗 17.99 的相依鏈判斷):
 > 1. 每個 body 每個子步一個 3 × 3 世界逆慣量,`apply_impulse` / `angular_factor` 用它取代兩次四元數旋轉。
+>    **進度(2026-11-22,#157)** ✅:`InvInertiaW`(`physics/rigid6.mojo`)每次姿態改變在 `SweepCache` 為每個配對的動態端建一次(按配對存,island sweep 不需要物體大小的緩衝);
+>    `solve_contact`、`warm_start_prepared` 與 `warm_start_contacts` 以一次 3 × 3 乘積施加衝量。循序與 island 平行 / 著色仍逐位相同(`test_ccd_shapes` 15/15、`test_islands_par`、`test_colored`)。
+>    `phys-profile`(7 次取最小,`f7ef15f` → 本項)原生 / wasm64:1000 箱 4 × 4 13.972 → 10.735 / 15.484 → 11.566 ms;200 箱 4 × 4 3.661 → 2.595 / 3.743 → 2.733;wasm 雜湊 = 原生。
+>    golden 重錄(x86-64 46 段、aarch64、`wasm_scenes`):最大的變動是 `test_solver_stress` 1:100 漂移 0.22 → 0.81 mm、`test_fracture_save` 120 tick 後的碎裂事件 20 → 11(混沌);`test_system_stack` 不變。
 > 2. Box2D 式預先準備的約束:每點 `rA × n`、`rB × n`(與切向)與有效質量每子步算一次,sweep 直接讀線速度與角速度。
 > 3. SIMD:以既有的著色把 4 或 8 個接觸點並成一個 `SIMD[DType.float32, w]` 運算,原生與 wasm64(simd128)同一份程式。
 > 4. 預設迭代數改 4 子步 × 1 次 + 放鬆(Box2D v3 的預設),先做穩定性測試(10 層堆疊、20 層金字塔、布娃娃、playground 的場景)。
