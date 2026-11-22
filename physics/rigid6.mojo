@@ -215,6 +215,9 @@ trait Body6(Copyable, Movable, Deinitable):
     # get_inertia())`). A body may ignore `iw` and use its own path.
     def apply_impulse_iw(mut self, j: Vec3, at: Vec3, iw: InvInertiaW): ...
     def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW): ...
+    # ROADMAP 17.100 item 2: add a world-frame linear / angular velocity
+    # change the caller computed (the contact sweep's precomputed response).
+    def add_velocity(mut self, dv: Vec3, dw: Vec3): ...
 
 
 @fieldwise_init
@@ -338,6 +341,10 @@ struct QuatBody6(
 
     def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW):
         self.omega = self.omega + iw.apply(l)
+
+    def add_velocity(mut self, dv: Vec3, dw: Vec3):
+        self.vel = self.vel + dv
+        self.omega = self.omega + dw
 
 
 @fieldwise_init
@@ -465,6 +472,9 @@ struct ScrewBody6(
 
     def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW):
         self.apply_angular_impulse(l)
+
+    def add_velocity(mut self, dv: Vec3, dw: Vec3):
+        self.set_velocity(self.linear_velocity() + dv, self.omega_world() + dw)
 
     def rotation(self) -> Quat:
         return self._rotation()
