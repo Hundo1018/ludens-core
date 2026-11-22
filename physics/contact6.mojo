@@ -578,6 +578,38 @@ def warm_start_contacts[B: Body6](
                 bset.bodies[pr.b].apply_angular_impulse(l)
 
 
+def warm_start_prepared[B: Body6](
+    mut bset: BodySet[B], pairs: List[ContactConstraint], cache: SweepCache, lo: Int, hi: Int
+):
+    """`warm_start_contacts` reading the anchors and the tangent basis from a
+    `SweepCache` prepared at the current poses (ROADMAP 17.99): the same
+    values `anchor_world` / `tangent_basis` give there, so bit-identical."""
+    for c in range(lo, hi):
+        ref pr = pairs[c]
+        if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
+            continue
+        var n = pr.m.normal
+        var co = c - cache.base
+        var tb0 = cache.t1[co]
+        var tb1 = cache.t2[co]
+        for k in range(pr.m.count):
+            var j = (
+                n * pr.acc[k]
+                + tb0 * pr.acc_t1[k]
+                + tb1 * pr.acc_t2[k]
+            )
+            if bset.is_dynamic(pr.a):
+                bset.bodies[pr.a].apply_impulse(-j * _cs(bset, pr.a), cache.pwa[4 * co + k])
+            if bset.is_dynamic(pr.b):
+                bset.bodies[pr.b].apply_impulse(j * _cs(bset, pr.b), cache.pwb[4 * co + k])
+        if bset.any_contact_model:
+            var l = pr.roll_acc + n * pr.spin_acc
+            if bset.is_dynamic(pr.a):
+                bset.bodies[pr.a].apply_angular_impulse(-l)
+            if bset.is_dynamic(pr.b):
+                bset.bodies[pr.b].apply_angular_impulse(l)
+
+
 def solve_point[B: Body6](
     mut bset: BodySet[B],
     ia: Int,
@@ -633,6 +665,104 @@ def solve_point[B: Body6](
     return new_acc
 
 
+struct SweepCache(Movable):
+    """ROADMAP 17.99: what the velocity sweeps of one `soft_sweep` /
+    `sweep_colored` call do not change, computed once per call by
+    `prepare_sweep`: per point the world anchors and the normal and tangent
+    denominators (inverse masses plus `angular_factor`, scaled by `_cs`), per
+    pair the tangent basis. A sweep changes velocities only; poses move
+    between sweep calls (`integrate_pose`), so every call prepares afresh.
+    The values come from the same functions on the same inputs as the
+    per-iteration code they replace, so the solve is bit-identical."""
+
+    var base: Int  # pair index of slot 0
+    var pwa: List[Vec3]  # 4 per pair
+    var pwb: List[Vec3]
+    var dn: List[Real]
+    var dt1: List[Real]
+    var dt2: List[Real]
+    var t1: List[Vec3]  # 1 per pair
+    var t2: List[Vec3]
+
+    def __init__(out self, lo: Int, hi: Int):
+        var n = max(hi - lo, 0)
+        self.base = lo
+        self.pwa = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.pwb = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.dn = List[Real](length=4 * n, fill=0)
+        self.dt1 = List[Real](length=4 * n, fill=0)
+        self.dt2 = List[Real](length=4 * n, fill=0)
+        self.t1 = List[Vec3](length=n, fill=Vec3(0, 0, 0, 0))
+        self.t2 = List[Vec3](length=n, fill=Vec3(0, 0, 0, 0))
+
+
+@always_inline
+def _denom[B: Body6](
+    bset: BodySet[B], pr: ContactConstraint, pwa: Vec3, pwb: Vec3, axis: Vec3
+) -> Real:
+    """`ka + kb` along `axis`, written exactly as `solve_contact` wrote it."""
+    var ka = Real(0)
+    if bset.is_dynamic(pr.a):
+        ka = bset.bodies[pr.a].inv_mass() + bset.bodies[
+            pr.a
+        ].angular_factor(pwa - bset.bodies[pr.a].position(), axis)
+    var kb = Real(0)
+    if bset.is_dynamic(pr.b):
+        kb = bset.bodies[pr.b].inv_mass() + bset.bodies[
+            pr.b
+        ].angular_factor(pwb - bset.bodies[pr.b].position(), axis)
+    ka *= _cs(bset, pr.a)
+    kb *= _cs(bset, pr.b)
+    return ka + kb
+
+
+def prepare_sweep[B: Body6](
+    bset: BodySet[B], pairs: List[ContactConstraint], lo: Int, hi: Int
+) -> SweepCache:
+    """A new `SweepCache` of pairs `lo ..< hi` at the current poses."""
+    var sc = SweepCache(lo, hi)
+    prepare_into(sc, bset, pairs, lo, hi)
+    return sc^
+
+
+def prepare_into[B: Body6](
+    mut sc: SweepCache, bset: BodySet[B], pairs: List[ContactConstraint], lo: Int, hi: Int
+):
+    """Fill `sc` for pairs `lo ..< hi` at the current poses, reusing its
+    storage (a step keeps one `SweepCache` and refills it after every pose
+    change instead of allocating per sweep). Entries of an inert pair are
+    left as they were: `solve_contact` and `warm_start_prepared` return
+    before reading them."""
+    var n = max(hi - lo, 0)
+    sc.base = lo
+    if len(sc.t1) < n:
+        sc.pwa.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.pwb.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.dn.resize(4 * n, 0)
+        sc.dt1.resize(4 * n, 0)
+        sc.dt2.resize(4 * n, 0)
+        sc.t1.resize(n, Vec3(0, 0, 0, 0))
+        sc.t2.resize(n, Vec3(0, 0, 0, 0))
+    for c in range(lo, hi):
+        ref pr = pairs[c]
+        if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
+            continue
+        var n = pr.m.normal
+        var tb = tangent_basis(n)
+        var o = c - lo
+        sc.t1[o] = tb[0]
+        sc.t2[o] = tb[1]
+        for k in range(pr.m.count):
+            var pwa = anchor_world(bset, pr.a, pr.ra[k], pr.oa[k], pr.ea, n)
+            var pwb = anchor_world(bset, pr.b, pr.rb[k], pr.ob[k], pr.eb, -n)
+            var i = 4 * o + k
+            sc.pwa[i] = pwa
+            sc.pwb[i] = pwb
+            sc.dn[i] = _denom(bset, pr, pwa, pwb, n)
+            sc.dt1[i] = _denom(bset, pr, pwa, pwb, tb[0])
+            sc.dt2[i] = _denom(bset, pr, pwa, pwb, tb[1])
+
+
 def soft_sweep[B: Body6](
     mut bset: BodySet[B],
     mut pairs: List[ContactConstraint],
@@ -651,13 +781,36 @@ def soft_sweep[B: Body6](
     the soft push-out speed (m/s, `SolverConfig.max_push_speed`). Separation is
     re-derived per point from the CURRENT poses via body-frame anchors, so
     rotation shows up as differential depth (restoring torque)."""
+    var cache = prepare_sweep(bset, pairs, lo, hi)
+    soft_sweep_prepared(
+        bset, pairs, cache, lo, hi, h, bias_rate, mass_scale, impulse_scale, use_bias, iters, mu, max_push
+    )
+
+
+def soft_sweep_prepared[B: Body6](
+    mut bset: BodySet[B],
+    mut pairs: List[ContactConstraint],
+    cache: SweepCache,
+    lo: Int,
+    hi: Int,
+    h: Real,
+    bias_rate: Real,
+    mass_scale: Real,
+    impulse_scale: Real,
+    use_bias: Bool,
+    iters: Int,
+    mu: Real,
+    max_push: Real = 4,
+):
+    """`soft_sweep` with a `SweepCache` the caller prepared at the current
+    poses (ROADMAP 17.99), covering at least `lo ..< hi`."""
     var f = contact_features(bset)
     comptime for F in range(8):
         if f == F:
             for _ in range(iters):
                 for c in range(lo, hi):
                     solve_contact[F=F](bset,
-                        pairs, c, h, bias_rate, mass_scale, impulse_scale,
+                        pairs, cache, c, h, bias_rate, mass_scale, impulse_scale,
                         use_bias, mu, max_push,
                     )
 
@@ -685,19 +838,20 @@ def sweep_colored[B: Body6](
     colors. The schedule is fixed and same-color writes are disjoint, so
     par=True is bit-identical to par=False (and to any `workers` count)."""
     var f = contact_features(bset)
+    var cache = prepare_sweep(bset, pairs, 0, len(pairs))
     comptime for F in range(8):
         if f == F:
             for _ in range(iters):
                 for col in range(len(clo)):
                     if par and chi[col] - clo[col] >= 8:
                         solve_color_parallel[F=F](
-                            bset, pairs, clo[col], chi[col], h, bias_rate,
+                            bset, pairs, cache, clo[col], chi[col], h, bias_rate,
                             mass_scale, impulse_scale, use_bias, mu, workers, dispatch, max_push,
                         )
                     else:
                         for c in range(clo[col], chi[col]):
                             solve_contact[F=F](bset,
-                                pairs, c, h, bias_rate, mass_scale,
+                                pairs, cache, c, h, bias_rate, mass_scale,
                                 impulse_scale, use_bias, mu, max_push,
                             )
 
@@ -705,6 +859,7 @@ def sweep_colored[B: Body6](
 def solve_contact[B: Body6, F: Int](
     mut bset: BodySet[B],
     mut pairs: List[ContactConstraint],
+    cache: SweepCache,
     c: Int,
     h: Real,
     bias_rate: Real,
@@ -792,32 +947,27 @@ def solve_contact[B: Body6, F: Int](
         blk = pr.m.count > 1 and adh == 0
     if blk:
         blk = _block_normal(bset, pr, n, h, p_bias, p_ms, use_bias, max_push)
+    # ROADMAP 17.99: anchors, denominators and the tangent basis come from
+    # `cache` (`prepare_sweep`, computed once per sweep call from the same
+    # poses with the same functions, so the values are bit-identical).
+    var co = c - cache.base
+    var tb0 = cache.t1[co]
+    var tb1 = cache.t2[co]
     for k in range(pr.m.count):
-        var pwa = anchor_world(bset, pr.a, pr.ra[k], pr.oa[k], pr.ea, n)
-        var pwb = anchor_world(bset, pr.b, pr.rb[k], pr.ob[k], pr.eb, -n)
+        var ci = 4 * co + k
+        var pwa = cache.pwa[ci]
+        var pwb = cache.pwb[ci]
         if not blk:
             # anchors coincided at prep with depth d0; separation since
             # then is the anchor drift along the normal
             var d = pr.m.depths[k] - dot(pwb - pwa, n)
             var va = Vec3(0, 0, 0, 0)
-            var ka = Real(0)
             if bset.moves(pr.a):
                 va = bset.bodies[pr.a].velocity_at(pwa)
-            if bset.is_dynamic(pr.a):
-                ka = bset.bodies[pr.a].inv_mass() + bset.bodies[
-                    pr.a
-                ].angular_factor(pwa - bset.bodies[pr.a].position(), n)
             var vb = Vec3(0, 0, 0, 0)
-            var kb = Real(0)
             if bset.moves(pr.b):
                 vb = bset.bodies[pr.b].velocity_at(pwb)
-            if bset.is_dynamic(pr.b):
-                kb = bset.bodies[pr.b].inv_mass() + bset.bodies[
-                    pr.b
-                ].angular_factor(pwb - bset.bodies[pr.b].position(), n)
-            ka *= _cs(bset, pr.a)
-            kb *= _cs(bset, pr.b)
-            var denom = ka + kb
+            var denom = cache.dn[ci]
             if denom <= 0:
                 continue
             var vn = dot(vb - va, n)
@@ -846,7 +996,6 @@ def solve_contact[B: Body6, F: Int](
                 if bset.is_dynamic(pr.b):
                     bset.bodies[pr.b].apply_impulse(j * _cs(bset, pr.b), pwb)
         # Coulomb friction: tangent impulses clamped to pair_mu * lambda_n.
-        var tb = tangent_basis(n)
         # an adhesive point's normal impulse may be negative; it gives no grip
         var lam = pr.acc[k] if pr.acc[k] > 0 else Real(0)
         var cap = pair_mu * lam
@@ -860,30 +1009,14 @@ def solve_contact[B: Body6, F: Int](
         comptime if ELL:
             disk = cap > 0
         for ti in range(2):
-            var t = tb[0] if ti == 0 else tb[1]
+            var t = tb0 if ti == 0 else tb1
             var vat = Vec3(0, 0, 0, 0)
-            var kat = Real(0)
             if bset.moves(pr.a):
                 vat = bset.bodies[pr.a].velocity_at(pwa)
-            if bset.is_dynamic(pr.a):
-                kat = bset.bodies[pr.a].inv_mass() + bset.bodies[
-                    pr.a
-                ].angular_factor(
-                    pwa - bset.bodies[pr.a].position(), t
-                )
             var vbt = Vec3(0, 0, 0, 0)
-            var kbt = Real(0)
             if bset.moves(pr.b):
                 vbt = bset.bodies[pr.b].velocity_at(pwb)
-            if bset.is_dynamic(pr.b):
-                kbt = bset.bodies[pr.b].inv_mass() + bset.bodies[
-                    pr.b
-                ].angular_factor(
-                    pwb - bset.bodies[pr.b].position(), t
-                )
-            kat *= _cs(bset, pr.a)
-            kbt *= _cs(bset, pr.b)
-            var dent = kat + kbt
+            var dent = cache.dt1[ci] if ti == 0 else cache.dt2[ci]
             if dent <= 0:
                 continue
             var vt = dot(vbt - vat, t)
@@ -916,7 +1049,7 @@ def solve_contact[B: Body6, F: Int](
                 var sc = cap / sqrt(m2)
                 pr.acc_t1[k] = t1 * sc
                 pr.acc_t2[k] = t2 * sc
-                var jt = tb[0] * (t1 * sc - t1) + tb[1] * (t2 * sc - t2)
+                var jt = tb0 * (t1 * sc - t1) + tb1 * (t2 * sc - t2)
                 if bset.is_dynamic(pr.a):
                     bset.bodies[pr.a].apply_impulse(-jt * _cs(bset, pr.a), pwa)
                 if bset.is_dynamic(pr.b):
@@ -1229,6 +1362,7 @@ struct _ColorTask[B: Body6, F: Int](Task):
 
     var bset: Pointer[BodySet[Self.B], MutUntrackedOrigin]
     var pairs2: Pointer[List[ContactConstraint], MutUntrackedOrigin]
+    var cache: Pointer[SweepCache, MutUntrackedOrigin]
     var lo: Int
     var h: Real
     var bias_rate: Real
@@ -1239,12 +1373,13 @@ struct _ColorTask[B: Body6, F: Int](Task):
     var max_push: Real
 
     def __init__(
-        out self, mut bset: BodySet[Self.B], mut pairs2: List[ContactConstraint], lo: Int,
+        out self, mut bset: BodySet[Self.B], mut pairs2: List[ContactConstraint], mut cache: SweepCache, lo: Int,
         h: Real, bias_rate: Real, mass_scale: Real, impulse_scale: Real, use_bias: Bool, mu: Real,
         max_push: Real,
     ):
         self.bset = Pointer(to=bset).unsafe_origin_cast[MutUntrackedOrigin]()
         self.pairs2 = Pointer(to=pairs2).unsafe_origin_cast[MutUntrackedOrigin]()
+        self.cache = Pointer(to=cache).unsafe_origin_cast[MutUntrackedOrigin]()
         self.lo = lo
         self.h = h
         self.bias_rate = bias_rate
@@ -1256,7 +1391,7 @@ struct _ColorTask[B: Body6, F: Int](Task):
 
     def run(self, k: Int):
         solve_contact[F=Self.F](
-            self.bset[], self.pairs2[], self.lo + k, self.h, self.bias_rate, self.mass_scale,
+            self.bset[], self.pairs2[], self.cache[], self.lo + k, self.h, self.bias_rate, self.mass_scale,
             self.impulse_scale, self.use_bias, self.mu, self.max_push,
         )
 
@@ -1264,6 +1399,7 @@ struct _ColorTask[B: Body6, F: Int](Task):
 def solve_color_parallel[B: Body6, F: Int](
     mut bset: BodySet[B],
     mut pairs2: List[ContactConstraint],
+    mut cache: SweepCache,
     lo: Int,
     hi: Int,
     h: Real,
@@ -1280,7 +1416,7 @@ def solve_color_parallel[B: Body6, F: Int](
     (ROADMAP 17.75). Same-color pairs share no dynamic body, so the writes
     are disjoint and the result is bit-identical to solving the color
     serially, whoever runs the items."""
-    var task = _ColorTask[B, F](bset, pairs2, lo, h, bias_rate, mass_scale, impulse_scale, use_bias, mu, max_push)
+    var task = _ColorTask[B, F](bset, pairs2, cache, lo, h, bias_rate, mass_scale, impulse_scale, use_bias, mu, max_push)
     dispatch_for(dispatch, task, hi - lo, workers)
 
 

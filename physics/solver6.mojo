@@ -117,6 +117,10 @@ from .contact6 import (
     warm_start_contacts,
     solve_point,
     soft_sweep,
+    soft_sweep_prepared,
+    warm_start_prepared,
+    prepare_into,
+    SweepCache,
     sweep_colored,
     restitution_pass,
     accumulate_step_impulse,
@@ -220,6 +224,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
     # motion (static/dynamic), sleeping, sleep_timer, island, restitution --
     # see `physics/body_set.mojo`.
     var cache: List[ContactConstraint]  # last frame's pairs (cross-frame warm starting)
+    var sweep: SweepCache  # ROADMAP 17.99: the serial path's per-pose solver cache, reused every step
     var joints: List[Joint6]
     # ROADMAP 17.47: per joint, limits / motor / spring / references /
     # collide flag (`physics.joint_ext`); `any_ext` gates the extra pass.
@@ -325,6 +330,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         )
         self.bset = BodySet[Self.B]()
         self.cache = List[ContactConstraint]()
+        self.sweep = SweepCache(0, 0)
         self.joints = List[Joint6]()
         self.jext = List[JointExt]()
         self.any_ext = False
@@ -3163,6 +3169,12 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         # soft pass -> relax, repeated `substeps` times) -- only the tracing
         # granularity changes, not the algorithm.
         self.trace.begin("solve")
+        # ROADMAP 17.99: poses move only at `integrate_pose` / `ccd_advance`, so
+        # one prepared `SweepCache` serves a substep's relax sweep and the next
+        # substep's warm start and biased sweep (serial path; colored sweeps
+        # prepare their own). Prepared here for the first substep.
+        if not colored:
+            prepare_into(self.sweep, self.bset, pairs, 0, len(pairs))
         for sub in range(substeps):
             # gravity: dynamic + awake only. `not _inactive(i)` alone would
             # also admit a kinematic body (never static, never sleeping) --
@@ -3174,7 +3186,10 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     self.bset.bodies[i].integrate_force(h, f, Vec3(0, 0, 0, 0))
             # Warm start: re-apply accumulated impulses; the soft solve's
             # -impulseScale·acc decay is the matching counter-term.
-            warm_start_contacts(self.bset, pairs, 0, len(pairs))
+            if colored:
+                warm_start_contacts(self.bset, pairs, 0, len(pairs))
+            else:
+                warm_start_prepared(self.bset, pairs, self.sweep, 0, len(pairs))
             warm_start_joints(self.bset, self.joints, -2)
             if self.any_ext:
                 warm_start_ext(self.bset, self.joints, self.jext, -2)
@@ -3193,8 +3208,8 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     impulse_scale, True, iters, mu, parallel, workers, cfg.dispatch, cfg.max_push_speed,
                 )
             else:
-                soft_sweep(
-                self.bset, pairs, 0, len(pairs), h, bias_rate, mass_scale,
+                soft_sweep_prepared(
+                    self.bset, pairs, self.sweep, 0, len(pairs), h, bias_rate, mass_scale,
                     impulse_scale, True, iters, mu, cfg.max_push_speed,
                 )
             if ccd:
@@ -3208,6 +3223,8 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             # soft bodies: XPBD lattice + particle-vs-body coupling, at the
             # substep's POST-integration poses (rigid impulses land next substep)
             softbody_pass(self.softs, self.bset, self.colliders, h, gravity, iters, ccd, self.step_index)
+            if not colored:
+                prepare_into(self.sweep, self.bset, pairs, 0, len(pairs))  # the poses just moved
             # relax: remove the bias energy (velocity-only, no bias)
             joint_sweep(self.bset, self.joints, h, bias_rate, 1, 0, False, 2, -2)
             if self.any_ext:
@@ -3218,9 +3235,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     parallel, workers, cfg.dispatch,
                 )
             else:
-                soft_sweep(
-                self.bset, pairs, 0, len(pairs), h, bias_rate, 1, 0, False, 2, mu
-                )
+                soft_sweep_prepared(self.bset, pairs, self.sweep, 0, len(pairs), h, bias_rate, 1, 0, False, 2, mu)
             if self.any_break or self.track_loads:
                 sample_loads(self.joints, h, self.peak_force, self.peak_torque)
                 if self.any_ext:
