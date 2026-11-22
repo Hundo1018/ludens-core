@@ -127,6 +127,45 @@ struct Inertia3(Copyable, ImplicitlyCopyable, Movable, Deinitable):
         return self
 
 
+@fieldwise_init
+struct InvInertiaW(Copyable, ImplicitlyCopyable, Movable, Deinitable):
+    """World-frame inverse inertia `R diag(1/ix, 1/iy, 1/iz) Rᵀ`, stored as its
+    three rows (the matrix is symmetric, so rows = columns). ROADMAP 17.100
+    item 1: built once per pose change, it replaces the two quaternion
+    rotations `apply_impulse` does per impulse with one 3 × 3 product."""
+
+    var r0: Vec3
+    var r1: Vec3
+    var r2: Vec3
+
+    @staticmethod
+    def zero() -> Self:
+        return Self(Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0), Vec3(0, 0, 0, 0))
+
+    @staticmethod
+    def of(q: Quat, i: Inertia3) -> Self:
+        var x = q.x
+        var y = q.y
+        var z = q.z
+        var w = q.w
+        var a0 = Vec3(1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y), 0)
+        var a1 = Vec3(2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x), 0)
+        var a2 = Vec3(2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y), 0)
+        var d = Vec3(1 / i.ix, 1 / i.iy, 1 / i.iz, 0)
+        var d0 = a0 * d
+        var d1 = a1 * d
+        var d2 = a2 * d
+        return Self(
+            Vec3(dot(d0, a0), dot(d0, a1), dot(d0, a2), 0),
+            Vec3(dot(d1, a0), dot(d1, a1), dot(d1, a2), 0),
+            Vec3(dot(d2, a0), dot(d2, a1), dot(d2, a2), 0),
+        )
+
+    @always_inline
+    def apply(self, v: Vec3) -> Vec3:
+        return Vec3(dot(self.r0, v), dot(self.r1, v), dot(self.r2, v), 0)
+
+
 trait Body6(Copyable, Movable, Deinitable):
     """What a 6-DOF contact solver needs from a body, representation-agnostic:
     world-point velocities, impulse response, and the normal-direction
@@ -171,6 +210,11 @@ trait Body6(Copyable, Movable, Deinitable):
     # ROADMAP 17.48: replace mass / principal inertia (`ContactScene6
     # .set_mass` / `set_inertia`); velocities and pose untouched.
     def set_inertia(mut self, i: Inertia3): ...
+    # ROADMAP 17.100 item 1: impulse response through a world inverse inertia
+    # the caller built at the current pose (`InvInertiaW.of(rotation(),
+    # get_inertia())`). A body may ignore `iw` and use its own path.
+    def apply_impulse_iw(mut self, j: Vec3, at: Vec3, iw: InvInertiaW): ...
+    def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW): ...
 
 
 @fieldwise_init
@@ -287,6 +331,13 @@ struct QuatBody6(
 
     def set_inertia(mut self, i: Inertia3):
         self.inertia = i
+
+    def apply_impulse_iw(mut self, j: Vec3, at: Vec3, iw: InvInertiaW):
+        self.vel = self.vel + j / self.inertia.mass
+        self.omega = self.omega + iw.apply(cross(at - self.pos, j))
+
+    def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW):
+        self.omega = self.omega + iw.apply(l)
 
 
 @fieldwise_init
@@ -406,6 +457,14 @@ struct ScrewBody6(
 
     def set_inertia(mut self, i: Inertia3):
         self.inertia = i
+
+    def apply_impulse_iw(mut self, j: Vec3, at: Vec3, iw: InvInertiaW):
+        """The twist lives in the body frame, so the world matrix saves nothing:
+        same result as `apply_impulse`."""
+        self.apply_impulse(j, at)
+
+    def apply_angular_impulse_iw(mut self, l: Vec3, iw: InvInertiaW):
+        self.apply_angular_impulse(l)
 
     def rotation(self) -> Quat:
         return self._rotation()
