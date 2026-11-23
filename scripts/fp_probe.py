@@ -77,7 +77,7 @@ def drift(res, ref, scene):
     rh, rvals = ref[scene]
     if h == rh:
         return 0.0
-    return max(abs(a - b) for a, b in zip(vals, rvals))
+    return max(abs(a - b) for a, b in zip(vals, rvals, strict=True))
 
 
 def over(res, ref):
@@ -145,7 +145,7 @@ def main():
                         family_same = False
                     else:
                         fma_differs = True
-                    dr = max(abs(a - b) for a, b in zip(vals, rvals))
+                    dr = max(abs(a - b) for a, b in zip(vals, rvals, strict=True))
                     cells.append("differs, max drift %.2e" % dr)
             print("| %s | %s |" % (name, " | ".join(cells)))
         print()
