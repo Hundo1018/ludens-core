@@ -215,7 +215,7 @@ def main():
                 else:
                     names.append(os.path.basename(f) + "+" + off)
             print("\ntop allocation sites in '%s' (per step):" % scene)
-            for (_pc, n), fn in zip(top, names):
+            for (_pc, n), fn in zip(top, names, strict=True):
                 print("  %7.1f  %s" % (n / steps, fn[:150]))
 
 

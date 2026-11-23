@@ -204,7 +204,7 @@ def fit_slope(points: list[tuple[int, float]]) -> float:
     ys = [math.log(ns) for n, ns in points]
     mx, my = statistics.fmean(xs), statistics.fmean(ys)
     den = sum((x - mx) ** 2 for x in xs)
-    return sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / den if den > 0 else 0.0
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True)) / den if den > 0 else 0.0
 
 
 def slopes(run: dict, declared: dict[str, float]) -> tuple[int, list[str]]:

@@ -410,7 +410,7 @@ class World:
             buf = ctypes.create_string_buffer(64)
             C.lib.ld_counter_name(i, buf, 64)
             names.append(buf.value.decode())
-        return dict(zip(names, list(out)))
+        return dict(zip(names, list(out)))  # noqa: B905 -- both have length n; strict= needs Python 3.10, the wheel supports 3.8
 
     # -- queries
 
