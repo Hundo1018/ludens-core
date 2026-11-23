@@ -4,7 +4,7 @@ The format is a flat stream of space-separated INTEGER tokens (version tag
 first); every float is stored as its raw f32 bit pattern (`to_bits`), so a
 round trip is exact and a loaded scene continues BIT-IDENTICALLY -- which
 requires saving everything dynamical, including the cross-frame warm-start
-cache (`_CPair` impulse accumulators + manifolds), joint accumulators, and
+cache (`ContactConstraint` impulse accumulators + manifolds), joint accumulators, and
 (audit F20) the contact-event stream's own state (`events_on`/
 `_prev_keys`), so events continue identically too, not just rigid/soft
 state.

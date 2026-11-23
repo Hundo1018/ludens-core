@@ -9,11 +9,13 @@ LAYER NOTE (why the adapter lives here, not in `scheduler/events.mojo`):
 `scheduler/events.mojo` cannot import `collision.contact_events` -- that
 would be a same-layer edge, which the reach-through/cycle rules forbid.
 `publish_contact_events` below is the "small adapter" the design note asks
-for; its natural home is the future `gameplay` package (layer 5, ROADMAP
-17.1+), which may import both `scheduler` and `collision`. Until `gameplay`
-exists, this test IS the production-style caller architecture law v3
-requires ("接上專案" -- reached by at least one real caller, not left as an
-island the way `geometry/quickhull.mojo` was before `947a37f`)."""
+for. Before the `gameplay` package (layer 5) existed, this test was the
+production-style caller architecture law v3 requires ("接上專案" -- reached
+by at least one real caller, not left as an island the way
+`geometry/quickhull.mojo` was before `947a37f`). The production adapter now
+lives in `gameplay/runtime.mojo` (`Runtime` forwards `scene.events` onto
+its `events` channel each fixed tick); this test still checks the same
+adapter shape against a real `ContactScene6`."""
 
 from harness.runner import Suite
 from geometry.vec import Real, Vec3

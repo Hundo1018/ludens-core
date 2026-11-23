@@ -12,7 +12,7 @@ solve converged, how many iterations it used and the final relative residual,
 because "the solver returned" and "the solver solved it" are different claims
 and a physics step that mistakes one for the other produces a plausible-looking
 wrong answer. A stalled or diverging solve is detected and reported, not
-silently accepted: `test_linalg` drives both cases on purpose.
+silently accepted: `test_numerics` drives both cases on purpose.
 
 MIXED PRECISION, and not as a refinement. The operator applies in float32
 because that is what the engine's state is, but the Krylov recurrence runs in

@@ -227,7 +227,7 @@ def bake_sdf_grid(verts: List[Real], idx: List[Int], res: Int, pad: Real) -> Sdf
 # the sign from the angle-weighted pseudonormal of the face, edge or vertex
 # holding the closest point; on open meshes (and points on the surface) it
 # falls back to the winding number. Same values as the brute bake
-# (`test_sdf_bake`).
+# (`test_sdf_grid`).
 
 
 struct _TriBvh(Movable):

@@ -1,0 +1,38 @@
+# Allow list for scripts/stale_refs.py: backticked names in comments, docstrings and docs that are
+# correct as written although no such code exists (external APIs, notation, examples, history).
+# Format: `path:token  # reason` (one file) or `token  # reason` (any file). Every entry needs a reason.
+
+README.md:SkinVert  # history: the struct wrapper, stated as removed
+collision/hull.mojo:SkinVert  # history: the removed SkinVert mitigation
+geometry/skinning.mojo:SkinVert  # history: "used to live here"
+diag/arena.mojo:UntrackedOrigin  # quoted from the mojo-syntax skill text
+docs/CATEGORY.md:FrameAllocator  # considered and rejected design, stated as such
+ecs/relations.mojo:ChildOf  # example relation name; relation ids are user comptime Ints
+experiments/exp_tier_phases.mojo:BroadPhase.update_moved  # proposed method this experiment measured; not built (ROADMAP 17.85)
+gameplay/objectives.mojo:ItemPickedUp  # example event type in prose
+gameplay/vehicle_wheel.mojo:VehicleConstraint  # Jolt API named for comparison
+geometry/mat3.mojo:_det3  # history: the private per-module copies this replaced
+physics/fem.mojo:_det3  # explains why det3 is public, not _det3
+geometry/multivector.mojo:_swap_sign  # explains why swap_sign is public, not _swap_sign
+geometry/vec.mojo:_tangent_basis  # history: the solver6 helper this was moved from
+geometry/trig.mojo:__sindf  # musl libm function this port follows
+geometry/trig.mojo:__cosdf  # musl libm function this port follows
+geometry/trig.mojo:__rem_pio2f  # musl libm function this port follows
+geometry/trig.mojo:__rem_pio2_large  # musl libm function this port does not follow
+harness/gradcheck.mojo:_fd  # history: the per-test helpers this module replaced
+numerics/cholesky.mojo:cs_chol  # CSparse function cited (Davis 2006)
+physics/material.mojo:PhysicMaterial.combine  # Unity API named for comparison
+physics/material.mojo:PxCombineMode  # PhysX API named for comparison
+physics/material.mojo:PhysicsMaterial  # Jolt API named for comparison
+physics/material.mojo:FrictionCombineMode  # UE API named for comparison
+physics/pbf.mojo:s_corr  # paper notation (Macklin & Mueller 2013 tensile correction)
+physics/solver6.mojo:_Pt  # history: wrappers that "used to sit here"
+physics/solver6.mojo:_LV  # history: wrappers that "used to sit here"
+physics/solver6.mojo:_Half  # history: wrappers that "used to sit here"
+physics/solver6.mojo:add_kinematic  # rejected alternative, stated as "deliberately NOT"
+physics/solver_config.mojo:_update_sleep  # history: names the comptime locals this replaced
+physics/solver_config.mojo:_restitution_pass  # history: names the comptime locals this replaced
+scheduler/events.mojo:OnPlayerDied  # example event name in prose
+scheduler/events.mojo:EventReader  # Bevy API named for comparison
+scheduler/timers.mojo:HashedWheelTimer  # Netty class named for comparison
+scripts/benchmark_report.md.in:InlineArray  # history: the name Mojo gave `Array` when that change was made

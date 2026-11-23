@@ -54,7 +54,9 @@ comptime SOLVE_CG = 2  # `solve_cg`
 
 @fieldwise_init
 struct ConRow(Copyable, ImplicitlyCopyable, Movable):
-    """One scalar constraint. `jac_at` indexes into the set's flat Jacobian."""
+    """One scalar constraint. Its Jacobian row is not stored here: row `r`
+    of the owning `ConstraintSet` lives at `jac[r * n + i]` (row-major,
+    `i` over the `n` generalised coordinates)."""
 
     var kind: Int
     var bias: Real  # target residual velocity (Baumgarte / restitution)

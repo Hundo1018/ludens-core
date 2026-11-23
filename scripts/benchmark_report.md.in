@@ -83,12 +83,13 @@ the primitive cost, where the analytic narrowphase cannot express the shape
 at all. Contact cost also stops depending on tessellation, since there is no
 mesh in between.
 
-Still to do: this lives at narrowphase level and is NOT yet wired into
-`solver6`, which dispatches on a shape-kind tag and needs a multi-point
-manifold rather than a single deepest contact. Convex hulls took exactly that
-route and are now wired (kind 3, see the manifold table); an SDF shape kind
-would follow the same pattern, with the clipping step replaced by sampling the
-field around the deepest point.
+Scope: the rows above time `geometry.sdf3.sdf_contact` on analytic and CSG
+`Sdf3` fields directly; `solver6` does not call that path. A field reaches the
+solver only as a sampled grid: `SdfGrid.from_field` bakes it, and
+`ContactScene6.add_sdf` (ROADMAP 17.52) adds it as a static `SHAPE_SDF` body
+whose contacts with boxes, spheres, capsules and hulls are a multi-point
+manifold sampled from the other shape (`contact_gen.try_sdf_pair`). A moving
+analytic or CSG `Sdf3` body is not a solver shape kind.
 
 @bench benchmarks/bench_sdf3.mojo
 ## Collision — manifold narrowphase (contact patch vs boolean test)
@@ -161,7 +162,7 @@ paid up front (brute force over triangles here).
 
 Layers, masks, sensors (`set_filter` / `set_sensor`) and the began/stay/ended
 event stream, all in `ContactScene6`. The filter test is two ANDs at the top of
-`_try_pair`, the one point both the brute and the broadphase enumeration funnel
+`try_pair` (`collision/contact_gen.mojo`), the one point both the brute and the broadphase enumeration funnel
 through, so the two seams cannot disagree about what was filtered —
 `test_filter_events` gates them to bit-identical results AND to an identical
 event stream.
@@ -1125,7 +1126,7 @@ It lands at 8.5ns against the tape's 50ns and the hand-derived routine's 5.3ns:
 5.9x faster than the tape it replaces, and still 1.6x slower than the code a
 person wrote. That remaining gap is reported rather than rounded away. Two
 things closed most of it and are worth recording: the register file and the
-constants moved from heap `List` to stack `InlineArray`, and the opcode
+constants moved from heap `List` to stack `Array` (then named `InlineArray`), and the opcode
 dispatch became `comptime if` so each instruction expands to its own rule
 alone. Before both, the generated version ran at 19.7ns — the structure was
 already right and the indirection was the whole difference.
@@ -1759,7 +1760,7 @@ it does not show up in this delta.
 
 Every box is pinned awake (`set_can_sleep(id, False)`) in BOTH columns —
 without that, the STATIC column's boxes settle and sleep within a few dozen
-frames (`test_sleep6`'s own number is 35), and `_impulse_inert` then skips
+frames (`test_sleep6`'s own number is 35), and `BodySet.impulse_inert` then skips
 their pair OUTRIGHT every subsequent step. That sleep/skip delta dwarfs one
 extra `velocity_at` read and would swamp the thing this table exists to
 isolate; an earlier revision of this bench measured exactly that confound
@@ -1772,11 +1773,11 @@ run-to-run noise, not a real cost.
 @bench benchmarks/bench_kinematic.mojo
 ## Physics — sleep API wake storm (ROADMAP 17.25)
 
-`wake(id)` (and the `_wake_island` it shares with `teleport` and with
-`_refresh_islands`'s own automatic wake) scans every body in the scene once
+`wake(id)` (and the `physics.islands.wake_island` it shares with `teleport` and with
+`refresh_islands`'s own automatic wake) scans every body in the scene once
 to find the ones sharing `id`'s island label — O(bodies), not O(island
 size), by construction: it reuses the same flat index space
-`_refresh_islands` already walks every step. This table builds a single
+`refresh_islands` already walks every step. This table builds a single
 N-body island (island size == scene size, the worst case for that scan),
 settles it to sleep, then wakes ONE body in it repeatedly at increasing N —
 a synthetic "wake storm" stress on the scan itself, isolated from any actual
@@ -2687,7 +2688,7 @@ ticks, process start included.
 - **The N ceiling is gone (was: `InlineArray[Int, cap]` by value).** The sparse
   index no longer has a fixed cap — `test_sparse_large` spawns **1,000,000**
   entities and checks counts and high-id component reads. The remaining
-  `InlineArray` in `ecs/archetype.mojo` indexes archetype-graph edges by
+  `Array` in `ecs/archetype.mojo` indexes archetype-graph edges by
   *component slot*, not by entity, so it does not bound N.
   What the tables above still under-show is the RAM-spill REGIME: the movement
   rows stop at N=65536, where a fat entity still reaches L3, so the W2 locality

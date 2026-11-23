@@ -58,7 +58,7 @@ def run_ticks(mut w: EmbedWorld, n: Int) raises:
             w.physics_tick()
 
 
-# The edit script: what each step changes. `use_add` = False skips the add (step 5) and the remove (step 6).
+# The edit script: what each step changes. Section 2 runs it without the add (step 5) and the remove (step 6).
 def touched(k: Int, hs: List[Int64]) -> List[Int64]:
     var t = List[Int64]()
     if k == 0 or k == 3 or k == 6:

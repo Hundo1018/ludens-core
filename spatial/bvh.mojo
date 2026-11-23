@@ -63,7 +63,7 @@ struct BVH[dim: Int](Copyable, Defaultable, Movable):
           it.
 
         `lbvh` wins over `sah` when a tree is thrown away every frame; `sah`
-        wins when it is queried many times per build. `bench_lbvh` sweeps
+        wins when it is queried many times per build. `bench_sah` measures
         exactly that queries-per-build ratio."""
         self.clear()
         if len(leaves) == 0:

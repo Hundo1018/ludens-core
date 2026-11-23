@@ -983,8 +983,9 @@ def solve_contact[B: Body6, F: Int](
     mu: Real,
     max_push: Real = 4,
 ):
-    """One pair's normal + friction solve (the body of `_soft_sweep`,
-    extracted so the colored sweep can schedule it per pair). `F` is
+    """One pair's normal + friction solve (the per-pair body that
+    `soft_sweep`/`soft_sweep_prepared` loop over, kept separate so
+    `sweep_colored` can schedule it per pair). `F` is
     `contact_features(bset)`, fixed by the caller (the `CF_*` bits)."""
     comptime MODEL = (F & CF_MODEL) != 0
     comptime ELL = (F & CF_ELLIPTIC) != 0
