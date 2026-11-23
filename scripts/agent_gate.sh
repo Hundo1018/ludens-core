@@ -9,7 +9,7 @@
 #   scripts/agent_gate.sh --update-golden  gate, then record this run as golden
 #   scripts/agent_gate.sh --selftest       test the gate's own tools first
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 # One golden per platform (ROADMAP 17.76): linux x86-64 keeps the original
 # file; any other OS / architecture reads test_stdout.<os>-<arch>.txt, which
 # `--update-golden` creates there on first record.

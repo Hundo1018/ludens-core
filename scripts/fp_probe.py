@@ -63,10 +63,10 @@ def parse(text):
 
 def run(flags, d):
     exe = os.path.join(d, "fp")
-    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, capture_output=True, text=True)
+    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, capture_output=True, text=True, check=False)
     if b.returncode != 0:
         return None, b.stderr.strip().split("\n")[-1]
-    r = subprocess.run([exe], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run([exe], cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         return None, "run failed: " + r.stderr.strip()[-200:]
     return parse(r.stdout), ""
@@ -77,7 +77,7 @@ def drift(res, ref, scene):
     rh, rvals = ref[scene]
     if h == rh:
         return 0.0
-    return max(abs(a - b) for a, b in zip(vals, rvals))
+    return max(abs(a - b) for a, b in zip(vals, rvals, strict=True))
 
 
 def over(res, ref):
@@ -145,7 +145,7 @@ def main():
                         family_same = False
                     else:
                         fma_differs = True
-                    dr = max(abs(a - b) for a, b in zip(vals, rvals))
+                    dr = max(abs(a - b) for a, b in zip(vals, rvals, strict=True))
                     cells.append("differs, max drift %.2e" % dr)
             print("| %s | %s |" % (name, " | ".join(cells)))
         print()

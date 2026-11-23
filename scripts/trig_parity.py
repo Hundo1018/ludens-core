@@ -46,16 +46,16 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="trig_") as d:
         a, exe = Path(d) / "libwasmrt_math.a", Path(d) / "parity"
         r = subprocess.run(["pixi", "run", "--manifest-path", str(RT / "pixi.toml"), "python3", "-m",
-                            "ludens_wasm_rt.native_math", "-o", str(a)], capture_output=True, text=True)
+                            "ludens_wasm_rt.native_math", "-o", str(a)], capture_output=True, text=True, check=False)
         if r.returncode != 0:
             print(r.stdout[-800:], r.stderr[-800:])
             return 1
         r = subprocess.run(["mojo", "build", "--target-cpu", "x86-64", "-I", "build", "-Xlinker", str(a), "-o", str(exe),
-                            "tools/wasm/trig_parity.mojo"], cwd=ROOT, capture_output=True, text=True)
+                            "tools/wasm/trig_parity.mojo"], cwd=ROOT, capture_output=True, text=True, check=False)
         if r.returncode != 0:
             print(r.stderr[-1500:])
             return 1
-        out = subprocess.run([str(exe)], capture_output=True, text=True).stdout
+        out = subprocess.run([str(exe)], capture_output=True, text=True, check=True).stdout
     bad, total = parse(out)
     print(f"[{'PASS' if bad == 0 else 'FAIL'}] trig-parity - {bad} mismatches in {total} comparisons")
     return 0 if bad == 0 else 1

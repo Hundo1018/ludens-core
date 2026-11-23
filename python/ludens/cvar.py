@@ -162,6 +162,8 @@ def bind_world(world, registry=None, iterations=4, substeps=4, gravity=(0.0, -9.
     4 / 4) are written to the world immediately so world and registry agree
     from the start. Bind before registering other PRE systems so the change
     is in effect for every system of that tick."""
+    if len(gravity) != 3:
+        raise ValueError("gravity needs 3 components (x, y, z), got %d" % len(gravity))
     reg = registry if registry is not None else CVarRegistry()
     dirty = {"solver": False, "gravity": False}
 
@@ -170,7 +172,7 @@ def bind_world(world, registry=None, iterations=4, substeps=4, gravity=(0.0, -9.
 
     reg.define("physics.iterations", int(iterations), min=1, max=256, help="solver iterations per substep", on_change=mark("solver"))
     reg.define("physics.substeps", int(substeps), min=1, max=64, help="substeps per tick", on_change=mark("solver"))
-    for axis, g in zip("xyz", gravity):
+    for axis, g in zip("xyz", gravity):  # noqa: B905 -- length checked above; strict= needs Python 3.10, the wheel supports 3.8
         reg.define("physics.gravity_" + axis, float(g), help="gravity %s (m/s^2)" % axis, on_change=mark("gravity"))
     world.set_solver(reg["physics.iterations"], reg["physics.substeps"])
     world.set_gravity((reg["physics.gravity_x"], reg["physics.gravity_y"], reg["physics.gravity_z"]))

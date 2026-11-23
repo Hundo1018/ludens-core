@@ -478,7 +478,7 @@ struct FractureSet(Movable):
         touch or overlap (decomposition parts overlap by up to a voxel, so
         there is no shared face to name). Pairs are found by bounding box then
         GJK; the seam area is estimated as `min(volume)^(2/3)`. O(n^2) over the
-        range -- TODO: a broadphase for large concave objects."""
+        range -- TODO (17.5): a broadphase for large concave objects."""
         if stress <= 0:
             raise Error("FractureSet.bond_overlapping: stress must be > 0")
         var made = 0

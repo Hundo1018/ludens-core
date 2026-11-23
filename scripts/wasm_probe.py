@@ -20,7 +20,6 @@ harness; a violation names the module and the shell import it adds.
 """
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -122,7 +121,7 @@ def run(files: list[Path]) -> int:
         with tempfile.TemporaryDirectory(prefix="wasm_") as d:
             ll = Path(d) / "k.ll"
             r = subprocess.run(["mojo", "build", "--emit", "llvm", "-I", "build", "-o", str(ll), str(f)],
-                               cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+                               cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False)
             if r.returncode != 0:
                 print(f"wasm-probe: {f}: emit failed\n{r.stderr[-1500:]}")
                 worst = 1
@@ -133,7 +132,7 @@ def run(files: list[Path]) -> int:
             status = "LEAF (0 imports)" if not imp else f"{len(imp)} imports: {', '.join(imp)}"
             print(f"wasm-probe: {f.relative_to(ROOT)}::{name}: {status}")
             if name not in parse(ir)[0]:
-                print(f"wasm-probe:   (exported function not found in IR)")
+                print("wasm-probe:   (exported function not found in IR)")
                 worst = 1
         bad = shell_reach(ROOT, f)
         print(f"wasm-probe: {f.relative_to(ROOT)} core/shell split: "
@@ -167,7 +166,7 @@ def capi() -> int:
         ll = Path(d) / "capi.ll"
         r = subprocess.run(["mojo", "build", "--emit", "llvm", "-D", "LUDENS_SERIAL=True", "-D", "ASSERT=none",
                             "-I", "build", "-o", str(ll), "embed/capi.mojo"],
-                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False)
         if r.returncode != 0:
             print(f"wasm-probe --capi: emit failed\n{r.stderr[-1500:]}")
             return 1

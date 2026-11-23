@@ -50,7 +50,7 @@ DOC_FILES = ("README.md", "CLAUDE.md", "CONTRIBUTING.md")
 
 def run(label, argv, quiet_ok=True):
     """Run one check; print its output only when it fails. Returns True on success."""
-    p = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True)
+    p = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, check=False)
     if p.returncode != 0:
         print(f"[hooks] FAIL {label}", file=sys.stderr)
         sys.stderr.write((p.stdout or "") + (p.stderr or ""))
@@ -145,6 +145,12 @@ def precommit_plan(staged, added, dirs, decl_changed=False):
         checks.append(("test tier headers", arch("tiers", "--check")))
     if touches_mojo or docs or "scripts/stale_refs_allow.txt" in staged:
         checks.append(("text names code that exists (stale_refs)", script("stale_refs.py")))
+    if any(f.endswith(".mojo") for f in staged):
+        checks.append(("CLAUDE.md code rules", script("code_rules.py")))
+    if any(f.endswith(".py") for f in staged) or "ruff.toml" in staged:
+        checks.append(("ruff", script("lint.py", "--only", "ruff")))
+    if any(f.endswith(".sh") or f.startswith(".githooks/") for f in staged):
+        checks.append(("shellcheck", script("lint.py", "--only", "shellcheck")))
     if docs or "scripts/arch_layers.toml" in staged:
         checks.append(("doc references", script("doclint.py")))
         checks.append(("layer tables match arch_layers.toml", script("layers_sync.py")))
@@ -174,7 +180,7 @@ def structure_edit_problem(staged_blob, main_blob):
 
 
 def _blob(rev_path):
-    p = subprocess.run(["git", "rev-parse", "-q", "--verify", rev_path], cwd=ROOT, capture_output=True, text=True)
+    p = subprocess.run(["git", "rev-parse", "-q", "--verify", rev_path], cwd=ROOT, capture_output=True, text=True, check=False)
     return p.stdout.strip() or None
 
 
@@ -192,7 +198,7 @@ def cmd_pre_commit():
             print(f"[hooks] FAIL {problem}")
             return 1
     dirs = engine_dirs()
-    diff = subprocess.run(["git", "diff", "--cached", "-U0", "--", "*.mojo"], cwd=ROOT, capture_output=True, text=True).stdout
+    diff = subprocess.run(["git", "diff", "--cached", "-U0", "--", "*.mojo"], cwd=ROOT, capture_output=True, text=True, check=True).stdout
     checks, _ = precommit_plan(staged, added, dirs, declaration_changed(diff, dirs))
     ok = True
     for label, argv in checks:
@@ -215,7 +221,7 @@ def changelog_behind():
     if not path.exists():
         return None
     listed = set(re.findall(r"\(([0-9a-f]{7})\)\s*$", path.read_text(encoding="utf-8"), re.M))
-    p = subprocess.run(["git", "log", "--format=%H"], cwd=ROOT, capture_output=True, text=True)
+    p = subprocess.run(["git", "log", "--format=%H"], cwd=ROOT, capture_output=True, text=True, check=True)
     for behind, full in enumerate(p.stdout.split()):
         if full[:7] in listed:
             return behind
@@ -228,7 +234,7 @@ def cmd_pre_push():
         ("arch check", arch("check")),
         ("test tier headers", arch("tiers", "--check")),
         ("doc references", script("doclint.py")),
-        ("text names code that exists (stale_refs)", script("stale_refs.py")),
+        ("lint: code rules, stale references, ruff, shellcheck", script("lint.py")),
         ("layer tables match arch_layers.toml", script("layers_sync.py")),
         ("ROADMAP subsystem table matches the index", script("roadmap_status.py", "--check")),
         ("unwired modules", script("orphans.py")),
@@ -339,7 +345,7 @@ def cmd_claude_post():
     if full.exists():
         problems += post_edit_problems(rel, full.read_text(encoding="utf-8", errors="replace"))
     if rel.split("/")[0] in engine_dirs():
-        p = subprocess.run(arch("check"), cwd=ROOT, capture_output=True, text=True)
+        p = subprocess.run(arch("check"), cwd=ROOT, capture_output=True, text=True, check=False)
         if p.returncode != 0:
             problems.append("arch check failed after this edit:\n" + (p.stdout + p.stderr).strip())
     if problems:
@@ -370,7 +376,7 @@ def selftest():
 
     dirs = {"physics", "collision", "harness"}
     checks, regen = precommit_plan(["physics/solver6.mojo"], [], dirs)
-    assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers", "text names code that exists (stale_refs)"] and not regen
+    assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers", "text names code that exists (stale_refs)", "CLAUDE.md code rules"] and not regen
     assert not precommit_plan(["physics/solver6.mojo"], [], dirs, decl_changed=True)[1], "commits never regenerate the doc"
     assert not precommit_plan(["scripts/arch_layers.toml"], [], dirs)[1]
     body_only = "+++ b/physics/solver6.mojo\n@@ -1 +1 @@\n-    x = 1\n+    x = 2\n"
@@ -390,7 +396,11 @@ def selftest():
     checks, _ = precommit_plan(["physics/new.mojo"], ["physics/new.mojo"], dirs)
     assert "unwired modules" in [c[0] for c in checks]
     checks, regen = precommit_plan(["python/ludens/_capi.py"], [], dirs)
-    assert checks == [] and not regen
+    assert [c[0] for c in checks] == ["ruff"] and not regen
+    checks, _ = precommit_plan(["scripts/run_tests.sh"], [], dirs)
+    assert "shellcheck" in [c[0] for c in checks]
+    checks, _ = precommit_plan(["scripts/doclint_allow.txt"], [], dirs)
+    assert checks == []
 
     assert structure_edit_problem(None, "a") is None, "a commit that does not touch the doc passes"
     assert structure_edit_problem("a", "a") is None, "main's version (pulled or merged) passes"

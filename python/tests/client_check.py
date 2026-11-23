@@ -355,8 +355,8 @@ with ludens.World(1.0 / 60.0, (0, -9.8, 0)) as m1, ludens.World(1.0 / 60.0, (0, 
     mk.set_unit_scale(K)
     for wv in (m1, mk, mn):
         wv.step_ticks(120)
-    same = all(tuple(x * K for x in a.state().pos) == tuple(b.state().pos) for a, b in zip(b1, bk))
-    drift = max(abs(a.state().pos[1] * K - b.state().pos[1]) / K for a, b in zip(b1, bn))
+    same = all(tuple(x * K for x in a.state().pos) == tuple(b.state().pos) for a, b in zip(b1, bk, strict=True))
+    drift = max(abs(a.state().pos[1] * K - b.state().pos[1]) / K for a, b in zip(b1, bn, strict=True))
     check(same, "a world in units of 1/128 m with set_unit_scale(128) is the metre world x 128, bit for bit")
     check(drift > 0, "without set_unit_scale the same world differs (by %.2g m)" % drift)
     check(raises(ludens.LudensError, lambda: mk.set_unit_scale(0)) is not None, "set_unit_scale(0) is rejected")
