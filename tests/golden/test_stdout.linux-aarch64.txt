@@ -1383,7 +1383,8 @@ sphere collision: gradient -0.021412147 1.1984232 RevReal -0.021412147 1.1984232
 [PASS] impact_report - 24 / 24 checks
 --- tests/test_islands_par.mojo ---
   islands: 6
-[PASS] islands_par - 6 / 6 checks
+  pairs with both ends asleep or static: 13 of 13
+[PASS] islands_par - 10 / 10 checks
 --- tests/test_iso_collision.mojo ---
 box SDF: triangles 7872  open edges 0  volume 3.9744866
 box dropped on the mesh: rests at 0.10040115 0.599994 -0.19986822  (bottom 0.499994 )
