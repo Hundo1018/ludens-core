@@ -54,7 +54,7 @@
 | 子系統 | 範圍 | ✅ | 🔶 | ⬜ | ⏸ / 不排 |
 |---|---|--:|--:|--:|--:|
 | [幾何代數與數值基礎](#幾何代數與數值基礎) | geometry、numerics、AD 係數場、exact predicates | 2 | 0 | 0 | 0 |
-| [剛體動力學、接觸與關節](#剛體動力學接觸與關節) | physics:solver6、接觸、最大座標關節、islands / sleeping、材質 | 23 | 1 | 1 | 0 |
+| [剛體動力學、接觸與關節](#剛體動力學接觸與關節) | physics:solver6、接觸、最大座標關節、islands / sleeping、材質 | 23 | 1 | 2 | 0 |
 | [碰撞形狀、寬窄相與世界查詢](#碰撞形狀寬窄相與世界查詢) | collision、spatial | 15 | 0 | 0 | 0 |
 | [縮座標關節體與致動](#縮座標關節體與致動) | chain(ABA / RNEA)、致動器、腱、感測器、統一約束 | 11 | 0 | 0 | 0 |
 | [軟體、布料、連續體與流體](#軟體布料連續體與流體) | softbody、cloth、FEM / MPM / SPH / PBF、LBM、繩索 | 16 | 0 | 0 | 7 |
@@ -65,7 +65,7 @@
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 0 | 0 | 1 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 21 | 1 | 0 | 0 |
 | [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 1 | 0 | 4 |
-| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 13 | 0 | 0 | 1 |
+| [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 14 | 0 | 0 | 1 |
 
 ## 原則與決策
 
@@ -301,6 +301,7 @@
 | 17.50 | [接觸模型變體](#1750-接觸模型變體--wave-b) | ✅ | B | 橢圓摩擦錐、滾動 / 扭轉摩擦、靜 / 動摩擦、逐材質 / 逐 body 接觸柔度、塊求解、黏附 / 吸附(CPU ✅;GPU 對齊屬第 7 層) |
 | 17.99 | [接觸求解器:快取子步內不變的量(位元不變)](#1799-接觸求解器快取子步內不變的量位元不變) | ✅ | B | 錨點、法向 / 切向分母與切向基底每次姿態改變算一次,由放鬆 sweep 與下一子步的 warm start、偏置 sweep 共用;golden 逐段不變;1000 箱 4 × 4 原生 −24 %、wasm64 −23 % |
 | 17.100 | [接觸求解器的遊戲規模效能(改變結果)](#17100-接觸求解器的遊戲規模效能改變結果) | ⬜ | B | 世界逆慣量矩陣、預先算好的有效質量、著色 SIMD、預設迭代數、增量 broadphase、平行與循序的結果;每項附前後的成本表與穩定性比較,golden 只在改變它的 PR 重新產生 |
+| 17.103 | [睡眠與靜止的接觸對不重算](#17103-睡眠與靜止的接觸對不重算) | ⬜ | B | 兩端都睡眠或靜態的配對沿用快取,不進窄相與 sweep;睡眠物體不重插 broadphase;1 萬個全睡的盒子現在每 tick 33 ms |
 
 ### 已完成條目的遺留待辦
 
@@ -788,6 +789,22 @@
 > 7. 兩個改變既有場景結果的預設(由 17.19 移來,使用者 2026-11-22 決定在本項一起決定):`max_mass_ratio` 是否預設開啟、網格接觸 reduction 是否預設開啟;各附開 / 關的穩定性與成本對照。
 > **驗收**(每個 PR):`phys-profile` 的成本表(原生循序、原生平行、wasm64;50 / 200 / 1000 醒著的箱子;4 × 4 與新預設)前後對照;穩定性:
 > 堆疊與金字塔漂移、布娃娃與關節鏈、playground 的 camp 與 quarry 場景,前後比較並在 PR 寫出界限;golden 只在改變它的 PR 重新產生,附理由。
+> **壓力與規模基準(2026-11-23,#160)**:`benchmarks/bench_stress.mojo`(報告「Stress and scale」一節)量每 tick 的 p50 / p99 / max,4 × 4、broadphase 開,
+> 作為之後各項的前後對照:30 層塔 0.40 ms;20 列金字塔(210 箱)p50 0.97、p99 9.2 ms;坑中 10 000 箱連成一個 island 925 ms(p99 1 203);
+> 5 000 箱全睡 13.5 ms、同一 tick 全部喚醒那一 tick 61 ms;單層盒子醒著 1e4 / 3e4 / 1e5 為 132 / 492 / 1 753 ms(每個 13.2 → 17.5 µs,略高於線性),
+> 全睡為 33 / 119 / 415 ms(見 17.103)。ECS 移動系統 1e6 實體:sparse-set 42.6 ms、archetype SoA 0.76 ms。
+
+#### 17.103 睡眠與靜止的接觸對不重算
+
+> **狀態**:⬜(2026-11-23)
+> **緣起**:17.100 的壓力基準。1 萬個全睡的盒子每 tick 仍要 33 ms(每個 3.3 µs),1e5 個 415 ms,約為醒著時的四分之一,而睡眠的目的是讓它接近零。
+> callgrind(2 000 個全睡的盒子,inclusive,遞迴函式互相重疊):收集配對 78 %、BVH 查詢 35 %、BVH 重建 26 %、窄相 `try_pair` 21 %、
+> `make_contact` 14 %、接觸 sweep 10 %。`_collect_pairs`(`physics/solver6.mojo`)沒有任何睡眠過濾:每 tick 為所有物體算 fat AABB、重建 BVH、
+> 查詢,再對每一對跑窄相。
+> **做法**:兩端都是睡眠或靜態的配對沿用上一 tick 的快取(姿態沒變,manifold 不會變),不進窄相與 sweep;睡眠物體不重新插入 broadphase
+> (與 17.100 第 5 項增量 broadphase 一起做)。醒來時照現行路徑重算。
+> **驗收**:`bench_stress` 的全睡列降到醒著列的 5 % 以下;喚醒風暴那一 tick 不變慢;睡眠進出的雜湊與現行相同(`test_sleep6`、`test_islands`),
+> 若不同,照 17.100 的規則附前後比較並重錄 golden。
 
 ---
 
@@ -4318,6 +4335,7 @@
 | 17.87 | [Hook 與文件生成](#1787-hook-與文件生成--wave-a工程) | ✅ | A | git hook(commit-msg / pre-commit / pre-push)、Claude Code hook(PreToolUse / PostToolUse)、`docs/STRUCTURE.md` 由架構索引產生、分層表與 ROADMAP 子系統表的同步檢查 |
 | 17.88 | [工具鏈升級:Mojo 1.2.0 / modular 26.7.0 與新語言特性](#1788-工具鏈升級mojo-120--modular-267-與新語言特性--wave-a工程) | ✅ | A | 精確鎖定 1.2.0 / 26.7.0、`match` / `if case` / `Defaultable` 採用、golden 逐段歸因、函式型參數結構體的編譯器問題與 `Tween` 改寫 |
 | 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | ✅ | B | 執行期旗標每步分派一次到編譯期特化的核心;求解器 seam 改為 policy trait;`QuatBody6[I]`、`EmbedWorld[B, BP]`;固定大小值;每項 golden 逐段不變 |
+| 17.102 | [靜態檢查:過時文件與可機器檢查的程式規則](#17102-靜態檢查過時文件與可機器檢查的程式規則) | ✅ | B | `pixi run lint`:不存在的程式名稱引用、CLAUDE.md 程式規則、ruff、shellcheck;pre-commit 依檔案類型挑選,pre-push 與 CI 全跑 |
 
 ### 已完成條目的遺留待辦
 
@@ -4659,6 +4677,27 @@
 >    - `FlipWater[D]`:不帶來執行期收益(兩檔 655 行),會改變 2D 水的結果與 `tests/golden/wasm_scenes.txt` 的 `water` 雜湊;
 >      保留兩種取樣算式則每個函式都要 `comptime if`(第 7 項)。要合併時另行決定。
 
+#### 17.102 靜態檢查:過時文件與可機器檢查的程式規則
+
+> **狀態**:✅(2026-11-23)
+> **緣起**:`bench_ecs` 的 docstring 寫 ECS 稀疏索引上限 4096,同一檔案下方的註解卻寫上限已移除;兩段出自同一個 commit,矛盾了四個月,
+> 期間沒有人量過幾千個以上的實體。人工逐條對照程式碼又找到 13 處過時文字(`remove_body` 與 `gameplay` 寫成未來、system tier 寫成空的、
+> 6 個 ECS backend 寫成 5 個、不存在的欄位與型別、改名後的私有名稱)。
+> **做法**:
+> 1. `scripts/stale_refs.py`:註解、docstring 與主要文件中反引號裡的程式名稱必須存在;「a future `X`」「until `X` exists」而 `X` 已存在也報。
+>    人工找到的 13 處抓到 9 處,其餘 4 處(數量、「尚未接上」、「system tier 是空的」、放錯模組)只能靠人讀。第一次跑 92 筆:56 筆改文字,
+>    36 筆是正確寫法(外部 API、musl 函式、範例、歷史),以 34 條 `scripts/stale_refs_allow.txt` 附理由放行。
+> 2. `scripts/code_rules.py`:裸 `case NAME:`、引擎套件 `print`、TODO 要附 issue 或 ROADMAP 編號(兩個 TODO 補上 17.5、10.1)。
+>    「`raises` 必須真的會 raise」不檢查:文字掃描的 69 個候選看過的都是 trait 規定、`Dict` 取值、GPU 呼叫,要型別才能分辨。
+> 3. ruff(只開找錯的規則,`ruff.toml`):`subprocess.run` 一律寫明 `check=`。`trig_parity` 在探針崩潰時以 0 次比較印 PASS、`stability` 在
+>    `golden.sh normalize` 失敗時把兩份空輸出判為穩定,改為 `check=True`;讀 `returncode` 的 28 處寫 `check=False`。
+> 4. shellcheck:5 筆,修 3 筆(`cd` 失敗後繼續、同一檔案邊讀邊寫、`A && B || C`),1 筆刻意的單引號就地註明。
+> 5. `pixi run lint` 合起來實測 4.2 秒;pre-commit 依暫存檔案挑選,pre-push(熱快取實測 7.2 秒)與 CI 全跑。ruff 與 shellcheck 由 pixi 從 conda-forge 安裝。
+> 6. `scripts/bench_cache_from_report.py`(`pixi run bench-cache`):由已提交的報告重建 `build/bench_out/`,先驗證能逐位元重組報告,
+>    新 checkout 上 `ONLY=` 不必重跑全部 bench。
+> 7. ruff 的 B905:`zip` 寫明 `strict=`。9 處兩邊長度都必須相同(例:`fma_parity_probe` 逐行比對兩份輸出,一邊崩潰少了幾行時截斷會讓比對照樣通過),
+>    scripts 與測試用 `strict=True`;出貨的 `python/ludens` 宣告支援 Python 3.8,沒有 `strict=`,`bind_world` 改為檢查重力是 3 個分量。
+
 ## 編號索引
 
 所有編號依數字排序。已完成者的完整紀錄在 [ROADMAP_HISTORY.md](ROADMAP_HISTORY.md)。
@@ -4826,6 +4865,8 @@
 | 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.99 | [接觸求解器:快取子步內不變的量(位元不變)](#1799-接觸求解器快取子步內不變的量位元不變) | 剛體動力學、接觸與關節 | ✅ |
 | 17.100 | [接觸求解器的遊戲規模效能(改變結果)](#17100-接觸求解器的遊戲規模效能改變結果) | 剛體動力學、接觸與關節 | ⬜ |
+| 17.102 | [靜態檢查:過時文件與可機器檢查的程式規則](#17102-靜態檢查過時文件與可機器檢查的程式規則) | 工程、測試、效能與工具鏈 | ✅ |
+| 17.103 | [睡眠與靜止的接觸對不重算](#17103-睡眠與靜止的接觸對不重算) | 剛體動力學、接觸與關節 | ⬜ |
 | 17.92 | [Motion matching 控制器](#1792-motion-matching-控制器) | 動畫與程序化 | ✅ |
 | 17.93 | [破壞的網路同步](#1793-破壞的網路同步) | gameplay 服務、AI、導航與網路 | ✅ |
 | 17.94 | [EmbedWorld 中的布娃娃](#1794-embedworld-中的布娃娃) | 角色、載具、破壞與 gameplay 物理 | ✅ |
