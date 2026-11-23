@@ -40,7 +40,7 @@ def build(out, variant, n, ticks):
     cmd = ["mojo", "build"] + cpu_flags() + ["-I", "build",
            "-D", "VARIANT=%d" % variant, "-D", "N=%d" % n, "-D", "TICKS=%d" % ticks,
            PROBE, "-o", out]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         sys.stderr.write(r.stdout + r.stderr)
         raise SystemExit("rules_icount: build failed")
@@ -64,6 +64,7 @@ def cachegrind(binary, ll_bytes=None):
         r = subprocess.run(
             cmd + ["--cachegrind-out-file=" + os.path.join(d, "cg.out"), binary],
             cwd=ROOT, capture_output=True, text=True,
+            check=False,
         )
         if r.returncode != 0:
             sys.stderr.write(r.stderr[-2000:])
@@ -86,7 +87,7 @@ def wall_seconds(binary, runs):
     best = None
     for _ in range(runs):
         t0 = time.perf_counter()
-        r = subprocess.run([binary], cwd=ROOT, capture_output=True)
+        r = subprocess.run([binary], cwd=ROOT, capture_output=True, check=False)
         dt = time.perf_counter() - t0
         if r.returncode != 0:
             raise SystemExit("rules_icount: probe run failed")

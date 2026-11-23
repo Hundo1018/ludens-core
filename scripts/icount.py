@@ -36,7 +36,7 @@ def build(out, steps=None):
     if steps is not None:
         cmd += ["-D", "STEPS=%d" % steps]
     cmd += [PROBE, "-o", out]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         sys.stderr.write(r.stdout + r.stderr)
         raise SystemExit("icount: build failed")
@@ -54,6 +54,7 @@ def count(binary):
         r = subprocess.run(
             ["valgrind", "--tool=cachegrind", "--cache-sim=no", "--cachegrind-out-file=" + os.path.join(d, "cg.out"), binary],
             cwd=ROOT, capture_output=True, text=True,
+            check=False,
         )
         if r.returncode != 0:
             sys.stderr.write(r.stderr[-2000:])

@@ -29,6 +29,7 @@ def build(test: str, out: Path) -> bool:
     r = subprocess.run(
         ["mojo", "build", "--target-cpu", cpu, "-D", "ASSERT=all", "-I", "build", "-o", str(out), test],
         cwd=ROOT, capture_output=True,
+        check=False,
     )
     return r.returncode == 0
 
@@ -36,7 +37,7 @@ def build(test: str, out: Path) -> bool:
 def normalized(test: str, text: str, d: Path) -> str:
     log = d / "one.log"
     log.write_text(f"--- {test} ---\n{text}", encoding="utf-8")
-    r = subprocess.run(["bash", "scripts/golden.sh", "normalize", str(log)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run(["bash", "scripts/golden.sh", "normalize", str(log)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=True)
     return r.stdout
 
 
@@ -53,7 +54,7 @@ def check(tests: list[str]) -> tuple[list[str], list[tuple[float, str]], list[st
             outs = []
             for _ in range(2):
                 t0 = time.monotonic()
-                r = subprocess.run([str(exe)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+                r = subprocess.run([str(exe)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False)
                 times.append((time.monotonic() - t0, t)) if not outs else None
                 outs.append(normalized(t, r.stdout, d))
             if outs[0] != outs[1]:

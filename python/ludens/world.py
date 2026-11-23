@@ -219,7 +219,7 @@ class World:
         try:
             if getattr(self, "_h", None) is not None:
                 C.lib.ld_world_destroy(self._h)
-        except Exception:
+        except Exception:  # noqa: BLE001 -- __del__ runs during interpreter shutdown; it must not raise
             pass
 
     # -- errors
@@ -640,7 +640,7 @@ class NavMesh:
     def __del__(self):
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001 -- __del__ runs during interpreter shutdown; it must not raise
             pass
 
     @property

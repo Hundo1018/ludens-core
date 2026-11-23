@@ -134,7 +134,7 @@ def run_bench(path: Path, target_cpu: str | None) -> str:
         cmd += ["--target-cpu", target_cpu]
     cmd += ["-I", "build", str(path)]
     for _ in range(2):  # same teardown-crash safety net as run_benchmarks.sh
-        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False)
         if r.returncode == 0:
             return r.stdout
     raise SystemExit(f"perf: {path} kept failing:\n{r.stderr[-2000:]}")
@@ -454,7 +454,7 @@ def main() -> int:
         return 1 if problems else 0
     if a.cmd == "bisect-check":
         # exit 0 = good, 1 = bad, 125 = skip (build failed): `git bisect run` codes
-        if subprocess.run(["bash", "scripts/build_engine.sh"], cwd=ROOT, capture_output=True).returncode != 0:
+        if subprocess.run(["bash", "scripts/build_engine.sh"], cwd=ROOT, capture_output=True, check=False).returncode != 0:
             return 125
         tmp = ROOT / "build/perf/bisect.json"
         collect(a.reps, [a.bench], tmp)

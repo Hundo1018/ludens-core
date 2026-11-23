@@ -12,7 +12,7 @@ BEFORE, AFTER = 60, 120
 
 
 def mojo(*args: str) -> str:
-    proc = subprocess.run(["mojo", *args], cwd=ROOT, capture_output=True, text=True)
+    proc = subprocess.run(["mojo", *args], cwd=ROOT, capture_output=True, text=True, check=False)
     if proc.returncode:
         sys.exit(proc.stdout + proc.stderr)
     return proc.stdout

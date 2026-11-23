@@ -42,7 +42,7 @@ def main() -> int:
         for fl in a.floors:
             f = Path(d) / "exp.mojo"
             f.write_text(variant(fl, a.phis, a.steps, a.mu))
-            r = subprocess.run(["mojo", "run", "-I", str(ROOT / "build"), str(f)], capture_output=True, text=True, cwd=d)
+            r = subprocess.run(["mojo", "run", "-I", str(ROOT / "build"), str(f)], capture_output=True, text=True, cwd=d, check=False)
             if r.returncode != 0:
                 print(r.stdout + r.stderr, file=sys.stderr)
                 return r.returncode

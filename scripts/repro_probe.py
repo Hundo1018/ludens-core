@@ -31,7 +31,7 @@ def hashes():
 
 
 def build():
-    r = subprocess.run(["bash", "scripts/build_engine.sh"], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(["bash", "scripts/build_engine.sh"], cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         sys.stderr.write(r.stdout + r.stderr)
         raise SystemExit("repro-probe: build failed")
