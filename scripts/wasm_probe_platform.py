@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import shutil
 import statistics
 import subprocess
@@ -54,7 +55,7 @@ WASMTIME_CONFIGS = [
                              "cranelift_flags": {"enable_heap_access_spectre_mitigation": "false"}}, ""),
     ("no signals traps", {"signals_based_traps": False}, "every trap check explicit"),
     ("nan canonicalization", {"cranelift_nan_canonicalization": True}, "determinism knob"),
-    ("simd off", {"wasm_simd": False}, "the module uses simd128: expected to fail"),
+    ("simd off", {"wasm_simd": False, "wasm_relaxed_simd": False}, "the module uses simd128: expected to fail"),
 ]
 NODE_FLAGS = [
     ("default", [], "Liftoff then TurboFan, memory64 guard-page trap handling"),
@@ -67,7 +68,7 @@ NODE_FLAGS = [
 def sh(cmd: list[str], *, cwd: Path = ROOT, env: dict | None = None) -> str:
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env, check=False)
     if p.returncode != 0:
-        raise RuntimeError(f"{' '.join(cmd[:6])}... failed ({p.returncode}):\n{(p.stdout + p.stderr)[-3000:]}")
+        raise RuntimeError(f"{' '.join(cmd[:6])}... failed ({p.returncode}):\n{(p.stdout + p.stderr)[:1500]}\n...\n{(p.stdout + p.stderr)[-1500:]}")
     return p.stdout
 
 
@@ -250,7 +251,9 @@ class Probe:
                     self.expect(f"wasmtime [{name}] 1012x120", r["hash"], want)
                     row.update(stat(r["ms_per_tick"][1:]), compile_s=r["compile_s"])
                 except RuntimeError as e:
-                    row["error"] = str(e).strip().splitlines()[-1][:300]
+                    lines = str(e).strip().splitlines()
+                    key = [x for x in lines if re.search(r"panicked|Error|error|failed", x) and "RUST_BACKTRACE" not in x]
+                    row["error"] = " / ".join(x.strip() for x in (key or lines[-1:])[:3])[:300].replace("|", "/")
                 a["wasmtime_configs"].append(row)
             for name, flags, why in NODE_FLAGS:
                 r = self.node(spec, flags)

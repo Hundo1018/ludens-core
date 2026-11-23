@@ -37,7 +37,7 @@ def make_engine(cfg: dict) -> Engine:
             for name, val in v.items():
                 c.cranelift_flag_set(name, str(val))
             continue
-        if not hasattr(c, k):
+        if k not in dir(c):
             raise SystemExit(f"platform_wasmtime: wasmtime.Config has no attribute {k!r}")
         setattr(c, k, v)
     return Engine(c)
