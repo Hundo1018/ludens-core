@@ -1719,6 +1719,19 @@ each a plausible place for the O(n) claim to quietly stop holding.
 
 @bench benchmarks/bench_solver_scale.mojo
 
+### Stress and scale: deep stacks, one large island, a wake storm, 1e6 ECS entities
+
+The per-feature benches above stop at a few thousand bodies. These scenes are the hard cases: a 30-box tower (one
+Gauss-Seidel chain 30 contacts deep), a 20-row pyramid, 10 000 boxes piled in a walled pit (one island the
+island-parallel path cannot split), and 5 000 resting boxes all woken in the same tick. Times are per tick with
+p50 / p99 / max, so one slow tick shows. The scale table runs the ECS movement system at 1e4 / 1e5 / 1e6 entities
+and one layer of resting boxes up to 1e5, awake and asleep. Asleep is not free: every tick still rebuilds the
+broadphase over all bodies and reruns the narrowphase on resting pairs. Callgrind on 2 000 sleeping boxes, share of
+the step's instructions, inclusive (the recursive BVH functions overlap, so the rows do not add up): pair collection
+78 %, BVH queries 35 %, BVH rebuild 26 %, narrowphase `try_pair` 21 %, `make_contact` 14 %, contact sweeps 10 %.
+
+@bench benchmarks/bench_stress.mojo
+
 ### Parallel narrowphase and contact prep (17.54)
 
 `SolverConfig.parallel_collision` runs `try_pair` over fixed chunks of the
