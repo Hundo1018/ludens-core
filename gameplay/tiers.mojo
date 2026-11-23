@@ -71,6 +71,22 @@ def _nearest_dist(p: Vec3, observers: List[Vec3]) -> Real:
     return best
 
 
+def _arrival_time(p: Vec3, v: Vec3, observers: List[Vec3], seed_radius: Real) -> Real:
+    """Earliest time a body at `p` moving at `v` reaches `seed_radius` of an
+    observer, along its current closing speed (`dot(v, toward the
+    observer)`); 0 inside the radius, a large value when moving away."""
+    var best = Real(1e30)
+    for o in observers:
+        var d = o - p
+        var dist = sqrt(dot(d, d))
+        if dist <= seed_radius:
+            return 0
+        var closing = dot(v, d) / dist
+        if closing > 0:
+            best = min(best, (dist - seed_radius) / closing)
+    return best
+
+
 struct DistanceTiers(TierPolicy, Copyable):
     var radii: List[Real]  # ascending: tier t covers up to radii[t]
     var hysteresis: Real
@@ -115,15 +131,29 @@ struct DistanceTiers(TierPolicy, Copyable):
 struct CausalReach(TierPolicy, Copyable):
     var seed_radius: Real
     var depths: List[Int]  # ascending: tier t covers graph depth <= depths[t]
+    var horizons: List[Real]  # ascending seconds: tier t also covers arrival time <= horizons[t] (empty = off)
     var reached: Int  # bodies reached by the last search (diagnostic)
+    var arriving: Int  # bodies the arrival time made finer than the graph depth (diagnostic)
 
-    def __init__(out self, seed_radius: Real, var depths: List[Int]) raises:
+    def __init__(out self, seed_radius: Real, var depths: List[Int], var horizons: List[Real] = List[Real]()) raises:
+        """`horizons` adds the light cone (ROADMAP 17.85 / 17.100): a body not
+        yet in contact with the observer's neighbourhood but closing on it
+        fast is ranked by when it can arrive, `(distance - seed_radius) /
+        closing speed`, so a projectile is solved finely before it hits
+        rather than from the tick it touches something. A body's tier is the
+        finer of its graph tier and its arrival tier; an empty list keeps
+        the graph-only behaviour bit for bit."""
         for i in range(1, len(depths)):
             if not (depths[i] > depths[i - 1]):
                 raise Error("CausalReach: depths must be strictly ascending")
+        for i in range(len(horizons)):
+            if not (horizons[i] >= 0) or (i > 0 and not (horizons[i] > horizons[i - 1])):
+                raise Error("CausalReach: horizons must be >= 0 and strictly ascending")
         self.seed_radius = seed_radius
         self.depths = depths^
+        self.horizons = horizons^
         self.reached = 0
+        self.arriving = 0
 
     def assign[Body: Body6, BP: BroadPhase](mut self, scene: ContactScene6[Body, BP], observers: List[Vec3], step: Int) -> List[Int]:
         var n = len(scene.bset.bodies)
@@ -183,6 +213,17 @@ struct CausalReach(TierPolicy, Copyable):
                 if depth[i] <= self.depths[t]:
                     out[i] = t
                     break
+        self.arriving = 0
+        if len(self.horizons) > 0:
+            for i in range(n):
+                if scene.bset.is_removed(i) or not scene.bset.moves(i) or out[i] == 0:
+                    continue
+                var t_arr = _arrival_time(scene.bset.bodies[i].position(), scene.bset.bodies[i].linear_velocity(), observers, self.seed_radius)
+                for t in range(min(len(self.horizons), out[i])):
+                    if t_arr <= self.horizons[t]:
+                        out[i] = t
+                        self.arriving += 1
+                        break
         return out^
 
 
