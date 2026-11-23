@@ -4,6 +4,7 @@ from harness.runner import Suite
 from geometry.vec import Real, Vec3
 from physics.rigid6 import Inertia3, QuatBody6
 from physics.solver6 import ContactScene6, Joint6
+from physics.serialize import scene_to_bytes
 
 comptime DT: Real = 1.0 / 60.0
 comptime G = Vec3(0, -9.8, 0, 0)
@@ -44,6 +45,36 @@ def _scene() raises -> ContactScene6[QuatBody6]:
         QuatBody6.at_rest(Vec3(-10, 1.3, 0, 0), Inertia3.sphere(2, 0.3)), 0.3, False
     ).index()
     sc.set_restitution(ball, 0.7)
+    return sc^
+
+
+def _same_bytes(a: List[UInt8], b: List[UInt8]) -> Bool:
+    if len(a) != len(b):
+        return False
+    for i in range(len(a)):
+        if a[i] != b[i]:
+            return False
+    return True
+
+
+def _tiered(par: Bool) raises -> ContactScene6[QuatBody6]:
+    """The same scene with a two-tier table (period 1 and 2) and every second
+    body in tier 1, stepped 300 times."""
+    var sc = _scene()
+    var it = List[Int]()
+    var su = List[Int]()
+    var pe = List[Int]()
+    for p in range(2):
+        it.append(4)
+        su.append(4)
+        pe.append(p + 1)
+    sc.set_tier_table(it, su, pe)
+    var tiers = List[Int]()
+    for i in range(len(sc.bset.bodies)):
+        tiers.append(i % 2)
+    sc.set_body_tiers(tiers)
+    for _ in range(300):
+        sc.step_soft(DT, G, parallel=par)
     return sc^
 
 
@@ -117,5 +148,24 @@ def main() raises:
             if ser.bset.bodies[i].q.w != sc.bset.bodies[i].q.w:
                 all_same = False
     s.check(all_same, "every worker count is bit-identical to serial")
+
+    # 5. ROADMAP 17.100 item 6: the WHOLE state, contact cache included. The
+    #    island path used to skip the held loads and the excess report and to
+    #    drop pairs whose bodies were both asleep, so positions matched while
+    #    the saved state (and the world hash) did not.
+    var inert = 0
+    for c in range(len(ser.cache)):
+        if ser.bset.impulse_inert(ser.cache[c].a) and ser.bset.impulse_inert(ser.cache[c].b):
+            inert += 1
+    print("  pairs with both ends asleep or static:", inert, "of", len(ser.cache))
+    s.check(inert > 0, "the scene has resting pairs no island owns")
+    s.check(len(ser.cache) == len(par.cache), "parallel keeps every cached pair")
+    s.check(_same_bytes(scene_to_bytes(ser), scene_to_bytes(par)), "parallel == serial serialized state (bit-identical)")
+
+    # 6. Tiered islands through the dispatcher (17.100 item 6): bit-identical to
+    #    the tiered serial loop.
+    var ts = _tiered(False)
+    var tp = _tiered(True)
+    s.check(_same_bytes(scene_to_bytes(ts), scene_to_bytes(tp)), "tiered parallel == tiered serial serialized state")
 
     s.finish()
