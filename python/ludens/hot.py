@@ -70,7 +70,7 @@ class HotSystem:
             migrate = getattr(mod, "migrate", None)
             if self._fn is not None and callable(migrate):
                 migrate(self.state)
-        except Exception:
+        except Exception:  # noqa: BLE001 -- any error in the new module keeps the old version running
             self.last_error = traceback.format_exc(limit=1)
             self.failures += 1
             return False

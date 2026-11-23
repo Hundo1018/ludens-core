@@ -43,7 +43,7 @@ def reexec_in_venv() -> int:
         subprocess.run(["pixi", "exec", "--spec", "python=3.13", "--", "python", "-m", "venv", str(VENV)], check=True)
         subprocess.run([str(py), "-m", "pip", "install", "-q", "bpy"], check=True)
     env = dict(os.environ, ABC_CHECK_IN_VENV="1")
-    return subprocess.run([str(py), __file__, *sys.argv[1:]], env=env).returncode
+    return subprocess.run([str(py), __file__, *sys.argv[1:]], env=env, check=False).returncode
 
 
 def f32(v: float) -> float:

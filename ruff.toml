@@ -1,0 +1,18 @@
+# ruff for scripts/ and python/ (pixi run lint). Only rules that find bugs, not style:
+#   F        pyflakes: undefined names, unused imports and variables
+#   E9       syntax errors
+#   B        bugbear (B905 zip(strict=) off: each site needs its own decision about unequal lengths)
+#   BLE      a bare `except Exception` must say why (noqa with a reason)
+#   PLE      pylint errors
+#   PLW1510  subprocess.run must say check=True or check=False: a check script that ignores a failed
+#            child reports "pass" (trig_parity printed PASS on an empty output when its probe crashed)
+target-version = "py311"
+line-length = 120
+extend-exclude = [".pixi", "build", "build64"]
+
+[lint]
+select = ["F", "E9", "B", "BLE", "PLE", "PLW1510"]
+ignore = ["B905"]
+
+[lint.per-file-ignores]
+"python/ludens/__init__.py" = ["F401"]  # the package's public names, re-exported

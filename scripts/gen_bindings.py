@@ -155,7 +155,7 @@ CS_SCALARS = {
     "void": "void",
 }
 
-CS_KEYWORDS = {"out", "in", "ref", "object", "string", "params", "base", "event", "fixed", "lock", "operator", "checked", "default", "delegate", "internal", "is", "as", "new", "this", "base", "static", "class", "struct", "namespace", "using", "var", "char", "int", "long", "float", "double", "byte", "bool", "decimal"}
+CS_KEYWORDS = {"out", "in", "ref", "object", "string", "params", "base", "event", "fixed", "lock", "operator", "checked", "default", "delegate", "internal", "is", "as", "new", "this", "static", "class", "struct", "namespace", "using", "var", "char", "int", "long", "float", "double", "byte", "bool", "decimal"}
 
 
 def _cs_name(n):

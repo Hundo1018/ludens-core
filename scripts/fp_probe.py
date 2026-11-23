@@ -63,10 +63,10 @@ def parse(text):
 
 def run(flags, d):
     exe = os.path.join(d, "fp")
-    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, capture_output=True, text=True)
+    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, capture_output=True, text=True, check=False)
     if b.returncode != 0:
         return None, b.stderr.strip().split("\n")[-1]
-    r = subprocess.run([exe], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run([exe], cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         return None, "run failed: " + r.stderr.strip()[-200:]
     return parse(r.stdout), ""
