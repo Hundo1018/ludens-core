@@ -13,6 +13,18 @@ B. tools/wasm/platform_game.mojo as its own wasm64 module importing engine funct
    helpers of platform_entry.mojo) from the engine module: rebuild time, size, cross-module call cost
    (wasm-to-wasm vs JS / Python forwarder), and the game loop as two modules vs compiled into the engine.
 
+C. (--aot / --simd-opt) how close an LLVM build of the same .wasm gets, all rows in one table vs native:
+   * wasm2c (WABT, `pixi exec -s wabt`) -> C -> clang 23 -O3 -march=x86-64 -ffp-contract=off with wasm2c's runtime and
+     tools/wasm/platform_w2c.c as the host (the module's imports are env.host_write / env.host_now_ns), one row per
+     wasm2c memory-check / segue configuration (W2C_VARIANTS);
+   * Wasmer's LLVM backend (--wasmer, conda-forge wasmer via `pixi exec`) on tools/wasm/platform_wasi.mojo built with
+     `--host wasi`: records whether it compiles a memory64 module;
+   * --simd-opt: the capi module rebuilt with `opt -mattr=+simd128,...` and C `-msimd128` (ludens_wasm_rt's
+     build_wasm passes +simd128 to llc only; PATH wrappers in build/pprobe/simdwrap add it) on node, wasmtime
+     (Spectre heap mitigation off) and the wasm2c variants marked `simd`.
+   `--reuse` keeps modules already built under build/pprobe, `--skip-b` skips part B and the rebuild timing.
+   --profile adds node --cpu-prof (self time) and callgrind (instructions) top-10 functions.
+
 Every runtime runs pinned to one core (taskset). Each number is the median of --reps runs after one warm-up run (the
 min is reported next to it); build times are the median of --reps builds. Every run that steps a world must give the
 native hash; the script exits 1 when one does not (the V8 / wasmtime knob rows included, except a config that fails to
@@ -31,6 +43,7 @@ import statistics
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,6 +78,25 @@ NODE_FLAGS = [
 ]
 
 
+WABT = "wabt==1.0.41"
+NO_SPECTRE = {"cranelift_flags": {"enable_heap_access_spectre_mitigation": "false"}}
+# wasm2c builds of the capi module (name, extra clang flags, patch the generated C, also on the --simd-opt module, note).
+# wasm2c checks every memory64 access explicitly (RANGE_CHECK: add-overflow test + compare with the memory size)
+# whatever WASM_RT_MEMCHECK_* says; GUARD_PAGES vs BOUNDS_CHECK only changes how the memory is allocated and how
+# stack overflow is caught (guard page + signal handler vs a depth counter on every call).
+W2C_VARIANTS = [
+    ("default", [], None, True, "WASM_RT_MEMCHECK_GUARD_PAGES (the default on x86-64 Linux): mmap'd memory, "
+     "stack overflow by signal handler"),
+    ("bounds check", ["-DWASM_RT_MEMCHECK_BOUNDS_CHECK=1"], None, False,
+     "malloc'd memory, stack-depth counter on every call"),
+    ("segue", ["-DWASM_RT_ALLOW_SEGUE=1", "-DWASM_RT_SEGUE_FREE_SEGMENT=1"], None, True,
+     "linear-memory base in %gs (fsgsbase): loads/stores without the base register"),
+    ("no range check", [], "no_range_check", True, "RANGE_CHECK patched out: no bounds checks at all (unsafe, diagnostic)"),
+    ("x86-64-v2", ["-march=x86-64-v2"], None, False, "SSE4.2 (still no FMA): simde's simd128 lowering gets "
+     "SSE4.1 blends / rounds; the native reference stays baseline x86-64"),
+]
+
+
 def sh(cmd: list[str], *, cwd: Path = ROOT, env: dict | None = None) -> str:
     p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env, check=False)
     if p.returncode != 0:
@@ -76,6 +108,43 @@ def stat(xs: list[float]) -> dict:
     return {"median": statistics.median(xs), "min": min(xs), "n": len(xs)}
 
 
+def fix_w2c_decls(c: Path) -> int:
+    """wabt 1.0.41 wasm2c --enable-tail-call emits the first local of some wasm_tailcall_* functions as
+    `  u64   u32 var_i0;` ... `var_l2 = 0;` (type and name split around the stack-variable declarations); put the type
+    back in front of the name. Returns how many were fixed."""
+    lines = c.read_text().split("\n")
+    n = 0
+    for i, line in enumerate(lines):
+        m = re.match(r"^  ([uf]\d+|v128)   (\S.*)$", line)
+        if not m:
+            continue
+        lines[i] = "  " + m.group(2)
+        j = i + 1
+        while not re.match(r"^var_l\d+ = ", lines[j]):
+            if lines[j].startswith("}"):
+                raise RuntimeError(f"fix_w2c_decls: no split local after line {i + 1} of {c}")
+            j += 1
+        lines[j] = f"{m.group(1)} {lines[j]}"
+        n += 1
+    c.write_text("\n".join(lines))
+    return n
+
+
+def patch_range_check(c: Path) -> None:
+    """Drop wasm2c's memory64 bounds check (diagnostic only: an out-of-bounds access is then undefined behaviour)."""
+    text = c.read_text()
+    pat = re.compile(r"#define RANGE_CHECK\(mem, offset, len\)\s*\\\n(?:.*\\\n)*?\s*\} while \(0\);")
+    text, k = pat.subn("#define RANGE_CHECK(mem, offset, len) do {} while (0);", text)
+    if k != 1:
+        raise RuntimeError(f"patch_range_check: RANGE_CHECK definition matched {k} times (wasm2c output changed?)")
+    c.write_text(text)
+
+
+def unescape_w2c(name: str) -> str:
+    """wasm2c / names-section symbols spell punctuation as 0xNN."""
+    return re.sub(r"0x([0-9A-F]{2})", lambda m: chr(int(m.group(1), 16)), name)
+
+
 def clean_intermediates(d: Path) -> None:
     """Emitted IR is tens of MB per engine build; keep only the module."""
     for pat in ("*.ll", "*.opt.bc", "*.mojo.o"):
@@ -83,9 +152,16 @@ def clean_intermediates(d: Path) -> None:
             f.unlink()
 
 
+REUSE = False  # --reuse: keep a module that is already there
+
+
 def build(entry: Path, out: Path, *, libs: list[str], exports: list[str], target: str = "wasm64",
-          include_build: bool = True) -> float:
-    cmd = [*RTRUN, "python3", "-m", "ludens_wasm_rt.build_wasm", "--target", target]
+          include_build: bool = True, path_prefix: Path | None = None, extra: list[str] = ()) -> float:
+    if REUSE and out.is_file():
+        return 0.0
+    # path_prefix goes in front of PATH inside the pixi env (whose bin/ pixi itself puts first)
+    pre = ["bash", "-c", 'PATH="$0:$PATH" exec "$@"', str(path_prefix)] if path_prefix else []
+    cmd = [*RTRUN, *pre, "python3", "-m", "ludens_wasm_rt.build_wasm", "--target", target, *extra]
     for lib in libs:
         cmd += ["--lib", lib]
     cmd += [str(entry)] + (["-I", "build"] if include_build else []) + ["-o", str(out), "--mojo", MOJO]
@@ -144,6 +220,13 @@ class Probe:
     # ------------------------------------------------------------------ builds
     def builds(self) -> None:
         OUT.mkdir(parents=True, exist_ok=True)
+        if self.args.skip_b:
+            self.res["first_builds_s"] = {
+                "capi_s": build(ROOT / "embed/capi.mojo", OUT / "capi/ludens64.wasm", libs=["."], exports=["ld_*"]),
+                "native_s": build(ROOT / "tools/wasm/platform_entry.mojo", OUT / "native/engine_native", libs=["."],
+                                  exports=[], target="native")}
+            self.res["sizes"] = {"capi_engine": (OUT / "capi/ludens64.wasm").stat().st_size}
+            return
         self.gamelib.mkdir(exist_ok=True)
         (self.gamelib / "wasm.toml").write_text(
             "# generated by scripts/wasm_probe_platform.py: the game module's engine imports\n"
@@ -285,6 +368,189 @@ class Probe:
                 b[runtime][link] = row
         self.res["B"] = b
 
+    # ------------------------------------------------------------------ C
+    def native_run(self) -> dict:
+        """The native reference build once more (C measures it before and after the wasm rows)."""
+        rows = [x.split() for x in sh([*self.pin, str(OUT / "native/engine_native")]).splitlines()
+                if x.startswith("scene 1012 ")]
+        return {**stat([float(f[3]) for f in rows[1:]]), "hash": sorted({f[4].removeprefix("0x").rjust(16, "0") for f in rows}),
+                "load": os.getloadavg()[0]}
+
+    def wabt(self) -> Path:
+        if not hasattr(self, "_wabt"):
+            self._wabt = Path(sh(["pixi", "exec", "-s", WABT, "-s", "simde", "sh", "-c", "echo $CONDA_PREFIX"]).strip())
+            self._clang = sh([*RTRUN, "which", "clang"]).strip()
+            self.res["host"]["wasm2c"] = sh([str(self._wabt / "bin/wasm2c"), "--version"]).strip()
+            self.res["host"]["clang_aot"] = sh([self._clang, "--version"]).splitlines()[0]
+        return self._wabt
+
+    def simd_ops(self, wasm: Path) -> dict:
+        dis = sh([str(self.wabt() / "bin/wasm-objdump"), "-d", str(wasm)])
+        ops = re.findall(r"\|\s+((?:[if](?:8x16|16x8|32x4|64x2)|v128)\.\S+)", dis)
+        return {"simd_ops": len(ops), "f32x4": sum(o.startswith("f32x4") for o in ops),
+                "f32x4.mul": ops.count("f32x4.mul"), "f32x4.add": ops.count("f32x4.add")}
+
+    def simd_wrappers(self) -> Path:
+        """opt / clang wrappers that add simd128 where build_wasm leaves it out (llc already gets +simd128)."""
+        d = OUT / "simdwrap"
+        d.mkdir(parents=True, exist_ok=True)
+        envbin = Path(sh([*RTRUN, "which", "opt"]).strip()).parent
+        (d / "opt").write_text(f'#!/bin/sh\nexec "{envbin}/opt" -mattr=+tail-call,+simd128,+bulk-memory,'
+                               f'+nontrapping-fptoint,+sign-ext,+mutable-globals "$@"\n')
+        (d / "clang").write_text(f'#!/bin/sh\ncase " $* " in *--target=wasm64*) exec "{envbin}/clang" -msimd128 "$@";; esac\n'
+                                 f'exec "{envbin}/clang" "$@"\n')
+        for f in ("opt", "clang"):
+            (d / f).chmod(0o755)
+        return d
+
+    def w2c_build(self, wasm: Path, d: Path, flags: list[str], patch: str | None) -> dict:
+        exe = d / "w2c_scene"
+        if REUSE and exe.is_file():
+            return {"bin": exe, "compile_s": None, "fixed_decls": None}
+        d.mkdir(parents=True, exist_ok=True)
+        wabt = self.wabt()
+        c = d / "module.c"
+        sh([str(wabt / "bin/wasm2c"), "--enable-memory64", "--enable-tail-call", "-n", "ludens", str(wasm), "-o", str(c)])
+        fixed = fix_w2c_decls(c)
+        if patch == "no_range_check":
+            patch_range_check(c)
+        base = [self._clang, "-O3", "-march=x86-64", "-ffp-contract=off", f"-I{d}", f"-I{wabt / 'include'}", "-w", *flags]
+        t0 = time.perf_counter()
+        sh([*base, "-c", str(c), "-o", str(d / "module.o")])
+        compile_s = time.perf_counter() - t0
+        rt = wabt / "share/wabt/wasm2c"
+        objs = [d / "module.o"]
+        for src in (rt / "wasm-rt-impl.c", rt / "wasm-rt-mem-impl.c", ROOT / "tools/wasm/platform_w2c.c"):
+            objs.append(d / (src.stem + ".o"))
+            sh([*base, "-c", str(src), "-o", str(objs[-1])])
+        sh([self._clang, *map(str, objs), "-lm", "-lpthread", "-o", str(exe)])
+        for f in [c, *objs]:
+            f.unlink()
+        return {"bin": exe, "compile_s": compile_s, "fixed_decls": fixed}
+
+    def w2c_try(self, wasm: Path, d: Path, flags: list[str], patch: str | None) -> dict:
+        try:
+            return self.w2c_build(wasm, d, flags, patch)
+        except RuntimeError as e:
+            lines = [x for x in str(e).splitlines() if "error" in x] or str(e).splitlines()[-1:]
+            return {"error": " / ".join(x.strip() for x in lines[:3])[:300].replace("|", "/")}
+
+    def w2c_run(self, exe: Path, nb: int, ticks: int) -> dict:
+        return json.loads(sh([*self.pin, str(exe), str(nb), str(ticks), str(self.reps + 1)]).strip().splitlines()[-1])
+
+    def wasmer(self) -> dict:
+        """Wasmer (conda-forge, LLVM / Cranelift backends) on the WASI scene driver; records the error if any."""
+        wasm = OUT / "wasi/bench.wasm"
+        build(ROOT / "tools/wasm/platform_wasi.mojo", wasm, libs=["."], exports=["pw_*"], extra=["--host", "wasi"])
+        out = {"version": sh(["pixi", "exec", "-s", "wasmer", "wasmer", "--version"]).strip(), "backends": {}}
+        for be in ("llvm", "cranelift"):
+            p = subprocess.run(["pixi", "exec", "-s", "wasmer", *self.pin, "wasmer", "run", f"--{be}", "--enable-memory64",
+                                "--enable-tail-call", "--enable-simd", "--enable-bulk-memory", "--invoke", "pw_bench",
+                                str(wasm), "1000", "120", str(self.reps + 1)], capture_output=True, text=True, check=False)
+            text = (p.stdout + p.stderr).strip()
+            rows = [x.split() for x in p.stdout.splitlines() if x.startswith("scene ")]
+            out["backends"][be] = ({**stat([float(f[3]) for f in rows[1:]]),
+                                    "hash": sorted({f[4].removeprefix("0x").rjust(16, "0") for f in rows})}
+                                   if p.returncode == 0 and rows else {"error": " / ".join(text.splitlines()[-2:])[:300]})
+        return out
+
+    def part_c(self) -> None:
+        c: dict = {"rows": []}
+        mods = {"baseline": OUT / "capi/ludens64.wasm"}
+        if self.args.simd_opt:
+            mods["simd128 opt"] = OUT / "capi_simd/ludens64.wasm"
+            c["simd_build_s"] = build(ROOT / "embed/capi.mojo", mods["simd128 opt"], libs=["."], exports=["ld_*"],
+                                      path_prefix=self.simd_wrappers())
+            c["simd_ops"] = {k: self.simd_ops(p) for k, p in mods.items()}
+        jobs, builds = [], []
+        if self.args.aot:
+            self.wabt()
+            for name, flags, patch, on_simd, why in W2C_VARIANTS:
+                for mk in mods:
+                    if mk == "baseline" or on_simd:
+                        jobs.append((name, mk, flags, patch, why))
+            with ThreadPoolExecutor(max(1, min(3, (os.cpu_count() or 2) - 1))) as pool:
+                builds = list(pool.map(lambda j: self.w2c_try(
+                    mods[j[1]], OUT / "w2c" / f"{j[1].split()[0]}-{j[0].replace(' ', '_')}", j[2], j[3]), jobs))
+        want = {sc: self.native[f"{12 + sc[0]}x{sc[1]}"]["hash"] for sc in SCENES}
+
+        def measure(runtime: str, setting: str, mk: str, fn, note: str = "", compile_s=None) -> None:
+            row = {"runtime": runtime, "setting": setting, "module": mk, "note": note, "load": os.getloadavg()[0],
+                   "compile_s": compile_s}
+            try:
+                big = fn(SCENES[1])
+                small = fn(SCENES[0])
+                row.update(stat(big["ms_per_tick"][1:]), hash=big["hash"], hash12=small["hash"])
+                self.expect(f"{runtime} [{setting}, {mk}] 1012x120", big["hash"], want[SCENES[1]])
+                self.expect(f"{runtime} [{setting}, {mk}] 12x240", small["hash"], want[SCENES[0]])
+            except RuntimeError as e:
+                row["error"] = " / ".join(str(e).strip().splitlines()[-3:])[:300].replace("|", "/")
+            c["rows"].append(row)
+
+        c["native_start"] = self.native_run()
+        for mk, wasm in mods.items():
+            def spec(sc, cfg=None, _w=wasm):
+                return {"mode": "scene", "wasm": str(_w), "nb": sc[0], "ticks": sc[1], "reps": self.reps + 1,
+                        **({"config": cfg} if cfg else {})}
+            measure("node", "default", mk, lambda sc: self.node(spec(sc)))
+            measure("wasmtime-py", "default", mk, lambda sc: self.wasmtime(spec(sc)))
+            measure("wasmtime-py", "no Spectre heap mitigation", mk, lambda sc: self.wasmtime(spec(sc, NO_SPECTRE)))
+            for (name, mk2, _f, _p, why), b in zip(jobs, builds, strict=True):
+                if mk2 == mk and "error" in b:
+                    c["rows"].append({"runtime": "wasm2c + clang -O3", "setting": name, "module": mk, "note": why,
+                                      "error": b["error"]})
+                elif mk2 == mk:
+                    measure("wasm2c + clang -O3", name, mk, lambda sc, _b=b: self.w2c_run(_b["bin"], *sc), why,
+                            b["compile_s"])
+        c["native_end"] = self.native_run()
+        if self.args.wasmer:
+            c["wasmer"] = self.wasmer()
+        self.res["C"] = c
+        if self.args.profile:
+            self.profile()
+
+    def profile(self) -> None:
+        """Top-10 functions: node --cpu-prof self time on the baseline module, callgrind instructions on the fastest
+        wasm2c binary (no `perf` on this host)."""
+        prof: dict = {}
+        d = OUT / "cpuprof"
+        shutil.rmtree(d, ignore_errors=True)
+        d.mkdir(parents=True)
+        nb, ticks = SCENES[1]
+        self.node({"mode": "scene", "wasm": str(OUT / "capi/ludens64.wasm"), "nb": nb, "ticks": ticks, "reps": 3},
+                  ["--cpu-prof", f"--cpu-prof-dir={d}"])
+        p = json.loads(next(d.glob("*.cpuprofile")).read_text())
+        hits: dict = {}
+        for n in p["nodes"]:
+            name = n["callFrame"]["functionName"] or "(anonymous)"
+            hits[name] = hits.get(name, 0) + n.get("hitCount", 0)
+        total = sum(hits.values())
+        prof["node"] = [(unescape_w2c(k)[:110], v / total * 100) for k, v in sorted(hits.items(), key=lambda kv: -kv[1])[:10]]
+        shutil.rmtree(d, ignore_errors=True)
+        rows = [r for r in self.res["C"]["rows"] if r["runtime"].startswith("wasm2c") and "median" in r
+                and r["setting"] != "no range check"]
+        if rows and shutil.which("valgrind"):
+            best = min(rows, key=lambda r: r["median"])
+            exe = OUT / "w2c" / f"{best['module'].split()[0]}-{best['setting'].replace(' ', '_')}" / "w2c_scene"
+            cg = OUT / "callgrind.out"
+            sh(["valgrind", "--tool=callgrind", f"--callgrind-out-file={cg}", str(exe), str(nb), str(ticks), "1"])
+            ann = sh(["callgrind_annotate", "--threshold=100", str(cg)])
+            cg.unlink()
+            tot = None
+            top = []
+            for line in ann.splitlines():
+                m = re.match(r"^\s*([\d,]+) \(\s*([\d.]+)%\)\s+(\S.*)$", line)
+                if not m:
+                    continue
+                if tot is None and "PROGRAM TOTALS" in line:
+                    tot = m.group(1)
+                    continue
+                if ":" in m.group(3) and len(top) < 10:
+                    fn = m.group(3).split(":", 1)[1].split(" [")[0].removeprefix("w2c_ludens_")
+                    top.append((unescape_w2c(fn)[:110], float(m.group(2))))
+            prof["callgrind"] = {"binary": f"{best['setting']} ({best['module']})", "top": top}
+        self.res["profile"] = prof
+
     @staticmethod
     def per_call(calls: list[float], spins: list[float], n: int) -> dict:
         c, s = statistics.median(calls), statistics.median(spins)
@@ -331,6 +597,60 @@ class Probe:
             for c in a["node_flags"]:
                 L.append(f"| {c['name']} | {c['median']:.3f} ({c['min']:.3f}) | {c['first']:.3f} | {c['why']} |")
             L.append("")
+        if "C" in r:
+            L += self.report_c()
+        if "B" in r:
+            L += self.report_b()
+        if r["failures"]:
+            L += ["## FAILURES", ""] + [f"- {x}" for x in r["failures"]]
+        return "\n".join(L)
+
+    def report_c(self) -> list[str]:
+        r, c = self.res, self.res["C"]
+        ns, ne = c["native_start"], c["native_end"]
+        ref = (ns["median"] + ne["median"]) / 2
+        L = ["## C. LLVM ahead-of-time and simd128 opt vs native (1012 x 120, ms/tick)", "",
+             f"Native reference (platform_entry.mojo `--target native`: x86-64, no FMA) measured before and after the "
+             f"rows: {ns['median']:.3f} ({ns['min']:.3f}) / {ne['median']:.3f} ({ne['min']:.3f}), load "
+             f"{ns['load']:.2f} / {ne['load']:.2f}; ratios use their mean {ref:.3f}. "
+             f"wasm2c: {r['host'].get('wasm2c', '-')}, C compiler: {r['host'].get('clang_aot', '-')}. "
+             "Hash equal = the 1012 x 120 and 12 x 240 hashes both equal native.", "",
+             "| runtime | setting | module | ms/tick | ratio | hash equal | load | C compile | note |",
+             "|---|---|---|---:|---:|---|---:|---:|---|",
+             f"| native | reference build | | {ref:.3f} | 1.00x | yes | | | |"]
+        want = (self.native["1012x120"]["hash"], self.native["12x240"]["hash"])
+        for x in c["rows"]:
+            if "error" in x:
+                L.append(f"| {x['runtime']} | {x['setting']} | {x['module']} | fails | | | | | {x['error']} |")
+                continue
+            ok = "yes" if (x["hash"], x["hash12"]) == ([want[0]], [want[1]]) else f"NO {x['hash']} {x['hash12']}"
+            cs = f"{x['compile_s']:.0f} s" if x.get("compile_s") else ""
+            L.append(f"| {x['runtime']} | {x['setting']} | {x['module']} | {x['median']:.3f} ({x['min']:.3f}) | "
+                     f"{x['median'] / ref:.2f}x | {ok} | {x['load']:.2f} | {cs} | {x['note']} |")
+        L.append("")
+        if "simd_ops" in c:
+            L += ["simd128 opt variant: the capi module rebuilt with opt `-mattr=+simd128,...` and C `-msimd128` "
+                  f"(build {c['simd_build_s']:.0f} s). SIMD instructions in the module (wasm-objdump -d): " + "; ".join(
+                      f"{k}: {v['simd_ops']:,} ({v['f32x4']:,} f32x4, of which mul {v['f32x4.mul']:,} / add {v['f32x4.add']:,})"
+                      for k, v in c["simd_ops"].items()) + ".", ""]
+        if "wasmer" in c:
+            w = c["wasmer"]
+            L += [f"Wasmer ({w['version']}, conda-forge) on tools/wasm/platform_wasi.mojo (`--host wasi`): " + "; ".join(
+                f"{be}: " + (v["error"] if "error" in v else f"{v['median']:.3f} ms/tick, hash {v['hash']}")
+                for be, v in w["backends"].items()) + ".", ""]
+        prof = r.get("profile")
+        if prof:
+            L += ["### Profiles (1012 x 120)", "", "node --cpu-prof, baseline module, self time:", "",
+                  "| % | function |", "|---:|---|"] + [f"| {pc:.1f} | `{fn}` |" for fn, pc in prof["node"]] + [""]
+            if "callgrind" in prof:
+                cg = prof["callgrind"]
+                L += [f"callgrind (self instructions), wasm2c {cg['binary']}:", "",
+                      "| % Ir | function |", "|---:|---|"] + [f"| {pc:.1f} | `{fn}` |" for fn, pc in cg["top"]] + [""]
+        return L
+
+    def report_b(self) -> list[str]:
+        r = self.res
+        L: list[str] = []
         s = r["sizes"]
         L += ["## B. engine module + game module", "",
               "### Sizes", "", "| module | bytes | exports |", "|---|---:|---:|",
@@ -372,9 +692,7 @@ class Probe:
             L.append(f"| {rt_name} | {d['inproc']['median']:.3f} ({d['inproc']['min']:.3f}) | {d['game']['median']:.3f} "
                      f"({d['game']['min']:.3f}) | {f['game']['median']:.3f} ({f['game']['min']:.3f}) |")
         L += ["", f"Game hash (all rows, native included): `{ng['hash']}`.", ""]
-        if r["failures"]:
-            L += ["## FAILURES", ""] + [f"- {x}" for x in r["failures"]]
-        return "\n".join(L)
+        return L
 
 
 def main() -> int:
@@ -382,7 +700,15 @@ def main() -> int:
     ap.add_argument("--reps", type=int, default=5, help="measured repeats per number (after one warm-up)")
     ap.add_argument("--quick", action="store_true", help="skip the knob sweep and the engine rebuild timing")
     ap.add_argument("--package-build", action="store_true", help="also time `scripts/build_engine.sh` once")
+    ap.add_argument("--aot", action="store_true", help="C: wasm2c + clang -O3 builds of the capi module (W2C_VARIANTS)")
+    ap.add_argument("--simd-opt", action="store_true", help="C: also a capi module built with simd128 for opt and C")
+    ap.add_argument("--wasmer", action="store_true", help="C: try Wasmer's LLVM / Cranelift backends (pixi exec wasmer)")
+    ap.add_argument("--profile", action="store_true", help="C: node --cpu-prof and callgrind top-10 functions")
+    ap.add_argument("--skip-b", action="store_true", help="skip part B (game module) and the rebuild timing")
+    ap.add_argument("--reuse", action="store_true", help="keep modules / binaries already under build/pprobe")
     args = ap.parse_args()
+    global REUSE
+    REUSE = args.reuse
     if not (RT / "pixi.toml").is_file():
         sys.exit(f"wasm_probe_platform: ludens-wasm-rt not found at {RT} (set LUDENS_WASM_RT)")
     if shutil.disk_usage(ROOT).free < 400 << 20:
@@ -391,8 +717,11 @@ def main() -> int:
     p.host()
     p.builds()
     p.part_a()
-    p.part_b()
-    p.rebuild_times()
+    if args.aot or args.simd_opt or args.wasmer:
+        p.part_c()
+    if not args.skip_b:
+        p.part_b()
+        p.rebuild_times()
     p.res["host"]["loadavg_end"] = os.getloadavg()
     md = p.report()
     print(md)
