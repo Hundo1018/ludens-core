@@ -17,10 +17,12 @@ EXTREME     degenerate hulls (single vertex, collinear, coplanar, duplicated
             vertices), exactly coincident hulls, and a near-flat hull — where a
             support-face builder returns garbage instead of failing.
 
-Each standalone case runs in its OWN function. That is not style: several
-width-3 SIMD lists alive in one frame crash this nightly's runtime (the
-hazard documented in geometry/skinning.mojo), and a test that builds a dozen hulls in one
-`main` reproduces it.
+Each standalone case runs in its OWN function. That started as a workaround:
+several width-3 SIMD lists alive in one frame crashed the runtime of that time,
+and a test that built a dozen hulls in one `main` reproduced it. `Vec3` is four
+lanes now and the crash no longer reproduces (geometry/skinning.mojo records the
+cause and the removal); the per-case functions stay because they keep each
+case's lists out of the others' scope.
 """
 
 from std.math import sqrt
