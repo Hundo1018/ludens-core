@@ -65,30 +65,30 @@ def walk(root: Path):
 
 
 def strip_mojo(text: str) -> tuple[str, list[tuple[int, str]]]:
-    """(code without comments/docstrings, [(line, prose)] of the comments and docstrings)."""
+    """(code without comments/docstrings, [(line, prose)] of the comments and docstrings). The code has one line per
+    source line (blank where a line is all docstring), so a line number in it is the line number in the file."""
     code, prose = [], []
     in_doc = False
     for i, line in enumerate(text.splitlines(), 1):
+        kept = []
         if in_doc:
-            if '"""' in line:
-                before, _, after = line.partition('"""')
-                prose.append((i, before))
-                in_doc = False
-                line = after
-            else:
+            if '"""' not in line:
                 prose.append((i, line))
+                code.append("")
                 continue
+            before, _, line = line.partition('"""')
+            prose.append((i, before))
+            in_doc = False
         # a single-quoted literal can hold `"""` (`'"""'`); hide it so it does not open a docstring
         line = SQ.sub(lambda m: "'" + " " * (len(m.group(0)) - 2) + "'", line)
         while '"""' in line:
             before, _, rest = line.partition('"""')
+            kept.append(before)
             if '"""' in rest:
                 doc, _, line = rest.partition('"""')
                 prose.append((i, doc))
-                code.append(before)
             else:
                 prose.append((i, rest))
-                code.append(before)
                 in_doc = True
                 line = ""
                 break
@@ -98,7 +98,8 @@ def strip_mojo(text: str) -> tuple[str, list[tuple[int, str]]]:
         if k >= 0:
             prose.append((i, line[k + 1:]))
             line = line[:k]
-        code.append(line)
+        kept.append(line)
+        code.append(" ".join(kept))
     return "\n".join(code), prose
 
 
