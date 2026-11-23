@@ -136,6 +136,7 @@ else
             PAR+=("$t")
         fi
     done
+    # shellcheck disable=SC2016  # single quotes on purpose: this is the body `bash -c` runs per file
     ONE='f="$1"; o="$2/$(basename "$f").out"
         set +e
         echo "--- $f ---" > "$o"
