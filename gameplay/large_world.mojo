@@ -1,7 +1,7 @@
 """Large worlds: origin rebasing and world partition (ROADMAP 17.8).
 
 The simulation stays f32 and near the origin; the world's true coordinates
-are `origin + local`, with `origin` held in f64 (`WorldOrigin`). Two pieces:
+are `origin + local`, with `origin` held in f64 (a `WorldPos`, `Rebaser.origin`). Two pieces:
 
 - `Rebaser[S: CoordStrategy]` decides when to move the origin and applies
   the move to the scene (`ContactScene6.shift_origin`). Strategies (the 17.8

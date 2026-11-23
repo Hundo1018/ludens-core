@@ -1,9 +1,9 @@
 """ROADMAP 17.25: sleep API wake storm.
 
 `wake(id)` scans every body in the scene once to find the ones sharing
-`id`'s island label (`ContactScene6._wake_island`) -- O(bodies), not
+`id`'s island label (`physics.islands.wake_island`) -- O(bodies), not
 O(island size), by construction: it walks the same flat `BodySet` index
-space `_refresh_islands` already scans every step, just once instead of
+space `refresh_islands` already scans every step, just once instead of
 per-step. This bench builds a single N-body island (island size == scene
 size, the worst case for that scan) and times waking ONE already-settled
 body in it repeatedly, at increasing N.
@@ -22,7 +22,7 @@ comptime REPS = 3000
 
 def _one_island(n: Int) raises -> ContactScene6[QuatBody6]:
     """N boxes shoulder-to-shoulder on a wide floor: touching neighbours
-    union into ONE dynamic island (`_refresh_islands`'s contact-graph
+    union into ONE dynamic island (`refresh_islands`'s contact-graph
     union-find), then settle to sleep so the wake actually has sleeping
     state to flip."""
     var sc = ContactScene6[QuatBody6]()

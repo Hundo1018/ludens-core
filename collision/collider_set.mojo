@@ -1025,7 +1025,7 @@ struct ColliderSet(Movable, Deinitable):
         particle of radius `r` centred at world point `p` against collider
         `i`, restricted to HULL/TRIMESH/HEIGHTFIELD -- box/sphere/capsule
         keep their own exact closed forms inline in
-        `physics.solver6._softbody_pass` (17.0f / F4b: those three kinds
+        `physics.soft_couple.softbody_pass` (17.0f / F4b: those three kinds
         used to be substituted with a sphere of radius `half.x` at the
         body's position, which for a level mesh is a sphere the size of the
         level). Returns (hit, target, normal): if `hit`, `target` is where

@@ -19,7 +19,7 @@ EXTREME     degenerate hulls (single vertex, collinear, coplanar, duplicated
 
 Each standalone case runs in its OWN function. That is not style: several
 width-3 SIMD lists alive in one frame crash this nightly's runtime (the
-documented `SkinVert` hazard), and a test that builds a dozen hulls in one
+hazard documented in geometry/skinning.mojo), and a test that builds a dozen hulls in one
 `main` reproduces it.
 """
 

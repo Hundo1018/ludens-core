@@ -763,8 +763,11 @@ struct SnapshotServer[S: NetSim](NetPeer):
 
 
 struct SnapshotClient[S: NetSim](NetPeer):
-    """Sends inputs, shows the newest snapshot. `prev` / `cur` hold the last
-    two snapshot states for interpolation (`view_alpha`)."""
+    """Sends inputs, shows the newest snapshot. `newest` is the tick of the
+    latest snapshot loaded into `sim`; `prev_tick` is the tick it replaced
+    (recorded only, nothing interpolates between them). `have`/`bytes` keep
+    a ring of received snapshot ticks and their full bytes, used as delta
+    bases."""
 
     var sim: Self.S
     var node: Int

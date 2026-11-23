@@ -40,6 +40,7 @@ DOCS = ["README.md", "CLAUDE.md", "CONTRIBUTING.md", "docs/ARCHITECTURE.md", "do
 SKIP_DIRS = {".git", ".claude", ".pixi", "build", "build64", ".campaign", "node_modules"}
 CODE_EXT = (".mojo", ".py", ".sh", ".toml", ".h", ".rs", ".c", ".mjs", ".js", ".ts", ".yml")
 
+SQ = re.compile(r"(?<![A-Za-z0-9])'(?:\\.|[^'\\\n])*'")
 TICK = re.compile(r"`([^`\n]{1,120})`")
 WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 MEMBER = re.compile(r"^([A-Z][A-Za-z0-9]+)\.([a-z_][a-z0-9_]*)$")
@@ -77,6 +78,8 @@ def strip_mojo(text: str) -> tuple[str, list[tuple[int, str]]]:
             else:
                 prose.append((i, line))
                 continue
+        # a single-quoted literal can hold `"""` (`'"""'`); hide it so it does not open a docstring
+        line = SQ.sub(lambda m: "'" + " " * (len(m.group(0)) - 2) + "'", line)
         while '"""' in line:
             before, _, rest = line.partition('"""')
             if '"""' in rest:
@@ -234,6 +237,8 @@ def selftest() -> int:
             "# `pkg.mod.Missing` and `test_absent`\n"
             '# `x + y` and `max` are not code names, nor `max.gpu.host` or `self.a.b`\n'
             'var s = "# `_in_string` is not a comment"\n'
+            "var q = '\"\"\"'  # `_after_quote` is a comment, not a docstring\n"
+            "def after_quote():\n    pass\n"
         )
         got = {(rel, tok, rule) for rel, _, tok, rule in findings(r)}
         want = {
@@ -243,6 +248,7 @@ def selftest() -> int:
             ("pkg/mod.mojo", "Thing.gone_method", "dead name"),
             ("pkg/mod.mojo", "pkg.mod.Missing", "dead name"),
             ("pkg/mod.mojo", "test_absent", "dead name"),
+            ("pkg/mod.mojo", "_after_quote", "dead name"),
         }
         cases += 1
         if got != want:
@@ -253,7 +259,7 @@ def selftest() -> int:
         p = check(r)
         cases += 1
         expect = {"no reason", "not needed any more"}
-        if len(p) != 6 or not all(any(e in x for x in p) for e in expect):
+        if len(p) != 7 or not all(any(e in x for x in p) for e in expect):
             print("selftest FAIL allow list:", p)
             return 1
     print(f"stale_refs selftest: {cases} cases ok")

@@ -43,7 +43,7 @@ def _scene(n: Int, kinematic: Bool) raises -> ContactScene6[QuatBody6]:
         )
         # Pinned awake in BOTH scenes: a resting box on a STATIC platform
         # falls asleep within ~35 frames (`test_sleep6`'s own number) and
-        # then every one of its pairs is skipped outright (`_impulse_inert`)
+        # then every one of its pairs is skipped outright (`BodySet.impulse_inert`)
         # -- that sleep-state asymmetry would swamp the one-branch delta
         # this bench exists to isolate, since "skip the pair entirely" costs
         # far less than either solve path. `set_can_sleep(False)` removes

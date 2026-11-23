@@ -53,10 +53,9 @@ struct SolverConfig(Copyable, ImplicitlyCopyable, Movable):
     # Speculative-contact margin base (F19): defined once, in
     # `collision.collider_set`, so `ColliderSet.fat_aabb` and
     # `collision.contact_gen`'s per-pair margin can no longer drift apart.
-    # Not yet threaded through those call sites as a runtime override --
-    # that plumbing is out of scope for this behaviour-preserving commit.
-    # This field exists so later config-driven code has one place to read
-    # the value both of those already use.
+    # Defaults to `SPEC_BASE`. `ContactScene6` (`_step_impl`,
+    # `begin_external_solve`) passes it to `_collect_pairs`, which hands
+    # it to `ColliderSet.fat_aabb` and the narrowphase margin; `UnitScale.apply` scales it by `per_meter`.
     var margin_base: Real
 
     # Sleep thresholds (`_update_sleep`'s old comptime locals).

@@ -5,7 +5,7 @@ interchangeable solvers: XPBD (per-constraint position projection) and VBD
 (vertex block descent: a small Newton step per vertex, swept in graph colours).
 Each runs on the CPU reference and, when an accelerator is present, on the
 GPU through ONE shared device context (creating several contexts in one
-process hangs, so the `_ctx` entry points are the ones to use for more than
+process hangs, so `gpu_cloth_run_ctx` / `gpu_vbd_run_ctx` are the entry points to use for more than
 one rollout). The example prints how far the free corner fell, the worst
 edge stretch for each solver, and the CPU/GPU agreement.
 

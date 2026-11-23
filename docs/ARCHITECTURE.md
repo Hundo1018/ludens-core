@@ -151,7 +151,7 @@ without one. Performance lives in `benchmarks/` (the report is the gate).
 | unit | one module, pure functions / one type | `test_vec`, `test_quat`, `test_predicates` | `pixi run test-unit` |
 | component | one package seam: every backend/variant of a trait against the same checks | `test_backend_parity`, `test_motor_parity` | `pixi run test-component` |
 | integration | two or more packages wired together through production entry points | `test_solver_broadphase`, `test_softcouple` | `pixi run test-integration` |
-| system | a whole world stepped through the game loop with ECS + scheduler + physics, checked on end state | (none yet -- see below) | `pixi run test-system` |
+| system | a whole world stepped through the game loop with ECS + scheduler + physics, checked on end state | `test_system_stack`, `test_runtime_flow` | `pixi run test-system` |
 | stress | extreme scale / adversarial inputs, slower; run before a release or a solver change | `test_stress_*` | `pixi run test-stress` |
 | performance | `benchmarks/bench_*`, collected into `BENCHMARK_REPORT.md` | — | `pixi run benchmark` |
 
@@ -163,12 +163,11 @@ but two of those backends (`bp_hashgrid`, `bp_tree`) wrap `spatial`'s hash grid
 rule correctly calls it `integration`: a seam test whose variants wrap another
 package's structures is testing that wiring too, not just the seam.
 
-`system` is empty today, not broken: no test yet imports `scheduler.gameloop`
-alongside both `ecs` and `physics` directly, because there is no runtime
-package wiring those three together outside a test file itself (`gameplay/
-runtime.mojo`, ROADMAP 17.0i, is the intended home). The tier and its gate
-exist now so the first real system test has a runner and a rule waiting for
-it, not a retrofit.
+`system` was empty when the tier was added (no runtime package yet wired
+`scheduler.gameloop`, `ecs` and `physics` together). `gameplay/runtime.mojo`
+(ROADMAP 17.0i) now does, and 17 test files carry `# tier: system` -- most
+step a world through `gameplay.runtime.Runtime` (`test_system_stack` was the
+first; `test_runtime_*`, `test_system_determinism`, `test_tier_tags`, ...).
 
 `pixi run test` runs unit → component → integration → system (the fast gate);
 `pixi run test-all` adds stress.
