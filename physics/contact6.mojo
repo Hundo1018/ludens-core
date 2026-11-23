@@ -15,7 +15,7 @@ gate for the move).
 
 from std.math import sqrt
 from scheduler.dispatch import Dispatch, Task, dispatch_for
-from geometry.vec import Real, Vec3, dot, tangent_basis
+from geometry.vec import Real, Vec3, dot, cross, tangent_basis
 from collision.manifold import ContactManifold
 from collision.contact_gen import RawContact
 from collision.contact_events import pack_key
@@ -694,6 +694,23 @@ struct SweepCache(Movable):
     var t2: List[Vec3]
     var iwa: List[InvInertiaW]  # 1 per pair: world inverse inertia of `a` (17.100 item 1)
     var iwb: List[InvInertiaW]  # 1 per pair: of `b`
+    # ROADMAP 17.100 item 2, 4 per pair (per point): r × axis for each end and
+    # axis (n, t1, t2), and the angular velocity change per unit impulse
+    # `Iw (r × axis) _cs`; `la` / `lb` (1 per pair) are `inv_mass _cs`.
+    var xan: List[Vec3]
+    var xbn: List[Vec3]
+    var xat1: List[Vec3]
+    var xbt1: List[Vec3]
+    var xat2: List[Vec3]
+    var xbt2: List[Vec3]
+    var wan: List[Vec3]
+    var wbn: List[Vec3]
+    var wat1: List[Vec3]
+    var wbt1: List[Vec3]
+    var wat2: List[Vec3]
+    var wbt2: List[Vec3]
+    var la: List[Real]
+    var lb: List[Real]
 
     def __init__(out self, lo: Int, hi: Int):
         var n = max(hi - lo, 0)
@@ -707,6 +724,20 @@ struct SweepCache(Movable):
         self.t2 = List[Vec3](length=n, fill=Vec3(0, 0, 0, 0))
         self.iwa = List[InvInertiaW](length=n, fill=InvInertiaW.zero())
         self.iwb = List[InvInertiaW](length=n, fill=InvInertiaW.zero())
+        self.xan = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.xbn = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.xat1 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.xbt1 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.xat2 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.xbt2 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wan = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wbn = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wat1 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wbt1 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wat2 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.wbt2 = List[Vec3](length=4 * n, fill=Vec3(0, 0, 0, 0))
+        self.la = List[Real](length=n, fill=0)
+        self.lb = List[Real](length=n, fill=0)
 
 
 @always_inline
@@ -758,6 +789,20 @@ def prepare_into[B: Body6](
         sc.t2.resize(n, Vec3(0, 0, 0, 0))
         sc.iwa.resize(n, InvInertiaW.zero())
         sc.iwb.resize(n, InvInertiaW.zero())
+        sc.xan.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.xbn.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.xat1.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.xbt1.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.xat2.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.xbt2.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wan.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wbn.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wat1.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wbt1.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wat2.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.wbt2.resize(4 * n, Vec3(0, 0, 0, 0))
+        sc.la.resize(n, 0)
+        sc.lb.resize(n, 0)
     for c in range(lo, hi):
         ref pr = pairs[c]
         if bset.impulse_inert(pr.a) and bset.impulse_inert(pr.b):
@@ -772,6 +817,8 @@ def prepare_into[B: Body6](
             sc.iwa[o] = InvInertiaW.of(bset.bodies[pr.a].rotation(), bset.bodies[pr.a].get_inertia())
         if bset.is_dynamic(pr.b):
             sc.iwb[o] = InvInertiaW.of(bset.bodies[pr.b].rotation(), bset.bodies[pr.b].get_inertia())
+        sc.la[o] = bset.bodies[pr.a].inv_mass() * _cs(bset, pr.a) if bset.is_dynamic(pr.a) else Real(0)
+        sc.lb[o] = bset.bodies[pr.b].inv_mass() * _cs(bset, pr.b) if bset.is_dynamic(pr.b) else Real(0)
         sc.t1[o] = tb[0]
         sc.t2[o] = tb[1]
         for k in range(pr.m.count):
@@ -783,6 +830,27 @@ def prepare_into[B: Body6](
             sc.dn[i] = _denom(bset, pr, pwa, pwb, n)
             sc.dt1[i] = _denom(bset, pr, pwa, pwb, tb[0])
             sc.dt2[i] = _denom(bset, pr, pwa, pwb, tb[1])
+            # ROADMAP 17.100 item 2: per-point response along each axis
+            if bset.moves(pr.a):
+                var ra = pwa - bset.bodies[pr.a].position()
+                sc.xan[i] = cross(ra, n)
+                sc.xat1[i] = cross(ra, tb[0])
+                sc.xat2[i] = cross(ra, tb[1])
+                if bset.is_dynamic(pr.a):
+                    var ca = _cs(bset, pr.a)
+                    sc.wan[i] = sc.iwa[o].apply(sc.xan[i]) * ca
+                    sc.wat1[i] = sc.iwa[o].apply(sc.xat1[i]) * ca
+                    sc.wat2[i] = sc.iwa[o].apply(sc.xat2[i]) * ca
+            if bset.moves(pr.b):
+                var rb = pwb - bset.bodies[pr.b].position()
+                sc.xbn[i] = cross(rb, n)
+                sc.xbt1[i] = cross(rb, tb[0])
+                sc.xbt2[i] = cross(rb, tb[1])
+                if bset.is_dynamic(pr.b):
+                    var cb = _cs(bset, pr.b)
+                    sc.wbn[i] = sc.iwb[o].apply(sc.xbn[i]) * cb
+                    sc.wbt1[i] = sc.iwb[o].apply(sc.xbt1[i]) * cb
+                    sc.wbt2[i] = sc.iwb[o].apply(sc.xbt2[i]) * cb
 
 
 def soft_sweep[B: Body6](
@@ -876,6 +944,30 @@ def sweep_colored[B: Body6](
                                 pairs, cache, c, h, bias_rate, mass_scale,
                                 impulse_scale, use_bias, mu, max_push,
                             )
+
+
+@always_inline
+def _vrel[B: Body6](bset: BodySet[B], a: Int, b: Int, ax: Vec3, xa: Vec3, xb: Vec3) -> Real:
+    """ROADMAP 17.100 item 2: `dot(v_b(p_b) - v_a(p_a), ax)` written as
+    `dot(v, ax) + dot(w, r × ax)` with the precomputed `r × ax`."""
+    var v = Real(0)
+    if bset.moves(b):
+        v += dot(bset.bodies[b].linear_velocity(), ax) + dot(bset.bodies[b].omega_world(), xb)
+    if bset.moves(a):
+        v -= dot(bset.bodies[a].linear_velocity(), ax) + dot(bset.bodies[a].omega_world(), xa)
+    return v
+
+
+@always_inline
+def _push[B: Body6](
+    mut bset: BodySet[B], a: Int, b: Int, ax: Vec3, lam: Real, la: Real, lb: Real, wa: Vec3, wb: Vec3
+):
+    """ROADMAP 17.100 item 2: impulse `lam` along `ax` (+ on b, - on a) through
+    the precomputed response: linear `ax inv_mass _cs`, angular `Iw (r × ax) _cs`."""
+    if bset.is_dynamic(a):
+        bset.bodies[a].add_velocity(ax * (-lam * la), wa * (-lam))
+    if bset.is_dynamic(b):
+        bset.bodies[b].add_velocity(ax * (lam * lb), wb * lam)
 
 
 def solve_contact[B: Body6, F: Int](
@@ -983,16 +1075,10 @@ def solve_contact[B: Body6, F: Int](
             # anchors coincided at prep with depth d0; separation since
             # then is the anchor drift along the normal
             var d = pr.m.depths[k] - dot(pwb - pwa, n)
-            var va = Vec3(0, 0, 0, 0)
-            if bset.moves(pr.a):
-                va = bset.bodies[pr.a].velocity_at(pwa)
-            var vb = Vec3(0, 0, 0, 0)
-            if bset.moves(pr.b):
-                vb = bset.bodies[pr.b].velocity_at(pwb)
             var denom = cache.dn[ci]
             if denom <= 0:
                 continue
-            var vn = dot(vb - va, n)
+            var vn = _vrel(bset, pr.a, pr.b, n, cache.xan[ci], cache.xbn[ci])
             # Box2D sign convention: separation s = -d (negative when
             # penetrating), bias <= 0 pulls vn upward past zero.
             var bias = Real(0)
@@ -1012,11 +1098,7 @@ def solve_contact[B: Body6, F: Int](
             var dl = new_acc - pr.acc[k]
             pr.acc[k] = new_acc
             if dl != 0:
-                var j = n * dl
-                if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse_iw(-j * _cs(bset, pr.a), pwa, cache.iwa[co])
-                if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse_iw(j * _cs(bset, pr.b), pwb, cache.iwb[co])
+                _push(bset, pr.a, pr.b, n, dl, cache.la[co], cache.lb[co], cache.wan[ci], cache.wbn[ci])
         # Coulomb friction: tangent impulses clamped to pair_mu * lambda_n.
         # an adhesive point's normal impulse may be negative; it gives no grip
         var lam = pr.acc[k] if pr.acc[k] > 0 else Real(0)
@@ -1032,16 +1114,12 @@ def solve_contact[B: Body6, F: Int](
             disk = cap > 0
         for ti in range(2):
             var t = tb0 if ti == 0 else tb1
-            var vat = Vec3(0, 0, 0, 0)
-            if bset.moves(pr.a):
-                vat = bset.bodies[pr.a].velocity_at(pwa)
-            var vbt = Vec3(0, 0, 0, 0)
-            if bset.moves(pr.b):
-                vbt = bset.bodies[pr.b].velocity_at(pwb)
             var dent = cache.dt1[ci] if ti == 0 else cache.dt2[ci]
             if dent <= 0:
                 continue
-            var vt = dot(vbt - vat, t)
+            var xa = cache.xat1[ci] if ti == 0 else cache.xat2[ci]
+            var xb = cache.xbt1[ci] if ti == 0 else cache.xbt2[ci]
+            var vt = _vrel(bset, pr.a, pr.b, t, xa, xb)
             if conveyor:
                 vt += dot(pr.vsurf, t)
             var acc_t = pr.acc_t1[k] if ti == 0 else pr.acc_t2[k]
@@ -1058,11 +1136,9 @@ def solve_contact[B: Body6, F: Int](
             else:
                 pr.acc_t2[k] = new_t
             if dtl != 0:
-                var jt = t * dtl
-                if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse_iw(-jt * _cs(bset, pr.a), pwa, cache.iwa[co])
-                if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse_iw(jt * _cs(bset, pr.b), pwb, cache.iwb[co])
+                var wa = cache.wat1[ci] if ti == 0 else cache.wat2[ci]
+                var wb = cache.wbt1[ci] if ti == 0 else cache.wbt2[ci]
+                _push(bset, pr.a, pr.b, t, dtl, cache.la[co], cache.lb[co], wa, wb)
         if disk:
             var t1 = pr.acc_t1[k]
             var t2 = pr.acc_t2[k]
@@ -1071,11 +1147,8 @@ def solve_contact[B: Body6, F: Int](
                 var sc = cap / sqrt(m2)
                 pr.acc_t1[k] = t1 * sc
                 pr.acc_t2[k] = t2 * sc
-                var jt = tb0 * (t1 * sc - t1) + tb1 * (t2 * sc - t2)
-                if bset.is_dynamic(pr.a):
-                    bset.bodies[pr.a].apply_impulse_iw(-jt * _cs(bset, pr.a), pwa, cache.iwa[co])
-                if bset.is_dynamic(pr.b):
-                    bset.bodies[pr.b].apply_impulse_iw(jt * _cs(bset, pr.b), pwb, cache.iwb[co])
+                _push(bset, pr.a, pr.b, tb0, t1 * sc - t1, cache.la[co], cache.lb[co], cache.wat1[ci], cache.wbt1[ci])
+                _push(bset, pr.a, pr.b, tb1, t2 * sc - t2, cache.la[co], cache.lb[co], cache.wat2[ci], cache.wbt2[ci])
     comptime if MODEL:
         _solve_rolling(bset, pr, n)
 
