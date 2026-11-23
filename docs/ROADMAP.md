@@ -786,6 +786,17 @@
 > 4. 預設迭代數改 4 子步 × 1 次 + 放鬆(Box2D v3 的預設),先做穩定性測試(10 層堆疊、20 層金字塔、布娃娃、playground 的場景)。
 > 5. 增量 broadphase:BVH 目前每 tick 重建(1 × 4、200 箱時佔 14 %),改 refit / 增量更新,候選配對順序保持決定性。
 > 6. 原生 island 平行:`cfg.parallel` 預設關;4 核心 1000 箱 16.2 → 9.2 ms,但雜湊與循序不同;決定平行是否必須與循序相同並照辦,或寫明差異。
+>    **進度(2026-11-23,修正待提交)** 🔶:決定平行必須與循序逐位相同。雜湊不同的原因不是求解:1000 箱時每個 body 的姿態、速度、睡眠與每個配對的累積衝量都已逐位相同,
+>    差在 island 平行分支在 `_report_excess` / `_hold_loads` 之前就返回(快照與雜湊所含的 `hold_jn` / `hold_jf` / `hold_span` 過時),
+>    且它與分級分支都把按 island 分組的配對副本存成快取,丟掉不屬於任何 island 的配對(兩端睡著或靜態)並改變配對順序。
+>    修正(`physics/solver6.mojo`):`_island_partition` 回傳原順序,解完的配對寫回原清單(`_scatter_pairs`);序列、island 平行與分級三條路徑共用一個尾段 `_finish_step`
+>    (睡眠、NaN 掃描、超量回報、held loads、debug draw、事件、overload 釋放、快取);`_solve_island` 讀每個 island slot 一份重用的 `SweepCache`(`island_sweeps`),
+>    與循序路徑一樣在開頭與每次姿態改變後準備,不再每次 sweep 配置;暖啟動用 `warm_start_prepared`;`cfg.parallel` 時分級步進的到期 island 經 `cfg.dispatch` 分派(`_TierTask`)。
+>    `tests/test_islands_par.mojo` 10/10:新增整場序列化狀態(`scene_to_bytes`,含接觸快取)的循序 vs island 平行比對,與分級循序 vs 分級平行比對,兩者逐位相同
+>    (場景 6 個 island,13 / 13 個快取配對兩端睡著或靜態);序列化狀態那項在修正前的程式上失敗。
+>    `test_colored` 6/6、`test_degrade` 3/3、`test_dispatch` 10/10、`test_impact_report` 24/24、`test_runtime_systems` 6/6、`test_tiers` 26/26、`test_tiers_parity` 11/11、
+>    `test_tiers_aggregate` 4/4、`test_system_tiers` 7/7。gate(x86-64,`LUDENS_TEST_JOBS=2`)459 / 459,golden 只有 `test_islands_par` 一段改變(新增 4 項檢查與一行配對計數;待以 `--update-golden` 記錄),其他各段逐位不變。成本未重量:上面 16.2 → 9.2 ms 與驗收要求的 `phys-profile` 前後表仍待量。
+>    後續(因果分離區域的非同步步進)的設計筆記:`docs/design/17.85-async-regions.md`。
 > 7. 兩個改變既有場景結果的預設(由 17.19 移來,使用者 2026-11-22 決定在本項一起決定):`max_mass_ratio` 是否預設開啟、網格接觸 reduction 是否預設開啟;各附開 / 關的穩定性與成本對照。
 > **驗收**(每個 PR):`phys-profile` 的成本表(原生循序、原生平行、wasm64;50 / 200 / 1000 醒著的箱子;4 × 4 與新預設)前後對照;穩定性:
 > 堆疊與金字塔漂移、布娃娃與關節鏈、playground 的 camp 與 quarry 場景,前後比較並在 PR 寫出界限;golden 只在改變它的 PR 重新產生,附理由。
@@ -3756,6 +3767,7 @@
 > **緣起**:2026-10-10 使用者提問 —— 世界中實體數遠大於玩家能產生因果交互的實體數時,
 > 引擎能否以適當的時間 / 空間解析度維護 simulation state,且分級(LOD)模組本身可替換。
 > 設計筆記:`docs/design/17.85-tiered-simulation.md`。
+> **後續設計(未排程,2026-11-23)**:因果分離區域以多步光錐界定、彼此非同步步進(區域領先 / 落後 k tick,結果與 lock-step 逐位相同),量測先行:`docs/design/17.85-async-regions.md`。
 > **現況**(已核對原始碼):**做不到**。執行模型是「每個 fixed step × 所有系統 × 所有實體 ×
 > 全精度」。`System.apply` 無狀態、`Scheduler.tick` 跑整個 pack、`FixedLoop` 單一 dt、job graph
 > 的 level 只給並行度(`scheduler/scheduler.mojo:26-46`、`gameloop.mojo:45-49`);ECS 查詢只有
