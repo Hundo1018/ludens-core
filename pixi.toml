@@ -43,6 +43,10 @@ gpu-compile = { cmd = "bash scripts/gpu_compile_check.sh", depends-on = ["build"
 wheel = { cmd = "python3 python/build_wheel.py", depends-on = ["build"] }
 # Dead file references in README / CLAUDE / ROADMAP / ARCHITECTURE (scripts/doclint.py; ROADMAP 17.82).
 doclint = "python3 scripts/doclint.py"
+# Comments, docstrings and docs that name code which no longer exists, or call existing code "future" (scripts/stale_refs.py).
+stale-refs = "python3 scripts/stale_refs.py"
+# Rebuild build/bench_out/ from the committed report so `ONLY=... pixi run benchmark` reruns only the listed benches.
+bench-cache = "python3 scripts/bench_cache_from_report.py"
 roadmap-status = "python3 scripts/roadmap_status.py"
 # docs/STRUCTURE.md from the architecture index; `-- --check` fails when stale (scripts/gen_structure.py; ROADMAP 17.87).
 structure = { cmd = "python3 scripts/gen_structure.py" }
