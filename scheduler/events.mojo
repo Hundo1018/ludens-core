@@ -55,13 +55,12 @@ lives OUTSIDE this file: `collision` is layer 3, the same layer as
 `scheduler` (docs/ARCHITECTURE.md §1), so `scheduler/events.mojo` cannot
 import it without a same-layer edge, which the reach-through/cycle rules
 forbid. The small adapter that calls `ch.send(...)` for each
-`ContactScene6.events` entry lives in
-`tests/test_events_contacts.mojo` instead -- a test may import any layer.
-The natural home is the future `gameplay` package (layer 5, ROADMAP 17.1
-onward), which can import both `scheduler` and `collision`; until it exists,
-the test IS the production-style caller architecture law v3 requires ("接上
-專案" -- reached by at least one production-style caller, not left as an
-island).
+`ContactScene6.events` entry lives in the `gameplay` package (layer 5),
+which may import both `scheduler` and `collision`: `gameplay/runtime.mojo`'s
+`Runtime` forwards `scene.events` onto its `events` channel every fixed
+tick. Before `gameplay` existed, `tests/test_events_contacts.mojo`'s
+`publish_contact_events` was the only production-style caller architecture
+law v3 requires ("接上專案"); it remains as the test of that adapter shape.
 """
 
 from diag.counters import Counters, EVENT_DROPPED_UNREAD

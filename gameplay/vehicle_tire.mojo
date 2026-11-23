@@ -15,7 +15,7 @@ therefore costs lateral grip and the wheel can never exceed `mu Fz` in any
 direction.
 
 LOW SPEED. `max(|vx|, vmin)` keeps the slip finite at a standstill (the SAE
-definition divides by zero), and `force_limit` is the implicit clamp: a force
+definition divides by zero), and `solve_axis` is the implicit clamp: a force
 that would reverse the slip velocity inside one step is cut to exactly the
 value that cancels it, which removes the jitter an explicit friction model has
 when parked on a slope.

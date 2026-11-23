@@ -5,12 +5,9 @@ movement system (query [P,V], integrate), then F query-only passes — is run
 against all five ECS backends and the OOP engine. The output is a cross matrix
 (variant x N x op) of ns/op so the strategies can be compared directly.
 
-N is capped at a few thousand on purpose: each backend's `SparseSet` stores its
-sparse index as an `Array[Int, cap]` *by value*, so a large `cap` makes
-codegen for the backend types explode (compile-time / memory blowup). The default
-`cap=4096` keeps the whole matrix compiling in seconds — and that ceiling is
-itself a maturity finding (a heap-backed sparse array is the natural next step
-for million-entity scale). Run with: `mojo run -I build benchmarks/bench_ecs.mojo`.
+N sweeps 500 / 4000 / 65536 (L2 to RAM). The sparse index is a heap `List[Int]`
+(the old by-value `Array[Int, cap]` and its 4096 ceiling are gone); 1e4..1e6
+entities are measured in `bench_stress.mojo`. Run with: `mojo run -I build benchmarks/bench_ecs.mojo`.
 """
 
 from std.benchmark import keep

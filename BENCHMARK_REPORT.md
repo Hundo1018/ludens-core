@@ -8,7 +8,7 @@ performance-competitive. Timings are wall-clock ns via `perf_counter_ns`
 with `keep()` guarding against dead-code elimination; absolute numbers are
 machine-specific, so read the *relative* columns.
 
-Host: CPU "Intel(R) Xeon(R) Processor @ 2.10GHz", 4 logical cores, accelerator none detected (generated 2026-11-12 by scripts/run_benchmarks.sh). Absolute numbers and the parallel-scaling curves depend on these; rows from a host with a different fingerprint are not comparable.
+Host: CPU "Intel(R) Xeon(R) Processor @ 2.10GHz", 4 logical cores, accelerator none detected (generated 2026-11-23 by scripts/run_benchmarks.sh). Absolute numbers and the parallel-scaling curves depend on these; rows from a host with a different fingerprint are not comparable.
 
 
 ## Engine implementations — movement workload
@@ -23,75 +23,75 @@ what made the first version of this benchmark look slow.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| sparse | 500 | spawn | 407.22 | 2.46 | 0.20 |
-| sparse | 500 | update | 47.07 | 21.24 | 0.47 |
-| sparse | 500 | query | 4049.20 | 0.25 | 0.08 |
-| sparse (for_each2) | 500 | update(for_each2) | 22.89 | 43.68 | 0.01 |
-| archetype (handle) | 500 | spawn | 374.79 | 2.67 | 0.19 |
-| archetype (handle) | 500 | update | 93.92 | 10.65 | 0.94 |
-| archetype (handle) | 500 | query | 3667.70 | 0.27 | 0.07 |
-| archetype (soa) | 500 | spawn | 445.97 | 2.24 | 0.22 |
-| archetype (soa) | 500 | update | 1.15 | 871.61 | 0.01 |
-| archetype (soa) | 500 | query | 646.55 | 1.55 | 0.01 |
-| archetype (for_each2) | 500 | update(for_each2) | 0.75 | 1333.33 | 0.00 |
-| bitset | 500 | spawn | 51.28 | 19.50 | 0.03 |
-| bitset | 500 | update | 28.45 | 35.14 | 0.28 |
-| bitset | 500 | query | 1949.70 | 0.51 | 0.04 |
-| reactive | 500 | spawn | 235.70 | 4.24 | 0.12 |
-| reactive | 500 | update | 89.98 | 11.11 | 0.90 |
-| reactive | 500 | query | 5098.10 | 0.20 | 0.10 |
-| reactive (for_each2) | 500 | update(for_each2) | 25.20 | 39.68 | 0.01 |
-| naive | 500 | spawn | 25.31 | 39.52 | 0.01 |
-| naive | 500 | update | 12.42 | 80.52 | 0.12 |
-| naive | 500 | query | 3358.35 | 0.30 | 0.07 |
-| oop | 500 | spawn | 24.60 | 40.65 | 0.01 |
-| oop | 500 | update | 1.01 | 986.10 | 0.01 |
-| sparse | 4000 | spawn | 161.66 | 6.19 | 0.65 |
-| sparse | 4000 | update | 45.28 | 22.08 | 3.62 |
-| sparse | 4000 | query | 34445.85 | 0.03 | 0.69 |
-| sparse (for_each2) | 4000 | update(for_each2) | 21.82 | 45.84 | 0.09 |
-| archetype (handle) | 4000 | spawn | 297.92 | 3.36 | 1.19 |
-| archetype (handle) | 4000 | update | 53.60 | 18.66 | 4.29 |
-| archetype (handle) | 4000 | query | 26151.00 | 0.04 | 0.52 |
-| archetype (soa) | 4000 | spawn | 347.38 | 2.88 | 1.39 |
-| archetype (soa) | 4000 | update | 1.64 | 609.36 | 0.13 |
-| archetype (soa) | 4000 | query | 157.05 | 6.37 | 0.00 |
-| archetype (for_each2) | 4000 | update(for_each2) | 0.72 | 1381.69 | 0.00 |
-| bitset | 4000 | spawn | 49.60 | 20.16 | 0.20 |
-| bitset | 4000 | update | 29.78 | 33.58 | 2.38 |
-| bitset | 4000 | query | 17786.05 | 0.06 | 0.36 |
-| reactive | 4000 | spawn | 222.16 | 4.50 | 0.89 |
-| reactive | 4000 | update | 84.84 | 11.79 | 6.79 |
-| reactive | 4000 | query | 39284.05 | 0.03 | 0.79 |
-| reactive (for_each2) | 4000 | update(for_each2) | 25.18 | 39.71 | 0.10 |
-| naive | 4000 | spawn | 14.88 | 67.20 | 0.06 |
-| naive | 4000 | update | 10.18 | 98.25 | 0.81 |
-| naive | 4000 | query | 23355.55 | 0.04 | 0.47 |
-| oop | 4000 | spawn | 20.26 | 49.35 | 0.08 |
-| oop | 4000 | update | 1.05 | 952.65 | 0.08 |
-| sparse | 65536 | spawn | 154.65 | 6.47 | 10.14 |
-| sparse | 65536 | update | 45.23 | 22.11 | 59.29 |
-| sparse | 65536 | query | 541149.85 | 0.00 | 10.82 |
-| sparse (for_each2) | 65536 | update(for_each2) | 22.55 | 44.35 | 1.48 |
-| archetype (handle) | 65536 | spawn | 352.58 | 2.84 | 23.11 |
-| archetype (handle) | 65536 | update | 57.53 | 17.38 | 75.40 |
-| archetype (handle) | 65536 | query | 472412.40 | 0.00 | 9.45 |
-| archetype (soa) | 65536 | spawn | 367.90 | 2.72 | 24.11 |
-| archetype (soa) | 65536 | update | 1.05 | 950.78 | 1.38 |
-| archetype (soa) | 65536 | query | 580.25 | 1.72 | 0.01 |
-| archetype (for_each2) | 65536 | update(for_each2) | 0.68 | 1473.28 | 0.04 |
-| bitset | 65536 | spawn | 51.21 | 19.53 | 3.36 |
-| bitset | 65536 | update | 29.83 | 33.52 | 39.10 |
-| bitset | 65536 | query | 255067.15 | 0.00 | 5.10 |
-| reactive | 65536 | spawn | 242.78 | 4.12 | 15.91 |
-| reactive | 65536 | update | 90.39 | 11.06 | 118.48 |
-| reactive | 65536 | query | 691811.30 | 0.00 | 13.84 |
-| reactive (for_each2) | 65536 | update(for_each2) | 24.33 | 41.10 | 1.59 |
-| naive | 65536 | spawn | 18.49 | 54.09 | 1.21 |
-| naive | 65536 | update | 11.18 | 89.46 | 14.65 |
-| naive | 65536 | query | 454887.60 | 0.00 | 9.10 |
-| oop | 65536 | spawn | 3.69 | 270.70 | 0.24 |
-| oop | 65536 | update | 1.44 | 693.94 | 1.89 |
+| sparse | 500 | spawn | 323.05 | 3.10 | 0.16 |
+| sparse | 500 | update | 35.79 | 27.94 | 0.36 |
+| sparse | 500 | query | 3709.50 | 0.27 | 0.07 |
+| sparse (for_each2) | 500 | update(for_each2) | 24.03 | 41.61 | 0.01 |
+| archetype (handle) | 500 | spawn | 283.94 | 3.52 | 0.14 |
+| archetype (handle) | 500 | update | 43.30 | 23.10 | 0.43 |
+| archetype (handle) | 500 | query | 2289.65 | 0.44 | 0.05 |
+| archetype (soa) | 500 | spawn | 294.93 | 3.39 | 0.15 |
+| archetype (soa) | 500 | update | 0.87 | 1145.21 | 0.01 |
+| archetype (soa) | 500 | query | 476.75 | 2.10 | 0.01 |
+| archetype (for_each2) | 500 | update(for_each2) | 0.46 | 2183.41 | 0.00 |
+| bitset | 500 | spawn | 43.61 | 22.93 | 0.02 |
+| bitset | 500 | update | 24.13 | 41.45 | 0.24 |
+| bitset | 500 | query | 1252.80 | 0.80 | 0.03 |
+| reactive | 500 | spawn | 174.92 | 5.72 | 0.09 |
+| reactive | 500 | update | 61.36 | 16.30 | 0.61 |
+| reactive | 500 | query | 2739.85 | 0.36 | 0.05 |
+| reactive (for_each2) | 500 | update(for_each2) | 22.73 | 44.00 | 0.01 |
+| naive | 500 | spawn | 16.17 | 61.84 | 0.01 |
+| naive | 500 | update | 6.49 | 154.19 | 0.06 |
+| naive | 500 | query | 1609.10 | 0.62 | 0.03 |
+| oop | 500 | spawn | 17.70 | 56.48 | 0.01 |
+| oop | 500 | update | 0.76 | 1321.35 | 0.01 |
+| sparse | 4000 | spawn | 122.73 | 8.15 | 0.49 |
+| sparse | 4000 | update | 36.36 | 27.50 | 2.91 |
+| sparse | 4000 | query | 30946.85 | 0.03 | 0.62 |
+| sparse (for_each2) | 4000 | update(for_each2) | 24.48 | 40.84 | 0.10 |
+| archetype (handle) | 4000 | spawn | 266.88 | 3.75 | 1.07 |
+| archetype (handle) | 4000 | update | 45.78 | 21.84 | 3.66 |
+| archetype (handle) | 4000 | query | 19928.55 | 0.05 | 0.40 |
+| archetype (soa) | 4000 | spawn | 268.99 | 3.72 | 1.08 |
+| archetype (soa) | 4000 | update | 0.76 | 1318.54 | 0.06 |
+| archetype (soa) | 4000 | query | 103.50 | 9.66 | 0.00 |
+| archetype (for_each2) | 4000 | update(for_each2) | 0.46 | 2171.55 | 0.00 |
+| bitset | 4000 | spawn | 55.09 | 18.15 | 0.22 |
+| bitset | 4000 | update | 25.66 | 38.98 | 2.05 |
+| bitset | 4000 | query | 11274.95 | 0.09 | 0.23 |
+| reactive | 4000 | spawn | 175.08 | 5.71 | 0.70 |
+| reactive | 4000 | update | 65.31 | 15.31 | 5.22 |
+| reactive | 4000 | query | 29699.95 | 0.03 | 0.59 |
+| reactive (for_each2) | 4000 | update(for_each2) | 23.03 | 43.42 | 0.09 |
+| naive | 4000 | spawn | 16.22 | 61.65 | 0.06 |
+| naive | 4000 | update | 7.96 | 125.57 | 0.64 |
+| naive | 4000 | query | 16960.60 | 0.06 | 0.34 |
+| oop | 4000 | spawn | 18.64 | 53.63 | 0.07 |
+| oop | 4000 | update | 0.77 | 1294.85 | 0.06 |
+| sparse | 65536 | spawn | 129.65 | 7.71 | 8.50 |
+| sparse | 65536 | update | 41.11 | 24.33 | 53.88 |
+| sparse | 65536 | query | 482048.75 | 0.00 | 9.64 |
+| sparse (for_each2) | 65536 | update(for_each2) | 25.49 | 39.24 | 1.67 |
+| archetype (handle) | 65536 | spawn | 277.26 | 3.61 | 18.17 |
+| archetype (handle) | 65536 | update | 46.48 | 21.52 | 60.92 |
+| archetype (handle) | 65536 | query | 373882.00 | 0.00 | 7.48 |
+| archetype (soa) | 65536 | spawn | 272.84 | 3.67 | 17.88 |
+| archetype (soa) | 65536 | update | 0.72 | 1390.06 | 0.94 |
+| archetype (soa) | 65536 | query | 378.55 | 2.64 | 0.01 |
+| archetype (for_each2) | 65536 | update(for_each2) | 0.48 | 2075.57 | 0.03 |
+| bitset | 65536 | spawn | 42.55 | 23.50 | 2.79 |
+| bitset | 65536 | update | 25.85 | 38.68 | 33.89 |
+| bitset | 65536 | query | 214800.70 | 0.00 | 4.30 |
+| reactive | 65536 | spawn | 174.09 | 5.74 | 11.41 |
+| reactive | 65536 | update | 61.99 | 16.13 | 81.25 |
+| reactive | 65536 | query | 475847.75 | 0.00 | 9.52 |
+| reactive (for_each2) | 65536 | update(for_each2) | 23.46 | 42.63 | 1.54 |
+| naive | 65536 | spawn | 17.83 | 56.10 | 1.17 |
+| naive | 65536 | update | 8.80 | 113.60 | 11.54 |
+| naive | 65536 | query | 326403.15 | 0.00 | 6.53 |
+| oop | 65536 | spawn | 2.93 | 341.78 | 0.19 |
+| oop | 65536 | update | 1.00 | 1003.60 | 1.31 |
 
 
 ## ECS vs OOP — crossover study
@@ -257,12 +257,13 @@ the primitive cost, where the analytic narrowphase cannot express the shape
 at all. Contact cost also stops depending on tessellation, since there is no
 mesh in between.
 
-Still to do: this lives at narrowphase level and is NOT yet wired into
-`solver6`, which dispatches on a shape-kind tag and needs a multi-point
-manifold rather than a single deepest contact. Convex hulls took exactly that
-route and are now wired (kind 3, see the manifold table); an SDF shape kind
-would follow the same pattern, with the clipping step replaced by sampling the
-field around the deepest point.
+Scope: the rows above time `geometry.sdf3.sdf_contact` on analytic and CSG
+`Sdf3` fields directly; `solver6` does not call that path. A field reaches the
+solver only as a sampled grid: `SdfGrid.from_field` bakes it, and
+`ContactScene6.add_sdf` (ROADMAP 17.52) adds it as a static `SHAPE_SDF` body
+whose contacts with boxes, spheres, capsules and hulls are a multi-point
+manifold sampled from the other shape (`contact_gen.try_sdf_pair`). A moving
+analytic or CSG `Sdf3` body is not a solver shape kind.
 
 ### 3D SDF contact vs the analytic pairs
 
@@ -421,7 +422,7 @@ paid up front (brute force over triangles here).
 
 Layers, masks, sensors (`set_filter` / `set_sensor`) and the began/stay/ended
 event stream, all in `ContactScene6`. The filter test is two ANDs at the top of
-`_try_pair`, the one point both the brute and the broadphase enumeration funnel
+`try_pair` (`collision/contact_gen.mojo`), the one point both the brute and the broadphase enumeration funnel
 through, so the two seams cannot disagree about what was filtered —
 `test_filter_events` gates them to bit-identical results AND to an identical
 event stream.
@@ -2223,7 +2224,7 @@ It lands at 8.5ns against the tape's 50ns and the hand-derived routine's 5.3ns:
 5.9x faster than the tape it replaces, and still 1.6x slower than the code a
 person wrote. That remaining gap is reported rather than rounded away. Two
 things closed most of it and are worth recording: the register file and the
-constants moved from heap `List` to stack `InlineArray`, and the opcode
+constants moved from heap `List` to stack `Array` (then named `InlineArray`), and the opcode
 dispatch became `comptime if` so each instruction expands to its own rule
 alone. Before both, the generated version ran at 19.7ns — the structure was
 already right and the indirection was the whole difference.
@@ -2945,31 +2946,31 @@ over every wave.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| flat | 200000 | query | 0.00 | 1694915.25 | 0.00 |
-| gerstner 4 waves, Q = 0 | 200000 | query | 575.33 | 1.74 | 115.07 |
-| gerstner 4 waves, Q = 0.6 | 200000 | query | 582.82 | 1.72 | 116.56 |
-| shallow-water grid 128^2 (sample) | 200000 | query | 7.00 | 142.90 | 1.40 |
-| fft ocean 64^2, grid at the updated t (bilinear) | 200000 | query | 29.42 | 33.99 | 5.88 |
-| fft ocean 64^2, other t (direct sum of 4096 modes) | 200 | query | 128154.33 | 0.01 | 25.63 |
-| fft ocean 64^2 choppy 0.8, grid inversion at the updated t | 20000 | query | 356.99 | 2.80 | 7.14 |
-| fft ocean 64^2 choppy 0.8, other t (inversion over direct sums) | 20 | query | 728927.85 | 0.00 | 14.58 |
+| flat | 200000 | query | 0.00 | 1639344.26 | 0.00 |
+| gerstner 4 waves, Q = 0 | 200000 | query | 599.80 | 1.67 | 119.96 |
+| gerstner 4 waves, Q = 0.6 | 200000 | query | 618.73 | 1.62 | 123.75 |
+| shallow-water grid 128^2 (sample) | 200000 | query | 7.44 | 134.40 | 1.49 |
+| fft ocean 64^2, grid at the updated t (bilinear) | 200000 | query | 32.92 | 30.38 | 6.58 |
+| fft ocean 64^2, other t (direct sum of 4096 modes) | 200 | query | 169563.10 | 0.01 | 33.91 |
+| fft ocean 64^2 choppy 0.8, grid inversion at the updated t | 20000 | query | 445.50 | 2.24 | 8.91 |
+| fft ocean 64^2 choppy 0.8, other t (inversion over direct sums) | 20 | query | 948169.40 | 0.00 | 18.96 |
 
 
 ### FFT ocean update (17.60)
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| FftOcean.update 32^2 (one inverse 2-D FFT) | 1024 | update | 86079.30 | 0.01 | 1.72 |
-| FftOcean.update 64^2 (one inverse 2-D FFT) | 4096 | update | 301632.60 | 0.00 | 6.03 |
-| FftOcean.update 128^2 (one inverse 2-D FFT) | 16384 | update | 1449437.00 | 0.00 | 28.99 |
+| FftOcean.update 32^2 (one inverse 2-D FFT) | 1024 | update | 106030.45 | 0.01 | 2.12 |
+| FftOcean.update 64^2 (one inverse 2-D FFT) | 4096 | update | 436874.30 | 0.00 | 8.74 |
+| FftOcean.update 128^2 (one inverse 2-D FFT) | 16384 | update | 1430190.55 | 0.00 | 28.60 |
 
 
 ### Shallow-water step and float_body (17.60)
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| ShallowWaterGrid.step 128^2 | 16384 | cell-step | 5.00 | 199.87 | 8.20 |
-| float_body 4^3 samples on the 4-wave sea | 1 | body | 42678.65 | 0.02 | 85.36 |
+| ShallowWaterGrid.step 128^2 | 16384 | cell-step | 5.28 | 189.41 | 8.65 |
+| float_body 4^3 samples on the 4-wave sea | 1 | body | 45693.20 | 0.02 | 91.39 |
 
 
 
@@ -2977,9 +2978,9 @@ over every wave.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| isotropic splat | 7208 | particle | 4234.01 | 0.24 | 30.52 |
-| anisotropic splat (neighbours, covariance, eigen) | 7208 | particle | 18424.41 | 0.05 | 132.80 |
-| marching tetrahedra 73^3 (65556 triangles) | 373248 | cell | 882.58 | 1.13 | 329.42 |
+| isotropic splat | 7208 | particle | 3191.17 | 0.31 | 23.00 |
+| anisotropic splat (neighbours, covariance, eigen) | 7208 | particle | 19016.13 | 0.05 | 137.07 |
+| marching tetrahedra 73^3 (65556 triangles) | 373248 | cell | 955.84 | 1.05 | 356.77 |
 
 
 
@@ -2993,36 +2994,36 @@ cost grows with resolution because the PCG iteration count does.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| MAC 32^2 (PCG 43 iterations / step) | 1024 | cell-step | 1520.63 | 0.66 | 77.86 |
-| MAC 32^2 (MGPCG 3 iterations / step) | 1024 | cell-step | 660.01 | 1.52 | 33.79 |
-| LBM D3Q19 32^2 x 1 | 1024 | cell-step | 348.45 | 2.87 | 17.84 |
-| MAC 64^2 (PCG 86 iterations / step) | 4096 | cell-step | 2581.88 | 0.39 | 528.77 |
-| MAC 64^2 (MGPCG 3 iterations / step) | 4096 | cell-step | 710.01 | 1.41 | 145.41 |
-| LBM D3Q19 64^2 x 1 | 4096 | cell-step | 451.71 | 2.21 | 92.51 |
+| MAC 32^2 (PCG 43 iterations / step) | 1024 | cell-step | 1643.75 | 0.61 | 84.16 |
+| MAC 32^2 (MGPCG 3 iterations / step) | 1024 | cell-step | 812.64 | 1.23 | 41.61 |
+| LBM D3Q19 32^2 x 1 | 1024 | cell-step | 396.14 | 2.52 | 20.28 |
+| MAC 64^2 (PCG 86 iterations / step) | 4096 | cell-step | 2810.42 | 0.36 | 575.57 |
+| MAC 64^2 (MGPCG 3 iterations / step) | 4096 | cell-step | 708.06 | 1.41 | 145.01 |
+| LBM D3Q19 64^2 x 1 | 4096 | cell-step | 373.87 | 2.67 | 76.57 |
 
 
 ### FLIP water: FLIP 0.95 vs APIC transfers (17.60)
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| dam break 80 x 24, FLIP 0.95 | 800 | particle-step | 1048.57 | 0.95 | 41.94 |
-| dam break 80 x 24, APIC | 800 | particle-step | 977.93 | 1.02 | 39.12 |
-| 3-D FLIP corner column 24 x 16 x 24 | 3456 | particle-step | 1203.37 | 0.83 | 83.18 |
-| diffuse update (542 diffuse, 800 water particles) | 800 | water particle | 2747.46 | 0.36 | 109.90 |
+| dam break 80 x 24, FLIP 0.95 | 800 | particle-step | 681.83 | 1.47 | 27.27 |
+| dam break 80 x 24, APIC | 800 | particle-step | 617.89 | 1.62 | 24.72 |
+| 3-D FLIP corner column 24 x 16 x 24 | 3456 | particle-step | 761.65 | 1.31 | 52.65 |
+| diffuse update (542 diffuse, 800 water particles) | 800 | water particle | 1679.89 | 0.60 | 67.20 |
 
 
 ### Rope per frame: XPBD rope vs distance-joint link chain; rope collision on/off
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| XPBD rope (8 substeps x 8 iters) | 16 | frame | 27485.80 | 0.04 | 0.82 |
-| distance-joint link chain (8 x 8) | 16 | frame | 231193.00 | 0.00 | 6.94 |
-| XPBD rope (8 substeps x 8 iters) | 64 | frame | 125822.07 | 0.01 | 3.77 |
-| distance-joint link chain (8 x 8) | 64 | frame | 1160750.60 | 0.00 | 34.82 |
-| XPBD rope (8 substeps x 8 iters) | 256 | frame | 490345.77 | 0.00 | 14.71 |
-| distance-joint link chain (8 x 8) | 256 | frame | 4628357.03 | 0.00 | 138.85 |
-| XPBD rope, collision on (8 substeps x 4 iters) | 16 | frame | 34948.63 | 0.03 | 1.05 |
-| XPBD rope, collision on (8 substeps x 4 iters) | 64 | frame | 124933.13 | 0.01 | 3.75 |
+| XPBD rope (8 substeps x 8 iters) | 16 | frame | 27115.57 | 0.04 | 0.81 |
+| distance-joint link chain (8 x 8) | 16 | frame | 163216.03 | 0.01 | 4.90 |
+| XPBD rope (8 substeps x 8 iters) | 64 | frame | 115041.53 | 0.01 | 3.45 |
+| distance-joint link chain (8 x 8) | 64 | frame | 801730.63 | 0.00 | 24.05 |
+| XPBD rope (8 substeps x 8 iters) | 256 | frame | 471183.50 | 0.00 | 14.14 |
+| distance-joint link chain (8 x 8) | 256 | frame | 3562459.90 | 0.00 | 106.87 |
+| XPBD rope, collision on (8 substeps x 4 iters) | 16 | frame | 25132.90 | 0.04 | 0.75 |
+| XPBD rope, collision on (8 substeps x 4 iters) | 64 | frame | 102776.27 | 0.01 | 3.08 |
 
 
 ## Physics — hair strands and Hill muscles (17.57)
@@ -3070,26 +3071,26 @@ rows to its travel limit, the cone-twist a swing row to its twist limit.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| ball (no ext pass), iters 4 | 64 | step | 720451.62 | 0.00 | 43.23 |
-| hinge + limit, iters 4 | 64 | step | 1415758.35 | 0.00 | 84.95 |
-| cone-twist + cone + twist, iters 4 | 64 | step | 1525306.93 | 0.00 | 91.52 |
-| slider + travel, iters 4 | 64 | step | 1533663.77 | 0.00 | 92.02 |
-| ball (no ext pass), iters 8 | 64 | step | 1109818.50 | 0.00 | 66.59 |
-| hinge + limit, iters 8 | 64 | step | 2182444.22 | 0.00 | 130.95 |
-| cone-twist + cone + twist, iters 8 | 64 | step | 2327416.18 | 0.00 | 139.64 |
-| slider + travel, iters 8 | 64 | step | 1725177.28 | 0.00 | 103.51 |
+| ball (no ext pass), iters 4 | 64 | step | 615779.18 | 0.00 | 36.95 |
+| hinge + limit, iters 4 | 64 | step | 1199225.15 | 0.00 | 71.95 |
+| cone-twist + cone + twist, iters 4 | 64 | step | 1166158.32 | 0.00 | 69.97 |
+| slider + travel, iters 4 | 64 | step | 1250736.22 | 0.00 | 75.04 |
+| ball (no ext pass), iters 8 | 64 | step | 915350.12 | 0.00 | 54.92 |
+| hinge + limit, iters 8 | 64 | step | 1858059.75 | 0.00 | 111.48 |
+| cone-twist + cone + twist, iters 8 | 64 | step | 1809031.40 | 0.00 | 108.54 |
+| slider + travel, iters 8 | 64 | step | 1875101.75 | 0.00 | 112.51 |
 
 
 ### Crater edit + bounds refresh: block summary vs full rescan
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| crater + block-summary bounds | 4096 | edit | 1570.24 | 0.64 | 0.31 |
-| crater + full-rescan bounds | 4096 | edit | 9897.20 | 0.10 | 1.98 |
-| crater + block-summary bounds | 65536 | edit | 2045.62 | 0.49 | 0.41 |
-| crater + full-rescan bounds | 65536 | edit | 144459.13 | 0.01 | 28.89 |
-| crater + block-summary bounds | 1048576 | edit | 11611.15 | 0.09 | 2.32 |
-| crater + full-rescan bounds | 1048576 | edit | 2441319.68 | 0.00 | 488.26 |
+| crater + block-summary bounds | 4096 | edit | 1739.06 | 0.58 | 0.35 |
+| crater + full-rescan bounds | 4096 | edit | 11982.62 | 0.08 | 2.40 |
+| crater + block-summary bounds | 65536 | edit | 2589.11 | 0.39 | 0.52 |
+| crater + full-rescan bounds | 65536 | edit | 160437.17 | 0.01 | 32.09 |
+| crater + block-summary bounds | 1048576 | edit | 13582.71 | 0.07 | 2.72 |
+| crater + full-rescan bounds | 1048576 | edit | 2720981.80 | 0.00 | 544.20 |
 
 
 ## Physics — LOD, budget and deterministic replay (17.31 / 17.39)
@@ -3106,29 +3107,29 @@ as a full re-run bit for bit; the snapshot interval sets the seek latency.
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| 10-stack, iters=1 (top error 29 mm) | 10 | frame | 210997.72 | 0.00 | 25.32 |
-| 10-stack, iters=2 (top error 29 mm) | 10 | frame | 252094.20 | 0.00 | 30.25 |
-| 10-stack, iters=4 (top error 29 mm) | 10 | frame | 359145.80 | 0.00 | 43.10 |
-| 10-stack, iters=8 (top error 29 mm) | 10 | frame | 567009.25 | 0.00 | 68.04 |
-| crates, all awake | 256 | frame | 6471033.60 | 0.00 | 194.13 |
-| crates, half frozen | 256 | frame | 3405068.43 | 0.00 | 102.15 |
-| crates, all awake | 1024 | frame | 21970359.30 | 0.00 | 659.11 |
-| crates, half frozen | 1024 | frame | 10677321.60 | 0.00 | 320.32 |
+| 10-stack, iters=1 (top error 29 mm) | 10 | frame | 176057.45 | 0.01 | 21.13 |
+| 10-stack, iters=2 (top error 29 mm) | 10 | frame | 186141.73 | 0.01 | 22.34 |
+| 10-stack, iters=4 (top error 29 mm) | 10 | frame | 252198.38 | 0.00 | 30.26 |
+| 10-stack, iters=8 (top error 29 mm) | 10 | frame | 335902.59 | 0.00 | 40.31 |
+| crates, all awake | 256 | frame | 5044510.23 | 0.00 | 151.34 |
+| crates, half frozen | 256 | frame | 1568744.60 | 0.00 | 47.06 |
+| crates, all awake | 1024 | frame | 13110467.47 | 0.00 | 393.31 |
+| crates, half frozen | 1024 | frame | 6859343.77 | 0.00 | 205.78 |
 
 
 ### Replay: seek to tick 590 of 600 -- full re-run vs nearest snapshot
 
 | variant | N | op | ns/op | Mops/s | total ms |
 |---|---:|---|---:|---:|---:|
-| record 600 ticks, snapshot every 600 | 600 | tick | 86192.51 | 0.01 | 51.72 |
-| seek via snapshots (interval 600) | 600 | seek | 54240195.00 | 0.00 | 54.24 |
-| record 600 ticks, snapshot every 120 | 600 | tick | 79351.86 | 0.01 | 47.61 |
-| seek via snapshots (interval 120) | 600 | seek | 6072580.00 | 0.00 | 6.07 |
-| record 600 ticks, snapshot every 30 | 600 | tick | 67159.58 | 0.01 | 40.30 |
-| seek via snapshots (interval 30) | 600 | seek | 1058283.00 | 0.00 | 1.06 |
-| record 600 ticks, snapshot every 10 | 600 | tick | 69455.96 | 0.01 | 41.67 |
-| seek via snapshots (interval 10) | 600 | seek | 135116.00 | 0.01 | 0.14 |
-| full re-run from tick 0 | 600 | seek | 37745982.00 | 0.00 | 37.75 |
+| record 600 ticks, snapshot every 600 | 600 | tick | 42250.43 | 0.02 | 25.35 |
+| seek via snapshots (interval 600) | 600 | seek | 24979365.00 | 0.00 | 24.98 |
+| record 600 ticks, snapshot every 120 | 600 | tick | 42931.72 | 0.02 | 25.76 |
+| seek via snapshots (interval 120) | 600 | seek | 3765075.00 | 0.00 | 3.77 |
+| record 600 ticks, snapshot every 30 | 600 | tick | 43870.80 | 0.02 | 26.32 |
+| seek via snapshots (interval 30) | 600 | seek | 747021.00 | 0.00 | 0.75 |
+| record 600 ticks, snapshot every 10 | 600 | tick | 52960.20 | 0.02 | 31.78 |
+| seek via snapshots (interval 10) | 600 | seek | 153427.00 | 0.01 | 0.15 |
+| full re-run from tick 0 | 600 | seek | 24593311.00 | 0.00 | 24.59 |
 
 
 ## Gameplay — save games vs snapshots (17.40)
@@ -3686,6 +3687,45 @@ each a plausible place for the O(n) claim to quietly stop holding.
 
 (rebuild with -D LUDENS_TRACE to see the nan_scan share breakdown)
 
+### Stress and scale: deep stacks, one large island, a wake storm, 1e6 ECS entities
+
+The per-feature benches above stop at a few thousand bodies. These scenes are the hard cases: a 30-box tower (one
+Gauss-Seidel chain 30 contacts deep), a 20-row pyramid, 10 000 boxes piled in a walled pit (one island the
+island-parallel path cannot split), and 5 000 resting boxes all woken in the same tick. Times are per tick with
+p50 / p99 / max, so one slow tick shows. The scale table runs the ECS movement system at 1e4 / 1e5 / 1e6 entities
+and one layer of resting boxes up to 1e5, awake and asleep. Asleep is not free: every tick still rebuilds the
+broadphase over all bodies and reruns the narrowphase on resting pairs. Callgrind on 2 000 sleeping boxes, share of
+the step's instructions, inclusive (the recursive BVH functions overlap, so the rows do not add up): pair collection
+78 %, BVH queries 35 %, BVH rebuild 26 %, narrowphase `try_pair` 21 %, `make_contact` 14 %, contact sweeps 10 %.
+
+### Physics stress (ms per tick; 4 substeps x 4 iterations, broadphase on)
+
+| scene | dynamic bodies | ticks | p50 | p99 | max | notes |
+|---|---:|---:|---:|---:|---:|---|
+| tower 30 | 30 | 120 | 0.418976 | 0.652727 | 0.740339 | top y 29.24393 (rest 29.5), islands 1 |
+| pyramid 20 rows | 210 | 120 | 1.085799 | 14.086953 | 14.212627 | islands 1, awake 0 |
+| pit 10000 | 10000 | 20 | 896.690357 | 1358.021392 | 1358.021392 | after 120 ticks: islands 7, pairs 52011, awake 10000 |
+| wake storm 5000: all asleep | 5000 | 30 | 13.186699 | 15.344573 | 15.344573 | asleep after 30 ticks |
+| wake storm 5000: the waking tick | 5000 | 1 | 61.305231 | 61.305231 | 61.305231 | awake 5000 |
+| wake storm 5000: next 30 ticks | 5000 | 30 | 21.094713 | 65.394789 | 65.394789 |  |
+
+### Scale (ms per tick / frame)
+
+| case | entities | ticks | p50 | p99 | max | notes |
+|---|---:|---:|---:|---:|---:|---|
+| ecs sparse-set | 10000 | 20 | 0.321453 | 0.347669 | 0.347669 | spawn 71.1713 ns / entity, update 32.1453 ns / entity |
+| ecs archetype (SoA views) | 10000 | 20 | 0.007008 | 0.007672 | 0.007672 | spawn 232.8281 ns / entity, update 0.7008 ns / entity |
+| ecs sparse-set | 100000 | 20 | 3.573404 | 3.781305 | 3.781305 | spawn 64.18889 ns / entity, update 35.73404 ns / entity |
+| ecs archetype (SoA views) | 100000 | 20 | 0.072033 | 0.093311 | 0.093311 | spawn 241.74039 ns / entity, update 0.72033 ns / entity |
+| ecs sparse-set | 1000000 | 20 | 38.825989 | 47.318121 | 47.318121 | spawn 86.935984 ns / entity, update 38.825989 ns / entity |
+| ecs archetype (SoA views) | 1000000 | 20 | 1.095831 | 1.787734 | 1.787734 | spawn 265.072175 ns / entity, update 1.095831 ns / entity |
+| layer 10000: awake | 10000 | 10 | 168.228789 | 194.01366 | 194.01366 | per body 16822.8789 ns |
+| layer 10000: asleep | 10000 | 10 | 30.946434 | 31.746819 | 31.746819 | asleep after 30 ticks, per body 3094.6434 ns |
+| layer 30000: awake | 30000 | 10 | 451.594645 | 552.337736 | 552.337736 | per body 15053.154833333334 ns |
+| layer 30000: asleep | 30000 | 10 | 104.389959 | 105.411747 | 105.411747 | asleep after 30 ticks, per body 3479.6653 ns |
+| layer 100000: awake | 100000 | 10 | 1690.89473 | 2164.685963 | 2164.685963 | per body 16908.9473 ns |
+| layer 100000: asleep | 100000 | 10 | 395.60197 | 480.853346 | 480.853346 | asleep after 30 ticks, per body 3956.0197 ns |
+
 ### Parallel narrowphase and contact prep (17.54)
 
 `SolverConfig.parallel_collision` runs `try_pair` over fixed chunks of the
@@ -3730,7 +3770,7 @@ it does not show up in this delta.
 
 Every box is pinned awake (`set_can_sleep(id, False)`) in BOTH columns —
 without that, the STATIC column's boxes settle and sleep within a few dozen
-frames (`test_sleep6`'s own number is 35), and `_impulse_inert` then skips
+frames (`test_sleep6`'s own number is 35), and `BodySet.impulse_inert` then skips
 their pair OUTRIGHT every subsequent step. That sleep/skip delta dwarfs one
 extra `velocity_at` read and would swamp the thing this table exists to
 isolate; an earlier revision of this bench measured exactly that confound
@@ -3756,11 +3796,11 @@ run-to-run noise, not a real cost.
 
 ## Physics — sleep API wake storm (ROADMAP 17.25)
 
-`wake(id)` (and the `_wake_island` it shares with `teleport` and with
-`_refresh_islands`'s own automatic wake) scans every body in the scene once
+`wake(id)` (and the `physics.islands.wake_island` it shares with `teleport` and with
+`refresh_islands`'s own automatic wake) scans every body in the scene once
 to find the ones sharing `id`'s island label — O(bodies), not O(island
 size), by construction: it reuses the same flat index space
-`_refresh_islands` already walks every step. This table builds a single
+`refresh_islands` already walks every step. This table builds a single
 N-body island (island size == scene size, the worst case for that scan),
 settles it to sleep, then wakes ONE body in it repeatedly at increasing N —
 a synthetic "wake storm" stress on the scan itself, isolated from any actual
@@ -5694,7 +5734,7 @@ ticks, process start included.
 - **The N ceiling is gone (was: `InlineArray[Int, cap]` by value).** The sparse
   index no longer has a fixed cap — `test_sparse_large` spawns **1,000,000**
   entities and checks counts and high-id component reads. The remaining
-  `InlineArray` in `ecs/archetype.mojo` indexes archetype-graph edges by
+  `Array` in `ecs/archetype.mojo` indexes archetype-graph edges by
   *component slot*, not by entity, so it does not bound N.
   What the tables above still under-show is the RAM-spill REGIME: the movement
   rows stop at N=65536, where a fat entity still reaches L3, so the W2 locality

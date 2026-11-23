@@ -6,7 +6,7 @@ edge closest to the origin, push a support point outward along that edge's
 normal, and insert it — until the support stops moving past the edge. The closest
 edge's distance is the penetration depth and its normal the contact normal.
 
-2D EPA expands a polygon of edges; 3D EPA (`_epa3`) expands a polytope of
+2D EPA expands a polygon of edges; 3D EPA (`epa3`) expands a polytope of
 triangle faces and additionally tracks WITNESS points: every polytope vertex
 remembers which support of A and of B produced it, so the closest face's
 barycentric coordinates recover the deepest points of both shapes

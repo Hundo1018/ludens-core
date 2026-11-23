@@ -143,6 +143,8 @@ def precommit_plan(staged, added, dirs, decl_changed=False):
     if touches_mojo:
         checks.append(("arch check (layers, cycles, reach-through)", arch("check")))
         checks.append(("test tier headers", arch("tiers", "--check")))
+    if touches_mojo or docs or "scripts/stale_refs_allow.txt" in staged:
+        checks.append(("text names code that exists (stale_refs)", script("stale_refs.py")))
     if docs or "scripts/arch_layers.toml" in staged:
         checks.append(("doc references", script("doclint.py")))
         checks.append(("layer tables match arch_layers.toml", script("layers_sync.py")))
@@ -226,6 +228,7 @@ def cmd_pre_push():
         ("arch check", arch("check")),
         ("test tier headers", arch("tiers", "--check")),
         ("doc references", script("doclint.py")),
+        ("text names code that exists (stale_refs)", script("stale_refs.py")),
         ("layer tables match arch_layers.toml", script("layers_sync.py")),
         ("ROADMAP subsystem table matches the index", script("roadmap_status.py", "--check")),
         ("unwired modules", script("orphans.py")),
@@ -367,7 +370,7 @@ def selftest():
 
     dirs = {"physics", "collision", "harness"}
     checks, regen = precommit_plan(["physics/solver6.mojo"], [], dirs)
-    assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers"] and not regen
+    assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers", "text names code that exists (stale_refs)"] and not regen
     assert not precommit_plan(["physics/solver6.mojo"], [], dirs, decl_changed=True)[1], "commits never regenerate the doc"
     assert not precommit_plan(["scripts/arch_layers.toml"], [], dirs)[1]
     body_only = "+++ b/physics/solver6.mojo\n@@ -1 +1 @@\n-    x = 1\n+    x = 2\n"
@@ -379,9 +382,9 @@ def selftest():
     checks, regen = precommit_plan(["tests/test_vec.mojo"], [], dirs)
     assert checks and not regen, "a test edit runs arch checks but does not regenerate the structure doc"
     checks, regen = precommit_plan(["docs/ROADMAP.md"], [], dirs)
-    assert {c[0] for c in checks} == {"doc references", "layer tables match arch_layers.toml", "ROADMAP subsystem table matches the index"} and not regen
+    assert {c[0] for c in checks} == {"text names code that exists (stale_refs)", "doc references", "layer tables match arch_layers.toml", "ROADMAP subsystem table matches the index"} and not regen
     checks, regen = precommit_plan(["README.md"], [], dirs)
-    assert {c[0] for c in checks} == {"doc references", "layer tables match arch_layers.toml"}
+    assert {c[0] for c in checks} == {"text names code that exists (stale_refs)", "doc references", "layer tables match arch_layers.toml"}
     checks, _ = precommit_plan(["pixi.toml"], [], dirs)
     assert [c[0] for c in checks] == ["floating-point flag policy"]
     checks, _ = precommit_plan(["physics/new.mojo"], ["physics/new.mojo"], dirs)

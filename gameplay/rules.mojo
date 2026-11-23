@@ -18,8 +18,8 @@ modifier list, `EVAL_INCREMENTAL` keeps running sums updated on add /
 remove, `EVAL_DIRTY` recomputes on first read after a change. They agree on
 every value after any (seeded) sequence (`test_rules`).
 
-TAGS. Hierarchical names (`State.Burning.Fire`) are interned to ids; a
-`TagSet` is a bitset, and adding a tag also sets its parents, so
+TAGS. Hierarchical names (`State.Burning.Fire`) are interned to ids; a tag
+set is a `UInt64` bitset (`Actor.tags`), and adding a tag also sets its parents, so
 `has(State.Burning)` is true for a burning-by-fire entity.
 
 EFFECTS. instant (applied once to the base), duration (modifiers until
@@ -71,7 +71,7 @@ struct TagRegistry(Movable):
 
     def intern(mut self, name: String) raises -> Int:
         """Id of `name`, registering it (and its parents) if new; at most
-        64 tags (a `TagSet` is one word)."""
+        64 tags (a tag set is one `UInt64`)."""
         for i in range(len(self.names)):
             if self.names[i] == name:
                 return i
