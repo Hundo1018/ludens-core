@@ -86,10 +86,15 @@
 - 12.1 C-ABI 嵌入邊界宣告 **v0.x 凍結**;腳本層先做 **Python 綁定**(17.21),hot reload 之後再接。
   Python 綁定放在核心 repo 的最上層獨立套件,測試以客戶端方式安裝進乾淨環境(不用 `-I build`)。
 - **網路**:傳輸層與線路格式交給宿主;本庫提供 rollback 核心、預測策略 seam 與 byte payload API(17.16)。
+  宿主 ludens-engine 提供傳輸層(網頁:WebSocket、WebTransport、WebRTC;原生:UDP、TCP、QUIC、WebRTC;使用者 2026-11-23 決定先全部開放),
+  `gameplay/netcode` 經開放清單(17.101)開放到 `EmbedWorld` 與 C-ABI。
 - **場景格式**由 ludens-engine 定義(2026-11-02 決定,ludens-engine #9);引擎提供 schema 讀寫、diff / apply 與和決定論快照的 parity(17.12,第一片完成)。
-- **wasm 為跨平台交付形態(2026-11-01)**:方向 C 不變;除原生共享庫與 Python wheel 外,以 **wasm64** 模組作為跨平台通用產物
-  (瀏覽器、Node / Deno、WASI、能載入 wasm 的宿主),匯出介面即 12.1 C-ABI。整套 C-ABI 已實測可編成 wasm64 並與原生無 FMA 建置
-  逐位相同;浮點政策(wasm 自有 golden 或擴大決定論承諾)待決。見 17.89、`docs/design/17.89-wasm-platform.md`。
+- **wasm64 為預設交付形態,原生保留(使用者 2026-11-23 決定;取代 2026-11-01 的「wasm 為另一種產物」)**:
+  每個平台出貨同一個 **wasm64** 模組,匯出介面即 12.1 C-ABI:瀏覽器直接載入;Windows、Android 等沒有 Mojo 原生目標的平台由原生外殼內嵌
+  wasm runtime 執行;Linux / macOS 也以 wasm 為預設。原生共享庫(含 FMA 速度變體 `capi-fast`)與 Python wheel 保留,給開發、測試參考、
+  伺服器與需要速度的宿主。代價(17.89 實測,1012 體 × 120 tick 單核):wasm 為原生無 FMA 參考建置的 1.38(node)至 1.45 倍
+  (wasmtime 關 Spectre 堆積緩解;預設 1.83 倍),即同一幀可容納的物理量少約 30 %;原生 FMA 變體另快 11–19 %。
+  浮點政策採 (a):wasm64 與原生無 FMA 建置逐位相同,CI 的 `wasm` job 比對。見 17.89、`docs/design/17.89-wasm-platform.md`。
 - **決定論**只承諾同工具鏈、同架構;不做跨平台定點 / 軟浮點。
 
 ## 邊界與排除
@@ -4206,7 +4211,7 @@
 > **相依**:12.1(匯出介面)、17.75(序列 / 宿主派發器)、17.76(容差表、`fp_probe --compare`)、17.81(CI)。
 > **邊界**:不自建 wasm 後端;Safari 等 memory64 上線;GPU 路徑不進 wasm(WebGPU 屬 W4)。
 > **wasm 優先的評估(2026-11-23,`pixi run wasm-platform-probe`,`scripts/wasm_probe_platform.py`)**:使用者提出「wasm 為第一平台、原生改為執行 wasm」,
-> 條件是效能相當;判準為原生宿主可內嵌的 runtime 最佳設定與原生參考建置(無 FMA、單核)每 tick 差 ≤ 10 %、雜湊相同。**結果:不通過,平台方向 C 不變。**
+> 條件是效能相當;判準為原生宿主可內嵌的 runtime 最佳設定與原生參考建置(無 FMA、單核)每 tick 差 ≤ 10 %、雜湊相同。**結果:不通過(1.38–1.45 倍)。使用者隨後以「是否成為瓶頸」為準,決定 wasm64 為預設交付、原生保留(2026-11-23,見「平台方向 C」)。**
 > Xeon 2.1 GHz、4 核、taskset 單核(量測時另有負載 3–4.6),5 次中位數,三邊雜湊相同。1012 體 × 120 tick:原生 3.77 ms、node 24 5.21(1.38 倍)、
 > wasmtime-py 50 預設 6.89(1.83 倍),關掉 Spectre 堆積緩解 5.47(1.45 倍)、`signals_based_traps=False` 5.57;NaN 正規化 13.0;關 SIMD 無法載入
 > (模組用 simd128)。原因:時間在執行而非編譯(1.23 MB 模組 wasmtime 編譯 1.5 s、載入序列化結果 3.2 ms;步進中沒有宿主呼叫);memory64 每次存取
