@@ -43,6 +43,9 @@ gpu-compile = { cmd = "bash scripts/gpu_compile_check.sh", depends-on = ["build"
 wheel = { cmd = "python3 python/build_wheel.py", depends-on = ["build"] }
 # Dead file references in README / CLAUDE / ROADMAP / ARCHITECTURE (scripts/doclint.py; ROADMAP 17.82).
 doclint = "python3 scripts/doclint.py"
+# Fast static checks in one command: code rules, stale references, ruff, shellcheck (scripts/lint.py).
+lint = "python3 scripts/lint.py"
+code-rules = "python3 scripts/code_rules.py"
 # Comments, docstrings and docs that name code which no longer exists, or call existing code "future" (scripts/stale_refs.py).
 stale-refs = "python3 scripts/stale_refs.py"
 # Rebuild build/bench_out/ from the committed report so `ONLY=... pixi run benchmark` reruns only the listed benches.
@@ -116,6 +119,8 @@ gate = "bash scripts/agent_gate.sh"
 # deliberate change that reruns the whole test + benchmark gate.
 modular = "==26.7.0"
 mojo = "==1.2.0"
+ruff = ">=0.17.6,<0.18"
+shellcheck = ">=0.11.0,<0.12"
 
 # valgrind has no osx-arm64 build (ROADMAP 17.76): Linux targets only.
 [target.linux-64.dependencies]
