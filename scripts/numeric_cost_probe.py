@@ -9,6 +9,7 @@ position drift.
 
     pixi run numeric-cost                 # table on this host (needs `pixi run build`)
     pixi run numeric-cost -- --runs 3     # repeat each build N times, keep the minimum
+    pixi run numeric-cost -- --rsqrt      # normalization: 1 / sqrt vs rsqrtps (+ Newton), per lane width
     pixi run numeric-cost -- --selftest   # parser / table check on synthetic data
 
 Reference: `--target-cpu x86-64`. This is SSE2 with no FMA, the build that
@@ -33,7 +34,15 @@ VARIANTS = [
     ("haswell (AVX2 + FMA)", ["--target-cpu", "haswell"]),
     ("native host CPU", []),
 ]
-WORKLOADS = ["pile", "motor", "norm_exact", "norm_rsqrt"]
+WORKLOADS = ["pile", "motor"]
+RSQRT_PROBE = "benchmarks/probes/rsqrt_cost.mojo"
+RSQRT_VARIANTS = [
+    ("x86-64, 4 lanes (SSE)", ["--target-cpu", "x86-64", "-D", "W=4"]),
+    ("x86-64 + FMA, 4 lanes", ["--target-cpu", "x86-64", "--target-features", "+fma", "-D", "W=4"]),
+    ("haswell without FMA, 8 lanes (AVX)", ["--target-cpu", "haswell", "--target-features", "-fma", "-D", "W=8"]),
+    ("haswell, 8 lanes (AVX + FMA)", ["--target-cpu", "haswell", "-D", "W=8"]),
+]
+RSQRT_MODES = ["exact", "rsqrt_newton", "rsqrt_raw"]
 
 
 def parse(text):
@@ -44,7 +53,7 @@ def parse(text):
         if not f:
             continue
         if f[0] == "TIME":
-            out["time"][f[1]] = int(f[2])
+            out["time"][f[1]] = float(f[2])
         elif f[0] == "HASH":
             out["hash"][f[1]] = int(f[2])
         elif f[0] == "POS":
@@ -63,9 +72,9 @@ def merge_min(a, b):
     return a
 
 
-def build_and_run(flags, d, runs):
+def build_and_run(flags, d, runs, probe=PROBE):
     exe = os.path.join(d, "nc")
-    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, capture_output=True, text=True, check=False)
+    b = subprocess.run(["mojo", "build"] + flags + ["-I", "build", probe, "-o", exe], cwd=ROOT, capture_output=True, text=True, check=False)
     if b.returncode != 0:
         return None, (b.stderr.strip().split("\n") or ["build failed"])[-1]
     res = None
@@ -94,11 +103,33 @@ def row(name, res, ref):
     return "| " + " | ".join(cells) + " |"
 
 
+def rsqrt_table(runs):
+    print("| build | 1 / sqrt (sqrtps + divps) | rsqrtps + 1 Newton step | rsqrtps alone |")
+    print("|---|---|---|---|")
+    errs = None
+    with tempfile.TemporaryDirectory() as d:
+        for name, flags in RSQRT_VARIANTS:
+            res, why = build_and_run(flags, d, runs, RSQRT_PROBE)
+            if res is None:
+                print("| %s | skipped: %s |||" % (name, why[:80]))
+                continue
+            ex = res["time"]["exact"]
+            cells = ["%.3f ns" % ex] + ["%.3f ns (%.2fx)" % (res["time"][m], ex / res["time"][m]) for m in RSQRT_MODES[1:]]
+            print("| %s | %s |" % (name, " | ".join(cells)))
+            errs = res["err"]
+    if errs:
+        print()
+        print("time per Vec3 (SoA, 4096 in L1); largest relative error against f64: " + ", ".join("%s %.2e" % (m, errs[m]) for m in RSQRT_MODES))
+
+
 def main():
+    if "--rsqrt" in sys.argv:
+        rsqrt_table(int(sys.argv[sys.argv.index("--runs") + 1]) if "--runs" in sys.argv else 1)
+        return
     if "--selftest" in sys.argv:
-        text = "TIME pile 200\nHASH pile 7\nPOS 1.0 2.0\nTIME motor 50\nHASH motor 3\nTIME norm_exact 10\nTIME norm_rsqrt 20\nERR norm_rsqrt 3e-7\n"
+        text = "TIME pile 200\nHASH pile 7\nPOS 1.0 2.0\nTIME motor 50\nHASH motor 3\nERR rsqrt_raw 3e-7\n"
         p = parse(text)
-        assert p["time"]["pile"] == 200 and p["hash"]["motor"] == 3 and p["pos"] == [1.0, 2.0] and p["err"]["norm_rsqrt"] == 3e-7
+        assert p["time"]["pile"] == 200 and p["hash"]["motor"] == 3 and p["pos"] == [1.0, 2.0] and p["err"]["rsqrt_raw"] == 3e-7
         q = parse(text.replace("TIME pile 200", "TIME pile 100").replace("HASH pile 7", "HASH pile 8").replace("POS 1.0 2.0", "POS 1.0 2.5"))
         assert merge_min(parse(text), q)["time"]["pile"] == 100
         assert drift(q, p) == 0.5 and drift(p, p) == 0.0
@@ -108,9 +139,8 @@ def main():
         return
     runs = int(sys.argv[sys.argv.index("--runs") + 1]) if "--runs" in sys.argv else 1
     ref = None
-    print("| build | pile 400 boxes x 120 steps | motor 2e6 | normalize 4e6 (1/sqrt) | normalize 4e6 (rsqrtps + Newton) | pile bits | motor bits |")
-    print("|---|---|---|---|---|---|---|")
-    err = None
+    print("| build | pile 400 boxes x 120 steps | motor 2e6 | pile bits | motor bits |")
+    print("|---|---|---|---|---|")
     with tempfile.TemporaryDirectory() as d:
         for name, flags in VARIANTS:
             res, why = build_and_run(flags, d, runs)
@@ -119,11 +149,7 @@ def main():
                 continue
             if ref is None:
                 ref = res
-                err = res["err"].get("norm_rsqrt")
             print(row(name, res, ref))
-    if err is not None:
-        print()
-        print("rsqrtps + one Newton step: largest relative error against 1/sqrt %.2e (f32 epsilon 1.19e-07)" % err)
 
 
 if __name__ == "__main__":

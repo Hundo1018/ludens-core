@@ -4334,18 +4334,35 @@
 > **進度註(2026-11-24,第 1 步:原生 x86-64 的量測)**:`benchmarks/probes/numeric_cost.mojo` + `scripts/numeric_cost_probe.py`
 > (`pixi run numeric-cost`),各建置跑 3 次取最小,4 核共用主機:
 >
-> | 建置 | 400 盒堆 × 120 步 | 馬達合成 2e6 | 正規化 4e6(1/sqrt) | 正規化 4e6(rsqrtps + 一次牛頓) | 盒堆位元 |
-> |---|---|---|---|---|---|
-> | x86-64(參考:SSE2、無 FMA) | 215.7 ms | 34.0 ms | 17.2 ms | 19.8 ms | — |
-> | x86-64 + 只開 FMA | 214.0 ms(1.01x) | 18.6 ms(1.83x) | 13.5 ms(1.27x) | 15.3 ms(1.30x) | 不同,最大 9.0e-7 m |
-> | haswell 不含 FMA(AVX2) | 215.3 ms(1.00x) | 37.2 ms(0.91x) | 16.3 ms(1.06x) | 19.1 ms(1.04x) | 相同 |
-> | haswell(AVX2 + FMA) | 211.8 ms(1.02x) | 18.5 ms(1.84x) | 13.5 ms(1.28x) | 15.2 ms(1.31x) | 不同,最大 9.0e-7 m |
+> | 建置 | 400 盒堆 × 120 步 | 馬達合成 2e6 | 盒堆位元 |
+> |---|---|---|---|
+> | x86-64(參考:SSE2、無 FMA) | 215.7 ms | 34.0 ms | — |
+> | x86-64 + 只開 FMA | 214.0 ms(1.01x) | 18.6 ms(1.83x) | 不同,最大 9.0e-7 m |
+> | haswell 不含 FMA(AVX2) | 215.3 ms(1.00x) | 37.2 ms(0.91x) | 相同 |
+> | haswell(AVX2 + FMA) | 211.8 ms(1.02x) | 18.5 ms(1.84x) | 不同,最大 9.0e-7 m |
+>
+> 正規化另以 `benchmarks/probes/rsqrt_cost.mojo` 量(`pixi run numeric-cost -- --rsqrt`):SoA 三個 4096 長陣列(在 L1)、無迴圈相依,
+> 每個 Vec3 的時間(3 次取最小)。Xeon 2.1 GHz(AVX-512 機器):
+>
+> | 建置 | 1 / sqrt(sqrtps + divps) | rsqrtps + 一次牛頓 | 只用 rsqrtps |
+> |---|---|---|---|
+> | x86-64,4 lane(SSE) | 0.572 ns | 0.520 ns(1.10x) | 0.459 ns(1.25x) |
+> | x86-64 + FMA,4 lane | 0.578 ns | 0.512 ns(1.13x) | 0.460 ns(1.26x) |
+> | haswell 不含 FMA,8 lane(AVX) | 0.522 ns | 0.322 ns(1.62x) | 0.240 ns(2.18x) |
+> | haswell,8 lane(AVX + FMA) | 0.524 ns | 0.277 ns(1.89x) | 0.219 ns(2.40x) |
+>
+> 最大相對誤差(對 f64):1 / sqrt 8.6e-8、rsqrtps + 牛頓 2.0e-7、只用 rsqrtps 3.0e-4。
+> 更正:第一版把正規化放在純量迴圈裡,迴圈被產生輸入的整數取模、轉型與水平加總佔滿(每圈約 35 條指令),得到「rsqrt 比 1/sqrt 慢」的錯誤結論;
+> 已移除該量測,改用上表。
 >
 > 結論:
 > - 接觸求解器(遊戲規模的盒堆)開 FMA 只快 1–2 %,在量測散佈內;這一塊 `Fast` 沒有收益。
-> - 幾何代數的馬達合成 1.83x、正規化 1.27x:FMA 的收益集中在純算術的核心(動畫、蒙皮、IK 鏈)。
-> - AVX2 本身沒有收益(馬達 0.91x)。
-> - 硬體 `rsqrtps` 近似反而比 1/sqrt 慢(17.2 → 19.8 ms),相對誤差 3.2e-7(f32 epsilon 1.19e-7 的 2.7 倍),不列入 `Fast`。
+> - 幾何代數的馬達合成開 FMA 1.83x:這個迴圈是相依鏈(每次合成用上一次的結果),受延遲限制,FMA 把乘加兩次延遲合成一次。
+>   代表 IK 鏈、骨架階層累乘這類相依計算;批次蒙皮(各頂點獨立)要另外量。
+> - 批次正規化:8 lane 時 `rsqrtps` + 一次牛頓 1.62–1.89x,誤差 2.0e-7(約 2 ulp);4 lane 只有 1.10–1.13x。原因是 `sqrtps` / `divps` 的
+>   吞吐量在 8 lane 不會加倍(1/sqrt 4 → 8 lane 只從 0.572 降到 0.522 ns),`rsqrtps` 則會。只用 `rsqrtps`(約 12 位)2.2–2.4x,誤差 3e-4,
+>   只適合純視覺。`rsqrtps` 的近似表依 CPU 廠商而不同,所以它屬於 `Fast`;wasm(含 relaxed-SIMD)沒有 rsqrt 指令,只有原生建置有這項收益。
+> - AVX2 本身對純量程式沒有收益(馬達 0.91x);8 lane 的收益要程式本身是 SoA 批次。
 > 待量:wasm relaxed-SIMD(`relaxed_madd`)在 node / wasmtime 的收益;動畫與蒙皮的實際 bench(`bench_skinning` 等)在 FMA 開關下的差;
 > 依結果決定 `Fast` 的範圍。
 
