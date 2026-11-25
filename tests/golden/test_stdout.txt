@@ -166,18 +166,19 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
   region capture: bodies 3  contacts 3  frame bytes 48 vs 196
 [PASS] capture - 12 / 12 checks
 --- tests/test_ccd6.mojo ---
-  bullet: max x = -0.06523497402667999 final x = -4.051424026489258 final vx = -4.2612314
+  bullet: max x = -0.14999912679195404 final x = -0.1592652052640915 final vx = -0.010275724
   rest height with speculative margin: 0.24971100687980652
-  fast drop: min y = 0.24954754114151
-  swept bullet: max x = -0.15143099427223206 final vx = -2.389896
+  fast drop: min y = 0.24970968067646027
+  swept bullet: max x = -0.14999912679195404 final vx = -0.010275724
   rest height with TOI stage: 0.24971100687980652
 touching at t=0: slide hit False  leave hit False  into hit True t 0.0
-bullet released touching a wall, after 1 s: y 0.05
-[PASS] ccd6 - 22 / 22 checks
+bullet released touching a wall, after 1 s: y 0.049960453
+spinning CCD bullet dropped on the floor: asleep at step 57  y 0.049884323
+[PASS] ccd6 - 23 / 23 checks
 --- tests/test_ccd_shapes.mojo ---
    hull bullet at 60 m/s: max x with CCD -0.124988936  without 10.816078
    ellipsoid bullet at 60 m/s: max x with CCD -0.125  without -0.125
-   compound bullet at 60 m/s: max x with CCD -0.12503888  without -0.1126467
+   compound bullet at 60 m/s: max x with CCD -0.12517649  without -0.1294935
   box bullet at a one-quad trimesh wall: max x -0.10834397
   spinning plank (36 rad/s) at a post: max |w| without CCD 253.40468  with CCD 36.0
   hull sliding at 8 m/s (mu 0) with CCD: vx after 1 s 8.0  x -1.9999795
@@ -317,7 +318,7 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
 --- tests/test_collide_par.mojo ---
   1024-box pile: contacts 1024
   heightfield scene: contacts 805
-  200 bullets at 40 m/s onto a 2 cm plate: lowest body y 0.08880921 (plate top 0)
+  200 bullets at 40 m/s onto a 2 cm plate: lowest body y 0.09447543 (plate top 0)
   brute: 1500 boxes, candidate pairs serial 1889  parallel 1889
   BVH: 1500 boxes, candidate pairs serial 1889  parallel 1889
   DBVH: 1500 boxes, candidate pairs serial 1889  parallel 1889
@@ -960,7 +961,7 @@ sphere SDF: open edges 0  volume 2.1380851  ( 2.1446605 )
 [PASS] jobgraph - 34 / 34 checks
 --- tests/test_joint_break.mojo ---
   load estimate 19.6  m*g 19.6
-  torn leg: hip gap 5.613571  events 1
+  torn leg: hip gap 5.613958  events 1
   bar on its hinge limit: torque threshold 6 -> holds ; 3 -> broken ; reaction torque 4.296776 (analytic 4.3001547 )
 [PASS] joint_break - 14 / 14 checks
 --- tests/test_joint_d6.mojo ---
@@ -1188,7 +1189,7 @@ wfc 20 x 20: sea / shore / land 187 183 30  forbidden pairs 0
 iterations over 100 steps: Jacobi PCG 10623  MGPCG 400
 [PASS] mac_multigrid - 4 / 4 checks
 --- tests/test_manifold.mojo ---
-[PASS] manifold - 91 / 91 checks
+[PASS] manifold - 108 / 108 checks
 --- tests/test_mat.mojo ---
 [PASS] mat - 34 / 34 checks
 --- tests/test_material_contact.mojo ---
@@ -1357,7 +1358,7 @@ round trip: quantize_rotation 10000 / 10000 ; plain rounding off on 161 of 10000
 [PASS] net_pose - 5 / 5 checks
 --- tests/test_netcode.mojo ---
   netcode: rollback peer 0 181 rollbacks, 1094 re-simulated ticks, 477 mispredicted inputs
-  netcode: snapshot 5488 bytes full, 1544 bytes per frame to all clients (delta), frames 249
+  netcode: snapshot 5488 bytes full, 1551 bytes per frame to all clients (delta), frames 249
 [PASS] netcode - 28 / 28 checks
 --- tests/test_noise.mojo ---
   perlin3 range: -0.7781262993812561 0.7502906322479248  value3: -0.9594535231590271 0.9886789321899414  fbm3: -0.4969649016857147 0.49642840027809143
@@ -1511,7 +1512,7 @@ ragdoll body masses 9.999999 19.999998
 get-up blend: 0.5 0.25 0.0  mode at end 0
 assist: COM x 0.0 -> 0.099397406  (support centre 0.1)
 after a 60 N s push: capture point x 0.8691256  margin -0.6191256  need step True
-after 1 steps: margin 0.14997101  COM x 0.8690333  (support centre 0.8691256 )  speed 0.00016686124
+after 1 steps: margin 0.14997107  COM x 0.86903346  (support centre 0.8691256 )  speed 0.00016673408
 carried box at 0.5999999 1.7997258  (hand at 0.6, 2.0)
 released box fell 1.988128 m in 0.5 s
 [PASS] ragdoll_ctl - 13 / 13 checks
@@ -1741,7 +1742,7 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571327
 --- tests/test_sequence_player.mojo ---
   at 1.125 s: clip 8 t 0.1875 weight 0.5 ; from clip 7 t 1.125 ;  at 3.5 s: clip 9 t 0.5 weight 1.0
   events 2 : 11 at tick 31   12 at tick 91 (sequence 3 )
-  platform end x 4.0333266  box x 3.8327608  released at vx 1.999898 ;  0.5 s later x 5.0332465 (free flight 5.0332756 ) y -0.31864527 ( -0.30842465 )
+  platform end x 4.0333285  box x 3.832529  released at vx 1.9999468 ;  0.5 s later x 5.0332947 (free flight 5.033302 ) y -0.31862292 ( -0.3083986 )
 [PASS] sequence_player - 8 / 8 checks
 --- tests/test_serialize.mojo ---
   blob bytes: 21030
@@ -1874,8 +1875,8 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 --- tests/test_softccd.mojo ---
   no-ccd max particle x: 9.205572128295898
   ccd max particle x: -0.9510559439659119
-  plate ccd: min bottom 0.31602513790130615 cube top 0.6500820517539978
-  plate no-ccd: min bottom -0.09624863415956497
+  plate ccd: min bottom 0.32929912209510803 cube top 0.6564057469367981
+  plate no-ccd: min bottom -0.0007605929858982563
    hull wall: max particle x without ccd 9.205572128295898  with ccd -1.0223491191864014
    trimesh wall: max particle x without ccd 9.205572128295898  with ccd -0.9995356798171997
 [PASS] softccd - 8 / 8 checks
@@ -1900,7 +1901,7 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 [PASS] solver_bp_seam - 36 / 36 checks
 --- tests/test_solver_broadphase.mojo ---
   brute cache pairs: 16  bp cache pairs: 16
-  fast faller y: 0.24971094727516174
+  fast faller y: 0.2497090846300125
 [PASS] solver_broadphase - 4 / 4 checks
 --- tests/test_solver_stress.mojo ---
   1:100   light box floor penetration 0.02953063  overlap with heavy 0.029556155  drift 0.00081143714  sag law 0.02758188
@@ -1909,13 +1910,13 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
   max_mass_ratio 10:  1:1000 penetration 0.0031626374  overlap 0.0031921864  drift 0.0005835799    1:1e4 penetration 0.0031631738  overlap 0.0031923652
   floor force under 1000 kg on 1 kg (true 9809.8 N): off 8408.604  ratio 10 9810.122
   1000 / 1 / 1 tower: worst overlap off 0.6182629  ratio 10 0.006403774   top drop off 1.0002914  ratio 10 0.013089895
-  (ratio off) asleep at step 62  woke True  bullet max x -0.2929748  worst sink 0.25164414  asleep again 32
-  1000 on 1 kg + sleep + CCD bullet: asleep at step 37  woke True  bullet max x -0.30133605  worst sink 0.003216818  asleep again at step 31
+  (ratio off) asleep at step 62  woke True  bullet max x -0.28928492  worst sink 0.2513441  asleep again 46
+  1000 on 1 kg + sleep + CCD bullet: asleep at step 37  woke True  bullet max x -0.29868332  worst sink 0.003216803  asleep again at step 31
   20-link chain + 100 kg: length 11.504181  rest 10.3  stretch 11.691074 %   max_mass_ratio 10: 2.1438782 %
   1000-box block, 300 steps: lowest centre 0.24607512 (rest 0.25)  max speed 0.0  finite True
   60 dominoes after 15 s: fallen 60
   box teleported 10 cm into a stack: max speed 0.32238674  horizontal separation after 1 s 0.4990606
-  two boxes at the same point: separation after 2 s 0.49971318
+  two boxes at the same point: separation after 2 s 0.49971262
 [PASS] solver_stress - 11 / 11 checks
 --- tests/test_solvers.mojo ---
   Poisson 32 x 32: Cholesky error 7.1525574e-07  nnz(L) 23344 ;  CG 69 iterations error 4.10527e-06 ;  IC(0)-PCG 22 iterations error 5.170703e-06 shifted 0
