@@ -51,7 +51,8 @@ while read -r name h; do
   w=$(awk -v n="$name" '$1==n{print $2}' build/wasm_scenes_wasmtime.txt)
   [ -z "$w" ] || [ "$w" = "$h" ] || { echo "DIFF  $name node $h wasmtime $w"; nodefail=1; }
 done < build/wasm_scenes_node.txt
-awk 'NR==FNR{seen[$1]=1; next} !($1 in seen)' build/wasm_scenes_wasmtime.txt build/wasm_scenes_node.txt >> build/wasm_scenes_wasmtime.txt
+awk 'NR==FNR{seen[$1]=1; next} !($1 in seen)' build/wasm_scenes_wasmtime.txt build/wasm_scenes_node.txt > build/wasm_scenes_only_node.txt
+cat build/wasm_scenes_only_node.txt >> build/wasm_scenes_wasmtime.txt
 
 fail=${nodefail:-0}
 while read -r name h; do
@@ -66,4 +67,8 @@ if [ "${1:-}" = "--update" ] && [ "$fail" -eq 0 ]; then
 elif ! diff -u "$GOLDEN" build/wasm_scenes_native.txt; then
   echo "golden: native hashes differ from $GOLDEN"; fail=1
 fi
-[ "$fail" -eq 0 ] && echo "WASM GATE PASS" || { echo "WASM GATE FAIL"; exit 1; }
+if [ "$fail" -eq 0 ]; then
+  echo "WASM GATE PASS"
+else
+  echo "WASM GATE FAIL"; exit 1
+fi

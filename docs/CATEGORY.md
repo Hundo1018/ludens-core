@@ -30,7 +30,7 @@ F_arch(W) ───F_arch(f)────▶  F_arch(W')
 ```
 
 「先換 backend 再跑系統」=「先跑系統再換 backend」。**這正是
-`test_backend_parity` 逐值斷言的內容** —— 5 個 backend 對同一場景產生相同的查
+`test_backend_parity` 逐值斷言的內容** —— 6 個 backend 對同一場景產生相同的查
 詢計數與聚合值。同理:
 
 | Seam(trait) | 檔案 | 範疇論解讀 | 定律測試 | Benchmark |
@@ -138,7 +138,7 @@ LES 對照列,`test_lbm_les` 的 seam 從此有量測(見末列)。
 | GPU 批次 raycast vs CPU BVH 走訪 | collision/gpu_raycast.mojo | 同一射線查詢的裝置實作;逐 proxy-id 相等 | `test_gpu_raycast` | `bench_gpu_raycast` |
 | LBVH 建樹(第三種啟發式)+ CPU LSD-radix vs GPU bitonic Morton 排序 | spatial/bvh.mojo(`morton_order`)、spatial/gpu_lbvh.mojo | median/SAH 之外的第三個建構函子;查詢結果集相等,建樹支配 median | `test_lbvh`、`test_gpu_lbvh` | `bench_gpu_lbvh` |
 | 島求解 serial vs threaded | physics/solver6.mojo(`_solve_islands_parallel`) | 態射合成的求值策略;任一 worker 寬度下世界逐位相同(須先對齊睡眠行為) | `test_islands_par` | `bench_islands` |
-| 島內圖著色 vs 純 Gauss–Seidel | physics/solver6.mojo(`_sweep_colored`) | 同一不動點迭代的掃描序變體;決定性、與執行緒數無關 | `test_colored` | `bench_colored` |
+| 島內圖著色 vs 純 Gauss–Seidel | physics/contact6.mojo(`sweep_colored`) | 同一不動點迭代的掃描序變體;決定性、與執行緒數無關 | `test_colored` | `bench_colored` |
 | work-stealing `ws_parallel_for` vs 靜態 `parallelize` | scheduler/workstealing.mojo | 同一平行 for 的排程策略;每個索引恰執行一次,結果不變 | `test_workstealing` | `bench_workstealing` |
 | job graph 由讀寫集推導 vs 註冊序 | scheduler/jobgraph.mojo | 態射合成序的自動化;拓撲序下世界逐位相同 | `test_jobgraph` | `bench_jobgraph` |
 
@@ -295,17 +295,17 @@ O(readers) 次複製、單位成本應該打平」的預期漲得更多——讀
 
 ### 2.5 `physics.body_set` 動作型別與 `physics.material` 組合模式(Phase 17.0g-2,2026-09-28)
 
-17.0g-1 把 `statics: List[Bool]` 換成 `MotionType`(`MOTION_STATIC`/
+17.0g-1 把 `statics: List[Bool]` 換成 Int 動作常數(`MOTION_STATIC`/
 `MOTION_DYNAMIC`)時就在文件裡點名「KINEMATIC 之後補上,只能附加不能插入」;
 17.0g-2 補了 `MOTION_KINEMATIC`(17.24)與逐 body 摩擦/恢復係數 + 逐對組合模
 式(17.23)。兩者都是「同一態射的三/四個實例」形狀的 seam(17.25 的睡眠公開
-API 刻意**不算**新 seam——既有的 `_wake_islands`/`_update_sleep` 內部機制只是
+API 刻意**不算**新 seam——既有的 `wake_islands`/`update_sleep`(今在 physics/islands.mojo)內部機制只是
 介面化,見 ROADMAP 17.25 條目)。
 
 | Seam | 檔案 | 範疇論解讀 | 定律測試 | Benchmark |
 |---|---|---|---|---|
-| body 動作型別:`MOTION_STATIC`/`MOTION_DYNAMIC`/`MOTION_KINEMATIC` | physics/body_set.mojo、physics/solver6.mojo(`_solve_pair` 等每個接觸/關節求解站台) | 同一「位姿推進」態射的三個實例;`BodySet.moves`(讀速度:dynamic∪kinematic)與`is_dynamic`(質量項/衝量:僅 dynamic)兩個謂詞的交集決定每個站台的行為——kinematic 靜止時兩個謂詞在其 slot 上的取值與 static 完全相同,退化為同一分支,逐位相等 | `test_kinematic.mojo`(KEY PARITY TEST:零速度 kinematic 與 static 在同場景跑 200 步,每個動態 body 逐位相同;整合案例含 island/sleep/broadphase seam 與序列化續跑;極端案例含 kinematic 撞靜態牆零接觸、`move_to` 巨位移仍有限、kinematic 夾擠動態體仍有限) | `bench_kinematic`(N=16..1024 個動態箱疊在 kinematic 對 static 平台上,量測 kinematic 路徑多付出的 `velocity_at` 讀取成本) |
-| 材質組合模式:`COMBINE_AVERAGE`/`COMBINE_MIN`/`COMBINE_MULTIPLY`/`COMBINE_MAX`(`physics.material.combine`,PhysX「較高優先模式勝」規則) | physics/material.mojo、physics/body_set.mojo(逐 body `friction`/`friction_combine`/`restitution_combine`)、physics/solver6.mojo(`_solve_pair`、`_restitution_pass`) | 同一「逐對係數」態射的四個求值分支,選哪一支由兩個 body 各自的模式取 `max` 決定(而非某個全域開關);兩個係數相等時四個分支在該點退化為同一個數值(`combine(1,1,·,·) == 1` 對全部四模式成立,是四個分支的共同不動點) | `test_materials.mojo`(普通:`combine` 四種公式的直接算術含優先權規則;整合/極端:兩 body 係數與模式皆為 1.0 時四模式跑出逐位相同的軌跡——parity;冰面對橡膠依組合模式排序的滑行距離,配合 `MULTIPLY<=MIN<=AVERAGE<=MAX`(係數皆在 [0,1] 時恆成立)的解析證明;預設 `restitution_combine=MAX` 重現既有 `max(a,b)` 彈跳行為) | `bench_materials`(N=1024 個同時接觸,四種組合模式各跑一輪 solver step——分派開銷應與選哪個模式無關,只是分支目標不同) |
+| body 動作型別:`MOTION_STATIC`/`MOTION_DYNAMIC`/`MOTION_KINEMATIC` | physics/body_set.mojo、physics/contact6.mojo(`solve_contact`/`solve_point`、`warm_start_contacts` 等接觸求解站台)、physics/joints6.mojo(`joint_sweep`/`warm_start_joints` 等關節求解站台) | 同一「位姿推進」態射的三個實例;`BodySet.moves`(讀速度:dynamic∪kinematic)與`is_dynamic`(質量項/衝量:僅 dynamic)兩個謂詞的交集決定每個站台的行為——kinematic 靜止時兩個謂詞在其 slot 上的取值與 static 完全相同,退化為同一分支,逐位相等 | `test_kinematic.mojo`(KEY PARITY TEST:零速度 kinematic 與 static 在同場景跑 200 步,每個動態 body 逐位相同;整合案例含 island/sleep/broadphase seam 與序列化續跑;極端案例含 kinematic 撞靜態牆零接觸、`move_to` 巨位移仍有限、kinematic 夾擠動態體仍有限) | `bench_kinematic`(N=16..1024 個動態箱疊在 kinematic 對 static 平台上,量測 kinematic 路徑多付出的 `velocity_at` 讀取成本) |
+| 材質組合模式:`COMBINE_AVERAGE`/`COMBINE_MIN`/`COMBINE_MULTIPLY`/`COMBINE_MAX`(`physics.material.combine`,PhysX「較高優先模式勝」規則) | physics/material.mojo、physics/body_set.mojo(逐 body `friction`/`friction_combine`/`restitution_combine`)、physics/contact6.mojo(`solve_contact`、`restitution_pass`) | 同一「逐對係數」態射的四個求值分支,選哪一支由兩個 body 各自的模式取 `max` 決定(而非某個全域開關);兩個係數相等時四個分支在該點退化為同一個數值(`combine(1,1,·,·) == 1` 對全部四模式成立,是四個分支的共同不動點) | `test_materials.mojo`(普通:`combine` 四種公式的直接算術含優先權規則;整合/極端:兩 body 係數與模式皆為 1.0 時四模式跑出逐位相同的軌跡——parity;冰面對橡膠依組合模式排序的滑行距離,配合 `MULTIPLY<=MIN<=AVERAGE<=MAX`(係數皆在 [0,1] 時恆成立)的解析證明;預設 `restitution_combine=MAX` 重現既有 `max(a,b)` 彈跳行為) | `bench_materials`(N=1024 個同時接觸,四種組合模式各跑一輪 solver step——分派開銷應與選哪個模式無關,只是分支目標不同) |
 
 摩擦係數的「未設定」哨兵值(`BodySet.friction[i] < 0`)是恆等閘門的關鍵:
 `eff_friction` 在未呼叫 `set_friction` 時用該步的 `cfg.default_friction` 頂
@@ -323,7 +323,7 @@ API 刻意**不算**新 seam——既有的 `_wake_islands`/`_update_sleep` 內�
 彼此接近,證明「選哪個組合模式」不是新的可觀測成本軸,只有「有沒有 kinematic
 body 需要讀它的速度」才是。**兩個 bench 都得先把箱子釘醒**
 (`set_can_sleep(id, False)`)才量得出這個小差異——箱子一旦睡著,整對接觸直接被
-`_impulse_inert` 跳過,睡/醒狀態的落差(整對跳過 vs 全套求解)比 kinematic 多
+`BodySet.impulse_inert` 跳過,睡/醒狀態的落差(整對跳過 vs 全套求解)比 kinematic 多
 讀一次速度大得多,會把要量的東西完全蓋掉,`bench_kinematic.mojo` 的檔頭把這
 個混淆變數寫在建場景的地方。控制掉睡眠之後,`bench_kinematic` 四個 N 的
 kinematic/static 比值落在 **0.97×–1.00×**(N=16 約 0.97×、N=64 約 0.99×、

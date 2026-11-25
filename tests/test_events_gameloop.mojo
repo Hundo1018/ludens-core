@@ -8,8 +8,8 @@ still sees each event exactly once.
 Contact-event wiring through a REAL `ContactScene6` stack is a separate file
 (`tests/test_events_contacts.mojo`), so THIS file does not import `physics`
 alongside `scheduler.gameloop` + `ecs`: doing all three together in one file
-is exactly the shape `docs/ARCHITECTURE.md` §3 reserves for the (currently
-empty) `system` tier, not `integration` -- this file stays `integration`
+is exactly the shape `docs/ARCHITECTURE.md` §3 reserves for the `system`
+tier (e.g. `test_system_stack`), not `integration` -- this file stays `integration`
 (span = {scheduler, ecs}) on purpose.
 
 WHAT "before or after the writer" MEANS HERE: `r_after` reads once per frame,

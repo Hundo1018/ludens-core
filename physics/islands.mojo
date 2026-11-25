@@ -98,8 +98,8 @@ def refresh_islands[B: Body6](
 
 def wake_if_kinematic_moving[B: Body6](mut bset: BodySet[B], ka: Int, kb: Int):
     """If `ka` is a MOVING kinematic body and `kb` is a sleeping dynamic
-    one, wake `kb`'s island (`_wake_island`) -- see the call site's
-    docstring in `_refresh_islands`. A no-op for every other combination
+    one, wake `kb`'s island (`wake_island`) -- see the call site's
+    docstring in `refresh_islands`. A no-op for every other combination
     (including a motionless kinematic, or `kb` not asleep to begin
     with)."""
     if not bset.is_kinematic(ka) or not bset.is_dynamic(kb) or not bset.sleeping[kb]:
@@ -113,7 +113,7 @@ def wake_if_kinematic_moving[B: Body6](mut bset: BodySet[B], ka: Int, kb: Int):
 
 def wake_island[B: Body6](mut bset: BodySet[B], i: Int):
     """Wake body `i`'s current island: every body sharing its
-    `bset.island` label -- the same island-wide rule `_refresh_islands`
+    `bset.island` label -- the same island-wide rule `refresh_islands`
     already applies automatically once any member is awake, exposed as
     its own method so the public `wake`/`teleport` API (17.25) can reach
     it without duplicating that inline version. A no-op for a static or
@@ -156,7 +156,7 @@ def update_sleep[B: Body6](mut bset: BodySet[B], dt: Real, cfg: SolverConfig):
     full stop -- not "asleep when still", just outside the concept, the
     same way statics always were); `can_sleep=False` (17.25) keeps a
     dynamic body's timer at 0 forever, which starves its whole island's
-    `all_still` check below without needing a second gate there."""
+    still check below (`short`) without needing a second gate there."""
     var n = len(bset.bodies)
     for i in range(n):
         if not bset.is_dynamic(i) or bset.sleeping[i] or not bset.can_sleep[i]:

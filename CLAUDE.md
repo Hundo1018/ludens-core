@@ -22,6 +22,7 @@ pixi run test              # arch-check + unit → component → integration →
 pixi run test-all          # 再加 stress
 pixi run test-unit         # 單一 tier:test-unit / -component / -integration / -system / -stress
 pixi run arch-check        # 分層/循環/私有名稱穿透檢查 + 測試 tier 標頭檢查
+pixi run lint              # 約 5 秒的靜態檢查:CLAUDE.md 程式規則、過時的程式名稱引用、ruff、shellcheck(scripts/lint.py)
 pixi run arch -- <cmd>     # 架構索引查詢:def NAME / impl TRAIT / uses MOD / deps MOD / raises PKG / check / tiers
 pixi run gate              # 變更的總閘門:整套測試 + 摘要 + 與 tests/golden/test_stdout.txt 比對
 pixi run gate -- --update-golden   # 接受本次輸出為新 golden
@@ -130,11 +131,13 @@ def main() raises:
 - git hook(`pixi run install-hooks` 啟用,人工 `--no-verify` 可略過一次):
   - `commit-msg`:主旨須為 Conventional Commit(`type(scope): subject`)。
   - `pre-commit`:依暫存檔案選檢查:`.mojo` → `arch check` + tier 標頭;`.md` → `doclint` + `layers-sync`;
-    `docs/ROADMAP.md` → 子系統表對索引;`pixi.toml` / `scripts/*.sh` → 浮點旗標政策;新增 `.mojo` → 孤島檢查。
+    `docs/ROADMAP.md` → 子系統表對索引;`pixi.toml` / `scripts/*.sh` → 浮點旗標政策;新增 `.mojo` → 孤島檢查;
+    `.mojo` → `code_rules`(裸 `case NAME:`、引擎套件 `print`、TODO 要附 issue 或 ROADMAP 編號);`.mojo` 或文件 → `stale_refs`
+    (反引號裡的程式名稱必須存在,例外寫進 `scripts/stale_refs_allow.txt` 並附理由);`.py` → ruff;`.sh` → shellcheck。
     `docs/STRUCTURE.md` 單向流動:每次 push 到 main 時 CI 重新產生並提交回 main;分支只 pull 不改。
     暫存的版本與 `origin/main` 不同時 pre-commit 擋下(改用 `git checkout origin/main -- docs/STRUCTURE.md`),
     CI 的 gate 也在 PR 上檢查同一件事。
-  - `pre-push`:CI 的快速檢查(gate selftest、arch、doclint、layers-sync、roadmap-status、orphans、flag-policy、perf governance、bench-fresh),約 26 秒;
+  - `pre-push`:CI 的快速檢查(gate selftest、arch、doclint、lint、layers-sync、roadmap-status、orphans、flag-policy、perf governance、bench-fresh),實測約 7 秒(arch 索引需重建時約 90 秒);
     `CHANGELOG.md` 落後 HEAD 超過 150 個 commit 時只警告。完整 `pixi run gate` 不在 hook 內。
 - Claude Code hook(`.claude/settings.json`):
   - PreToolUse 擋:直接編輯產生檔(`BENCHMARK_REPORT.md`、`CHANGELOG.md`、`docs/STRUCTURE.md`、`bindings/` 下的產物、`tests/golden/`);

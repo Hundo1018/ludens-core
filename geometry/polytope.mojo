@@ -27,7 +27,7 @@ the SAME new vertex index. Nothing is recomputed per triangle, so a crack
 between the pieces cannot appear from two roundings of one point. (The
 classification itself is an epsilon band, not the exact predicate of
 `geometry/predicates.mojo`: vertices within `eps` of the plane count as ON
-it. TODO: route the sign test through `orient3d` for plane-through-3-points
+it. TODO (10.1): route the sign test through `orient3d` for plane-through-3-points
 cuts.)
 """
 

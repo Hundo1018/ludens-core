@@ -28,6 +28,8 @@ jobs:
         run: pixi run gate -- --selftest
       - name: doc references (README, CLAUDE, ROADMAP, ARCHITECTURE)
         run: pixi run doclint
+      - name: lint (code rules, stale references, ruff, shellcheck; scripts/lint.py)
+        run: pixi run lint
       - name: unwired modules (scripts/orphans_allow.txt)
         run: pixi run orphans
       - name: exposure list (scripts/exposure.toml, issue #159)
