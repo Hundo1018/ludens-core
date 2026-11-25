@@ -3800,6 +3800,7 @@
 > 引擎能否以適當的時間 / 空間解析度維護 simulation state,且分級(LOD)模組本身可替換。
 > 設計筆記:`docs/design/17.85-tiered-simulation.md`。
 > **後續設計(未排程,2026-11-23)**:因果分離區域以多步光錐界定、彼此非同步步進(區域領先 / 落後 k tick,結果與 lock-step 逐位相同),量測先行:`docs/design/17.85-async-regions.md`。
+> gameplay 層(投擲物、傷害、死亡判定、規則事件、網路輸入)的光錐條件、確定性排序與業界分區做法的量化比較:`docs/design/17.85-lightcone-gameplay.md`(2026-11-25,模擬 `scripts/lightcone_sim.py`)。
 > **現況**(已核對原始碼):**做不到**。執行模型是「每個 fixed step × 所有系統 × 所有實體 ×
 > 全精度」。`System.apply` 無狀態、`Scheduler.tick` 跑整個 pack、`FixedLoop` 單一 dt、job graph
 > 的 level 只給並行度(`scheduler/scheduler.mojo:26-46`、`gameloop.mojo:45-49`);ECS 查詢只有
