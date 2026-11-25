@@ -63,6 +63,8 @@ hooks-selftest = "python3 scripts/hooks.py --selftest && python3 scripts/gen_str
 flag-policy = "python3 scripts/flag_policy.py"
 # Engine modules nothing in the engine or examples imports, gated by scripts/orphans_allow.txt (ROADMAP 17.82).
 orphans = "python3 scripts/orphans.py"
+# 開放清單 (issue #159): every engine module outside embed/ is exposed / pending / internal; checked against the imports.
+exposure = "python3 scripts/exposure.py"
 # Seed sweeps over randomised tests via LUDENS_SEED (scripts/fuzz.py; ROADMAP 17.82).
 fuzz = { cmd = "python3 scripts/fuzz.py", depends-on = ["build"] }
 # Each test twice: run-to-run differences + per-file run time (scripts/stability.py; ROADMAP 17.82).
