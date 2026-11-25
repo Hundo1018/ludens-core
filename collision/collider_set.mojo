@@ -840,13 +840,15 @@ struct ColliderSet(Movable, Deinitable):
         return ShapeDesc(self.shape[i], self.half[i], self.hull_id[i])
 
     def pair_manifold(
-        self, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, mr: Real, infl: Vec3
+        self, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, mr: Real, infl: Vec3,
+        keep: Real = Real(1e30),
     ) -> ContactManifold[3]:
         """`shape_pair` on colliders `i` and `j`'s own shapes."""
-        return self.shape_pair(self.desc(i), pose_i, self.desc(j), pose_j, mr, infl)
+        return self.shape_pair(self.desc(i), pose_i, self.desc(j), pose_j, mr, infl, keep)
 
     def shape_pair(
-        self, di: ShapeDesc, pose_i: Pose3, dj: ShapeDesc, pose_j: Pose3, mr: Real, infl: Vec3
+        self, di: ShapeDesc, pose_i: Pose3, dj: ShapeDesc, pose_j: Pose3, mr: Real, infl: Vec3,
+        keep: Real = Real(1e30),
     ) -> ContactManifold[3]:
         """Shape-pair dispatch (kinds normalised so a-kind <= b-kind; the
         manifold normal is flipped back when the pair had to be swapped).
@@ -883,11 +885,22 @@ struct ColliderSet(Movable, Deinitable):
             m = self.ellipsoid_pair_d(db, pb, da, pa, mr * 2)
             m.normal = -m.normal
         elif ka == SHAPE_BOX and kb == SHAPE_BOX:
-            # inflated extents for the test and the depths, real boxes for
-            # the points (`box_box_manifold`'s `spec`; infl is uniform)
+            # Box-box (ROADMAP 17.19, 2026-11-25): a slow pair inflates the
+            # extents as before (bit-identical to the earlier manifold). A
+            # fast pair -- infl past `thr`, i.e. relative travel per step
+            # beyond half the pair's thinnest half-extent (the CCD "could
+            # jump the thinnest feature" test) and past `keep` (try_pair:
+            # the base margin) -- keeps the real boxes and passes the
+            # inflation as `box_box_manifold`'s `spec`, so the points stay
+            # on the boxes instead of moving sideways by infl and spinning
+            # a head-on bullet. infl is uniform.
+            var thin = min(min(da.half[0], min(da.half[1], da.half[2])), min(db.half[0], min(db.half[1], db.half[2])))
+            var thr = max(keep, keep * 0.5 + thin * 0.25)
+            var k = infl[0] if infl[0] <= thr else Real(0)
+            var kv = Vec3(k, k, k, 0)
             m = box_box_manifold(
-                pa.position, pa.axes, da.half,
-                pb.position, pb.axes, db.half, infl[0],
+                pa.position, pa.axes, da.half + kv,
+                pb.position, pb.axes, db.half + kv, infl[0] - k,
             )
         elif ka == SHAPE_BOX and kb == SHAPE_SPHERE:
             # sphere_box normal is sphere->box == b->a: flip once more
