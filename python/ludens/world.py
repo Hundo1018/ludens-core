@@ -219,7 +219,7 @@ class World:
         try:
             if getattr(self, "_h", None) is not None:
                 C.lib.ld_world_destroy(self._h)
-        except Exception:
+        except Exception:  # noqa: BLE001 -- __del__ runs during interpreter shutdown; it must not raise
             pass
 
     # -- errors
@@ -410,7 +410,7 @@ class World:
             buf = ctypes.create_string_buffer(64)
             C.lib.ld_counter_name(i, buf, 64)
             names.append(buf.value.decode())
-        return dict(zip(names, list(out)))
+        return dict(zip(names, list(out)))  # noqa: B905 -- both have length n; strict= needs Python 3.10, the wheel supports 3.8
 
     # -- queries
 
@@ -640,7 +640,7 @@ class NavMesh:
     def __del__(self):
         try:
             self.close()
-        except Exception:
+        except Exception:  # noqa: BLE001 -- __del__ runs during interpreter shutdown; it must not raise
             pass
 
     @property

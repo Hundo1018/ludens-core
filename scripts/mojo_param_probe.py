@@ -49,7 +49,7 @@ def run(root, path):
                 return name, None, "skipped: core-shlib needs <root>/build (pixi run build)"
             inc = ["-I", str(root / "build")] if mode == "core-shlib" else []
             r = subprocess.run(["mojo", "build", "--emit", "shared-lib", *inc, "-o", str(Path(d) / "lib.so"), str(path)],
-                               cwd=root, capture_output=True, text=True)
+                               cwd=root, capture_output=True, text=True, check=False)
             return name, r.returncode == 0, "compiled" if r.returncode == 0 else errors(r.stdout + r.stderr)
         if mode == "engine-build":
             if not (root / "scripts/build_core.py").is_file():
@@ -67,11 +67,11 @@ def run(root, path):
                 entry.unlink()
             return name, True, "compiled"
         if mode == "must-fail":
-            r = subprocess.run(["mojo", "build", "-o", str(Path(d) / "x"), str(path)], cwd=root, capture_output=True, text=True)
+            r = subprocess.run(["mojo", "build", "-o", str(Path(d) / "x"), str(path)], cwd=root, capture_output=True, text=True, check=False)
             if r.returncode != 0:
                 return name, True, "rejected: " + (errors(r.stdout + r.stderr) or ["?"])[0].split("error: ")[-1][:110]
             return name, False, "compiled, but it must be rejected"
-        r = subprocess.run(["mojo", "run", str(path)], cwd=root, capture_output=True, text=True)
+        r = subprocess.run(["mojo", "run", str(path)], cwd=root, capture_output=True, text=True, check=False)
         out = r.stdout.strip()
         if r.returncode == 0 and out == expect:
             return name, True, out

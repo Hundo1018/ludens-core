@@ -195,7 +195,7 @@ def main():
         cpu = ["--target-cpu", "x86-64"] if os.uname().machine == "x86_64" else []
         subprocess.run(["mojo", "build"] + cpu + ["-I", "build", PROBE, "-o", exe], cwd=ROOT, check=True)
         env = dict(os.environ, LD_PRELOAD=so)
-        r = subprocess.run([exe], cwd=ROOT, env=env, capture_output=True, text=True)
+        r = subprocess.run([exe], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
         if r.returncode != 0:
             sys.exit("alloc-probe: run failed: " + r.stderr[-300:])
         res, steps = parse(r.stdout)
@@ -210,12 +210,12 @@ def main():
             for pc, _ in top:
                 f, off = pc.rsplit("+", 1)
                 if f.endswith("/alloc") or f == exe:
-                    out = subprocess.run(["addr2line", "-f", "-C", "-e", exe, off], capture_output=True, text=True).stdout.split("\n")
+                    out = subprocess.run(["addr2line", "-f", "-C", "-e", exe, off], capture_output=True, text=True, check=False).stdout.split("\n")
                     names.append(out[0])
                 else:
                     names.append(os.path.basename(f) + "+" + off)
             print("\ntop allocation sites in '%s' (per step):" % scene)
-            for (pc, n), fn in zip(top, names):
+            for (_pc, n), fn in zip(top, names, strict=True):
                 print("  %7.1f  %s" % (n / steps, fn[:150]))
 
 

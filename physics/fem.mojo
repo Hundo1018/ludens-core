@@ -440,7 +440,7 @@ struct FemBody(Movable):
         The point is the step size. The explicit integrator's stable dt is set
         by the stiffest element, so a stiff material forces small steps no
         matter how coarse the mesh is; the implicit one is unconditionally
-        stable and its cost per step is the CG solve. `test_linalg` runs both at
+        stable and its cost per step is the CG solve. `test_numerics` runs both at
         a dt the explicit path cannot survive.
 
         Returns the solver's own report, so a caller can tell a converged step

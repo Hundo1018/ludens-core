@@ -1,4 +1,5 @@
-"""Body identity (audit finding F5): `BodyId`, `MotionType`, and `BodySet`.
+"""Body identity (audit finding F5): `BodyId`, the `MOTION_*` motion
+constants, and `BodySet`.
 
 Before this, a body was a raw `Int` index into 6 parallel `List`s living
 directly on `ContactScene6` (`bodies`, `statics`, `sleeping`, `sleep_timer`,
@@ -18,14 +19,13 @@ as invalid (`is_valid`) afterwards instead of silently aliasing whatever
 `push` later reuses that slot for -- the same stale-handle contract
 `ecs.entity.Entity`/`ecs.world.World` already use (audit F14's precedent).
 
-`ContactScene6` does not yet expose body removal through its own `add*`/
-`step_soft` API in this commit (17.0g-1 is a behaviour-preserving refactor:
-every existing `add*` call still just appends, so `collision.collider_set
-.ColliderSet`'s "collider `i` == body `i`" index invariant, which has no
-matching `remove`, is never put at risk). `BodySet.remove`/`is_valid` are
-still fully implemented and tested here, ready for the gameplay layer (or a
-future `ContactScene6.remove_body`, once `ColliderSet` grows a matching
-removal path) to build on.
+When this module landed (17.0g-1, a behaviour-preserving refactor),
+`ContactScene6` did not expose body removal; `BodySet.remove`/`is_valid`
+existed and were tested here with no scene-level caller. ROADMAP 17.0i
+added `ContactScene6.remove_body` (`physics/solver6.mojo`), which calls
+`BodySet.remove`; `ColliderSet` keeps "collider `i` == body `i`" by
+overwriting a reused slot through `ColliderSet.add`'s `at` parameter.
+`physics/fracture.mojo` removes bodies through it.
 """
 
 from geometry.vec import Real, Vec3

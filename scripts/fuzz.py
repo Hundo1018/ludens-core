@@ -44,7 +44,7 @@ def sweep(binary: Path, seeds: range) -> list[tuple[int, str]]:
     fails = []
     for seed in seeds:
         r = subprocess.run([str(binary)], cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
-                           env={**os.environ, "LUDENS_SEED": str(seed)})
+                           env={**os.environ, "LUDENS_SEED": str(seed)}, check=False)
         if r.returncode != 0:
             tail = [l for l in (r.stdout + r.stderr).splitlines() if "FAIL" in l][:3]
             fails.append((seed, " | ".join(tail)))

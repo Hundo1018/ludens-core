@@ -448,9 +448,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
     def add_joint(mut self, j: Joint6) raises -> Int:
         """Audit E12: a joint whose `a`/`b` body index is out of range would
         be an out-of-bounds write the first time the solver walks `joints`
-        (`_joint_sweep`/`_warm_start_joints` index `self.bset.bodies`
-        directly) -- caught here, once, at the public boundary, rather than
-        left as UB in a release build."""
+        (`physics.joints6.joint_sweep`/`warm_start_joints` index
+        `self.bset.bodies` directly) -- caught here, once, at the public
+        boundary, rather than left as UB in a release build."""
         var n = len(self.bset.bodies)
         if j.a < 0 or j.a >= n or j.b < 0 or j.b >= n:
             raise Error("ContactScene6.add_joint: body index out of range")
@@ -845,8 +845,8 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         this method), so a stale cache entry would otherwise just sit
         unused; pruning it now is a courtesy, not a correctness requirement.
 
-        Raises if a joint still references `id`: `_joint_sweep`/
-        `_warm_start_joints` index `self.bset.bodies` directly with no
+        Raises if a joint still references `id`: `joints6.joint_sweep`/
+        `warm_start_joints` index `self.bset.bodies` directly with no
         removed-body check of their own (mirroring `add_joint`'s own
         bounds-check -- ARCHITECTURE.md S2, "invalid caller input"), so a
         dangling joint would be a live out-of-bounds-meaning read, not just
@@ -1110,7 +1110,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         self.bset.motion[i] = MOTION_KINEMATIC
         self.bset.sleeping[i] = False
         self.bset.sleep_timer[i] = 0
-        self.bset.island[i] = -1  # recomputed by the next `_refresh_islands`
+        self.bset.island[i] = -1  # recomputed by the next `islands.refresh_islands`
         # ROADMAP 17.45: a triangle mesh moves with its body from now on --
         # remember its vertices in the body frame (once)
         if self.colliders.shape[i] == SHAPE_TRIMESH:
@@ -1189,7 +1189,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         Angular velocity uses the small-angle quaternion-derivative
         approximation (`w = 2*Im(q_delta)/dt`, shorter-path corrected) the
         rest of this file already leans on for joint angular error
-        (`_joint_sweep`'s hinge `er = cross(oa, ob)`) -- exact for a single
+        (`joints6.joint_sweep`'s hinge `er = cross(oa, ob)`) -- exact for a single
         substep's rotation, and bounded (never NaN/Inf) for any finite
         `pose`/`dt`, including a huge-displacement jump (extreme test)."""
         if not self.bset.is_valid(id):
@@ -1248,7 +1248,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         """Manually wake body `id`'s island (ROADMAP 17.25) -- e.g. a
         distant explosion's damage query decides a sleeping stack should
         react NOW rather than at its next contact impulse. Waking a STATIC
-        or KINEMATIC id is a no-op (`_wake_island`'s `is_dynamic` gate); an
+        or KINEMATIC id is a no-op (`islands.wake_island`'s `is_dynamic` gate); an
         invalid/removed id raises (docs/ARCHITECTURE.md S2: invalid caller
         input at the public API)."""
         if not self.bset.is_valid(id):
@@ -1257,8 +1257,8 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
 
     def set_can_sleep(mut self, id: BodyId, on: Bool) raises:
         """`on=False` keeps body `id`'s whole island awake forever: its own
-        `sleep_timer` never advances (`_update_sleep`'s gate), which starves
-        the island-wide `all_still` check with no second gate needed there.
+        `sleep_timer` never advances (`islands.update_sleep`'s gate), which starves
+        the island-wide still check (`short` there) with no second gate needed there.
         Turning it back off ALSO wakes the body immediately, so a body
         just marked "never sleep" is never left asleep from before this
         call."""
@@ -2074,7 +2074,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         touched, on what manifold) comes from `collision.contact_gen.try_pair`
         over `self.colliders`; this method's own job is wrapping that
         geometry with the warm-start match and body-frame anchors that need
-        `Body6` (`_make_cpair`).
+        `Body6` (`physics.contact6.make_contact`).
 
         ROADMAP 17.54: candidates are enumerated first (span "broadphase"),
         then run through the narrowphase ("narrowphase") and wrapped
@@ -2380,7 +2380,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         prepare_into(scp[], self.bset, pairs, plo, phi)
         for sub in range(substeps):
             # gravity: DYNAMIC members of this island only. A kinematic body
-            # gets its OWN singleton island (`_refresh_islands`'s docstring),
+            # gets its OWN singleton island (`islands.refresh_islands`'s docstring),
             # so it reaches this loop too, with `is_dynamic == False` --
             # skipped here, same as it would be in the serial `step` path.
             for m in range(mlo, mhi):
@@ -2401,10 +2401,10 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 self.bset, pairs, scp[], plo, phi, h, bias_rate, mass_scale,
                 impulse_scale, True, iters, mu, self.max_push,
             )
-            # pose: dynamic (if awake) OR kinematic -- `not _inactive` is
-            # exactly `moves(i) and not sleeping[i]` here since `_inactive`
+            # pose: dynamic (if awake) OR kinematic -- `not bset.inactive(i)` is
+            # exactly `moves(i) and not sleeping[i]` here since `inactive`
             # is `is_static or sleeping` and this loop never sees a static
-            # body's label (`_refresh_islands` never assigns one).
+            # body's label (`islands.refresh_islands` never assigns one).
             if ccd:
                 # 17.46: island-local CCD (members + static candidates)
                 ccd_advance_island(self.bset, self.colliders, h, ccd_all, members, mlo, mhi)
@@ -2593,7 +2593,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             var used = 0
             # DYNAMIC-body adjacency only (was `not is_static`): a
             # kinematic body, like a static one, is never WRITTEN by the
-            # colored solve (`_solve_pair`'s impulse application is now
+            # colored solve (`contact6.solve_point`'s impulse application is
             # `is_dynamic`-gated too), so it must not force a color
             # conflict between two of its dynamic contacts either --
             # ROADMAP 17.24's "kinematic platform pushing N boxes"
@@ -2629,7 +2629,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 # data race under colored+parallel). Bail out of the
                 # WHOLE partition rather than continue with a corrupt
                 # one: `colored` false below falls through to the
-                # existing serial `_soft_sweep(pairs, 0, len(pairs))`
+                # existing serial `soft_sweep_prepared(..., 0, len(pairs), ...)`
                 # path with `pairs` still in its original (uncoloured)
                 # order, so this is "fall back to serial", not a crash.
                 overflow = True
@@ -3171,7 +3171,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         if not colored:
             prepare_into(self.sweep, self.bset, pairs, 0, len(pairs))
         for sub in range(substeps):
-            # gravity: dynamic + awake only. `not _inactive(i)` alone would
+            # gravity: dynamic + awake only. `not bset.inactive(i)` alone would
             # also admit a kinematic body (never static, never sleeping) --
             # ROADMAP 17.24 says gravity must NOT reach it, so this gate is
             # tighter than the pose-integration one just below.

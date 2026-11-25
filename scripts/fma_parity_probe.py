@@ -95,7 +95,7 @@ def main():
                                capture_output=True, text=True, check=True).stdout.split("\n")
     bad = 0
     print(f"cpu {args.cpu}, {args.ticks} ticks: world hash from the C-ABI library vs native Mojo")
-    for cl, ml in zip(c_out, m_out):
+    for cl, ml in zip(c_out, m_out, strict=True):
         if not cl:
             continue
         name, c0, c1 = cl.split()

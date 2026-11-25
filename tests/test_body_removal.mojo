@@ -55,7 +55,7 @@ def _test_ordinary(mut s: Suite) raises:
     s.check(sc.bset.is_valid(a), "the OTHER body's id is untouched")
 
     # must keep stepping without crashing (the removed slot is now a
-    # tombstone -- `_inactive`/`_collect_pairs`/`_quarantine_nonfinite` all
+    # tombstone -- `BodySet.inactive`/`_collect_pairs`/`_quarantine_nonfinite` all
     # need to leave it alone).
     for _ in range(30):
         sc.step_soft(DT, G)
