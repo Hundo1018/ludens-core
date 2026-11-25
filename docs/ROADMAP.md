@@ -808,6 +808,7 @@
 >    `test_colored` 6/6、`test_degrade` 3/3、`test_dispatch` 10/10、`test_impact_report` 24/24、`test_runtime_systems` 6/6、`test_tiers` 26/26、`test_tiers_parity` 11/11、
 >    `test_tiers_aggregate` 4/4、`test_system_tiers` 7/7。gate(x86-64,`LUDENS_TEST_JOBS=2`)459 / 459,golden 只有 `test_islands_par` 一段改變(新增 4 項檢查與一行配對計數;待以 `--update-golden` 記錄),其他各段逐位不變。成本未重量:上面 16.2 → 9.2 ms 與驗收要求的 `phys-profile` 前後表仍待量。
 >    後續(因果分離區域的非同步步進)的設計筆記:`docs/design/17.85-async-regions.md`。
+> **光錐(2026-11-23 分支 `lightcone-main`,2026-11-25 併入 main 後量測)**:不在上列七項內,依同一個 golden 破例處理。(a) 一步光錐:speculative margin 與 broadphase fat AABB 讀的速度長度由 `|v|` 改為 `|v| + |ω| r`(`ContactScene6._reach_vel`,r 為碰撞體半邊長向量的長度),中心靜止、以 20 rad/s 自轉的木板原本在 10 步內穿進旁邊 0.1 m 的箱子 0.276 m,改後第一步即有配對,最深接觸 0.011 m。(b) 多步光錐:`CausalReach` 可帶 `horizons`(遞增秒數),物體另依到達觀察者種子半徑的時間分級,取圖分級與到達分級較細者;不帶 `horizons` 與原計畫逐格相同。`tests/test_light_cone.mojo` 7/7、`test_islands_par` 10/10、`test_tiers` 26/26。`phys-profile`(ludens-engine,7 次取最小,原生,main `579e615` 與本項交錯各量兩次):1000 箱 4 × 4 6.706 / 6.484 → 6.691 / 6.423 ms,1 × 4 5.193 / 5.071 → 4.992 / 5.036;200 箱 4 × 4 1.429 / 1.385 → 1.479 / 1.389;差距在兩次量測的散佈(約 3 %)內。wasm64 一次:1000 箱 4 × 4 7.537 → 7.417。靜置箱子的雜湊改變(殘餘角速度放大 margin),所以 golden 會變,依 CI 的 gate 記錄重錄。
 > 7. 兩個改變既有場景結果的預設(由 17.19 移來,使用者 2026-11-22 決定在本項一起決定):`max_mass_ratio` 是否預設開啟、網格接觸 reduction 是否預設開啟;各附開 / 關的穩定性與成本對照。
 > **驗收**(每個 PR):`phys-profile` 的成本表(原生循序、原生平行、wasm64;50 / 200 / 1000 醒著的箱子;4 × 4 與新預設)前後對照;穩定性:
 > 堆疊與金字塔漂移、布娃娃與關節鏈、playground 的 camp 與 quarry 場景,前後比較並在 PR 寫出界限;golden 只在改變它的 PR 重新產生,附理由。
