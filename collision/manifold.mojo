@@ -396,9 +396,15 @@ def _face_manifold(
     j: Int,
     sign: Real,
     n_out: Vec3,
+    spec: Real = 0,
 ) -> ContactManifold[3]:
     """Clip the incident box's most anti-parallel face against reference face
-    `j` of the reference box; `n_out` is the manifold normal (a -> b)."""
+    `j` of the reference box; `n_out` is the manifold normal (a -> b).
+
+    `spec` > 0 (speculative margin, `box_box_manifold`): the incident face is
+    the real one, so the points lie on the body; the reference side planes
+    are moved out by `spec`, and each depth is the real separation plus
+    `2 spec` (the depth the two boxes inflated by `spec` would report)."""
     var nf = rax[j] * sign  # reference face outward normal (toward incident)
     # incident face: axis of the incident box most anti-parallel to nf
     var best_k = 0
@@ -422,16 +428,16 @@ def _face_manifold(
     # clip against the reference face's 4 side planes
     var u = (j + 1) % 3
     var v = (j + 2) % 3
-    var r = _clip_poly_plane(pts, count, rax[u], dot(rax[u], rc) + rh[u])
+    var r = _clip_poly_plane(pts, count, rax[u], dot(rax[u], rc) + rh[u] + spec)
     pts = r[0].copy()
     count = r[1]
-    r = _clip_poly_plane(pts, count, -rax[u], -(dot(rax[u], rc) - rh[u]))
+    r = _clip_poly_plane(pts, count, -rax[u], -(dot(rax[u], rc) - rh[u] - spec))
     pts = r[0].copy()
     count = r[1]
-    r = _clip_poly_plane(pts, count, rax[v], dot(rax[v], rc) + rh[v])
+    r = _clip_poly_plane(pts, count, rax[v], dot(rax[v], rc) + rh[v] + spec)
     pts = r[0].copy()
     count = r[1]
-    r = _clip_poly_plane(pts, count, -rax[v], -(dot(rax[v], rc) - rh[v]))
+    r = _clip_poly_plane(pts, count, -rax[v], -(dot(rax[v], rc) - rh[v] - spec))
     pts = r[0].copy()
     count = r[1]
     if count == 0:
@@ -451,7 +457,7 @@ def _face_manifold(
     var nc = 0
     var behind = Real(4e-6) * rh[j]
     for i in range(count):
-        var dd = face_off - dot(nf, pts[i])  # >0 means behind the face
+        var dd = face_off - dot(nf, pts[i]) + 2 * spec  # >0 means behind the face
         if dd > behind:
             cand[nc] = pts[i]
             cdep[nc] = dd
@@ -487,8 +493,19 @@ def box_box_manifold(
     cb: Vec3,
     axb: Axes3,
     hb: Vec3,
+    spec: Real = 0,
 ) -> ContactManifold[3]:
-    """Contact manifold between two ORIENTED 3D boxes (world-frame axes)."""
+    """Contact manifold between two ORIENTED 3D boxes (world-frame axes).
+
+    `spec` >= 0 is the speculative inflation of each box's half extents
+    (`contact_gen.try_pair`: half the pair margin). The separating-axis test
+    and the depths are those of the inflated boxes, but the points come from
+    the real boxes: inflating the extents also moved the points sideways by
+    `spec`, so a 0.1 m box at 50 m/s (margin 0.85 m) got contact points
+    0.527 m from its centre, and a head-on hit left it spinning at 28 rad/s
+    (ROADMAP 17.19, 2026-11-25)."""
+    var hai = ha + Vec3(spec, spec, spec, 0)
+    var hbi = hb + Vec3(spec, spec, spec, 0)
     var t = cb - ca
     var best_overlap = Real(1e30)
     var best_axis = Vec3(0, 0, 0, 0)
@@ -497,7 +514,7 @@ def box_box_manifold(
     # 6 face axes (preferred), then 9 edge-cross axes with a 5% penalty.
     for j in range(3):
         var l = axa[j]
-        var overlap = _proj_radius(axa, ha, l) + _proj_radius(axb, hb, l) - abs(
+        var overlap = _proj_radius(axa, hai, l) + _proj_radius(axb, hbi, l) - abs(
             dot(t, l)
         )
         if overlap < 0:
@@ -509,7 +526,7 @@ def box_box_manifold(
             best_j = j
     for j in range(3):
         var l = axb[j]
-        var overlap = _proj_radius(axa, ha, l) + _proj_radius(axb, hb, l) - abs(
+        var overlap = _proj_radius(axa, hai, l) + _proj_radius(axb, hbi, l) - abs(
             dot(t, l)
         )
         if overlap < 0:
@@ -528,8 +545,8 @@ def box_box_manifold(
             if ll < Real(1e-10):
                 continue  # near-parallel edges: face axes cover this
             l = l / sqrt(ll)
-            var overlap = _proj_radius(axa, ha, l) + _proj_radius(
-                axb, hb, l
+            var overlap = _proj_radius(axa, hai, l) + _proj_radius(
+                axb, hbi, l
             ) - abs(dot(t, l))
             if overlap < 0:
                 return ContactManifold[3].miss()
@@ -557,12 +574,12 @@ def box_box_manifold(
     if best_is_a:
         var sign = Real(1) if dot(t, best_axis) >= 0 else Real(-1)
         var n = best_axis * sign  # a -> b
-        return _face_manifold(ca, axa, ha, cb, axb, hb, best_j, sign, n)
+        return _face_manifold(ca, axa, ha, cb, axb, hb, best_j, sign, n, spec)
     else:
         # reference face on B; its outward normal points toward A (= -n).
         var sign = Real(1) if dot(-t, best_axis) >= 0 else Real(-1)
         var n = best_axis * (-sign)  # a -> b
-        return _face_manifold(cb, axb, hb, ca, axa, ha, best_j, sign, n)
+        return _face_manifold(cb, axb, hb, ca, axa, ha, best_j, sign, n, spec)
 
 
 # --- sphere / capsule manifolds ----------------------------------------------
