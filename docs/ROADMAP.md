@@ -64,7 +64,7 @@
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 0 | 1 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 0 | 1 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 21 | 1 | 0 | 0 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 2 | 0 | 4 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 2 | 1 | 4 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 14 | 0 | 0 | 1 |
 
 ## 原則與決策
@@ -86,10 +86,15 @@
 - 12.1 C-ABI 嵌入邊界宣告 **v0.x 凍結**;腳本層先做 **Python 綁定**(17.21),hot reload 之後再接。
   Python 綁定放在核心 repo 的最上層獨立套件,測試以客戶端方式安裝進乾淨環境(不用 `-I build`)。
 - **網路**:傳輸層與線路格式交給宿主;本庫提供 rollback 核心、預測策略 seam 與 byte payload API(17.16)。
+  宿主 ludens-engine 提供傳輸層(網頁:WebSocket、WebTransport、WebRTC;原生:UDP、TCP、QUIC、WebRTC;使用者 2026-11-23 決定先全部開放),
+  `gameplay/netcode` 經開放清單(17.101)開放到 `EmbedWorld` 與 C-ABI。
 - **場景格式**由 ludens-engine 定義(2026-11-02 決定,ludens-engine #9);引擎提供 schema 讀寫、diff / apply 與和決定論快照的 parity(17.12,第一片完成)。
-- **wasm 為跨平台交付形態(2026-11-01)**:方向 C 不變;除原生共享庫與 Python wheel 外,以 **wasm64** 模組作為跨平台通用產物
-  (瀏覽器、Node / Deno、WASI、能載入 wasm 的宿主),匯出介面即 12.1 C-ABI。整套 C-ABI 已實測可編成 wasm64 並與原生無 FMA 建置
-  逐位相同;浮點政策(wasm 自有 golden 或擴大決定論承諾)待決。見 17.89、`docs/design/17.89-wasm-platform.md`。
+- **wasm64 為預設交付形態,原生保留(使用者 2026-11-23 決定;取代 2026-11-01 的「wasm 為另一種產物」)**:
+  每個平台出貨同一個 **wasm64** 模組,匯出介面即 12.1 C-ABI:瀏覽器直接載入;Windows、Android 等沒有 Mojo 原生目標的平台由原生外殼內嵌
+  wasm runtime 執行;Linux / macOS 也以 wasm 為預設。原生共享庫(含 FMA 速度變體 `capi-fast`)與 Python wheel 保留,給開發、測試參考、
+  伺服器與需要速度的宿主。代價(17.89 實測,1012 體 × 120 tick 單核):wasm 為原生無 FMA 參考建置的 1.38(node)至 1.45 倍
+  (wasmtime 關 Spectre 堆積緩解;預設 1.83 倍),即同一幀可容納的物理量少約 30 %;原生 FMA 變體另快 11–19 %。
+  浮點政策採 (a):wasm64 與原生無 FMA 建置逐位相同,CI 的 `wasm` job 比對。見 17.89、`docs/design/17.89-wasm-platform.md`。
 - **決定論**只承諾同工具鏈、同架構;不做跨平台定點 / 軟浮點。
 
 ## 邊界與排除
@@ -3858,6 +3863,7 @@
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | ✅ | B | `save_excludes()` 列出 `save` / `hash` 不帶的狀態與理由(重力、求解器、單位比例為宿主設定;宿主材質 id 由 17.91 移交);帶水的世界 `save` 寫入標記、`load` 拒絕;`hash` 涵蓋水粒子;`test_save_coverage` 逐項量測 |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 不排 | B | 保留 FMA 的效能,同時讓同一算式在每個呼叫點、每個建置得到相同位元:明確的 `fma` 呼叫 + 關閉隱式合併,量測速度與位元一致性 |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 🔶 | B | `EmbedWorld` 加入實體與 `ChildOf` 階層、事件冒泡與群組、正規化的換關卡;core 能力逐項開放到宿主入口(入口、存檔 / 雜湊、`scene_io`、C-ABI),以 `scripts/capability_table.py` 量測 |
+| 17.104 | [原生外殼:wasm2c 事先編譯的引擎模組](#17104-原生外殼wasm2c-事先編譯的引擎模組) | ⬜ | B | 每個原生平台執行同一個 wasm64 模組:建置時 wasm2c → clang -O3、拿掉邊界檢查(信任的引擎模組,1.10–1.16 倍原生);mod / 腳本另開有檢查的實例 |
 | 17.105 | [數值策略:逐位相同與快速兩種建置](#17105-數值策略逐位相同與快速兩種建置) | 🔶 | B | `Exact`(跨目標逐位相同,現行)與 `Fast`(允許 FMA 等只在同一建置內可重現的優化)兩種編譯期策略,依子系統選用;先量測各項優化的收益與誤差 |
 
 ### 待辦與部分完成條目
@@ -4245,6 +4251,24 @@
 > **seam?**:否 —— 平台產物,不是引擎內的可替換子系統;wasm 必須過與原生相同的場景與雜湊 / 容差閘門。
 > **相依**:12.1(匯出介面)、17.75(序列 / 宿主派發器)、17.76(容差表、`fp_probe --compare`)、17.81(CI)。
 > **邊界**:不自建 wasm 後端;Safari 等 memory64 上線;GPU 路徑不進 wasm(WebGPU 屬 W4)。
+> **wasm 優先的評估(2026-11-23,`pixi run wasm-platform-probe`,`scripts/wasm_probe_platform.py`)**:使用者提出「wasm 為第一平台、原生改為執行 wasm」,
+> 條件是效能相當;判準為原生宿主可內嵌的 runtime 最佳設定與原生參考建置(無 FMA、單核)每 tick 差 ≤ 10 %、雜湊相同。**結果:不通過(1.38–1.45 倍)。使用者隨後以「是否成為瓶頸」為準,決定 wasm64 為預設交付、原生保留(2026-11-23,見「平台方向 C」)。**
+> Xeon 2.1 GHz、4 核、taskset 單核(量測時另有負載 3–4.6),5 次中位數,三邊雜湊相同。1012 體 × 120 tick:原生 3.77 ms、node 24 5.21(1.38 倍)、
+> wasmtime-py 50 預設 6.89(1.83 倍),關掉 Spectre 堆積緩解 5.47(1.45 倍)、`signals_based_traps=False` 5.57;NaN 正規化 13.0;關 SIMD 無法載入
+> (模組用 simd128)。原因:時間在執行而非編譯(1.23 MB 模組 wasmtime 編譯 1.5 s、載入序列化結果 3.2 ms;步進中沒有宿主呼叫);memory64 每次存取
+> 都做顯式邊界檢查,Spectre 緩解再加一個條件移動;剩下的 1.3–1.45 倍兩個 runtime 都有,是 Cranelift / V8 對 LLVM 的程式碼品質差。
+> 舊數據 wasmtime 25.8 ms 不再重現:當時 sin/cos 走 Python 宿主匯入(實測純 Python 宿主函式 11.8 µs / 次),引擎現在自帶 sin/cos(估計,未重測舊版)。
+> 原生 FMA 速度變體還比參考建置快 11–19 %,所以對原生的實際差距更大。
+> **多模組(同一探針)**:引擎模組 786 KB(只匯出用到的 21 個 `ld_*`;完整 C-ABI 1.23 MB)+ 遊戲模組 12.4 KB(空遊戲 1.05 KB,重複的 runtime 約 9 %)。
+> 改一行後重建:遊戲模組 1.8 s(冷 2.5 s),引擎入口 15.2 s,改到引擎套件另需 `pixi run build` 92 s。跨模組呼叫(引擎匯出直接接成遊戲匯入):
+> node 0.8 ns、wasmtime 1.1 ns;經 JS 轉接 28 ns,經 Python 轉接 39.7 µs。同一個 240 tick 遊戲迴圈:單模組 / 雙模組直接連結 node 0.747 / 0.750 ms、
+> wasmtime 0.882 / 0.926 ms,雜湊 `74e4f29c373a2055` 與原生相同。只有純量跨模組(世界 handle、body id、浮點);兩個 Mojo 模組各帶自己的小 runtime 可行。
+> 結論給腳本層(延後中的計畫):遊戲或腳本編成獨立 wasm 模組,每次呼叫的成本與重建時間都不是障礙;記憶體分離,資料以純量或複製傳遞。
+> **LLVM AOT 與 simd128 opt(2026-11-23,同一探針 `--aot --simd-opt --wasmer --profile`,C 段)**:問題是 wasm64 模組能否在雜湊相同下到原生參考建置 10 % 內。同機 taskset 單核,另一個 agent 在建置(負載 1.2–1.6),原生在各列前後各量一次(3.94 / 3.87 ms,取平均 3.91)。1012 體 × 120 tick,5 次中位數,所有列兩個場景雜湊都與原生相同:node 5.17(1.32 倍)、wasmtime 預設 6.81(1.74)、關 Spectre 堆積緩解 5.11(1.31);wasm2c(WABT 1.0.41)→ clang 23 -O3 -march=x86-64 -ffp-contract=off:預設 6.00(1.53)、WASM_RT_MEMCHECK_BOUNDS_CHECK 7.82(2.00,每次呼叫的堆疊深度計數)、segue(%gs 基底)6.00(1.54)、x86-64-v2 6.49(1.66)、拿掉 RANGE_CHECK(不安全,僅診斷)4.38(1.12)。wasm2c 對 memory64 的每次存取一律做溢位加法加大小比較,GUARD_PAGES 只對 32 位元記憶體有效,所以 LLVM 的程式碼品質被邊界檢查吃掉,反而比 V8 慢;去掉檢查後是 LLVM 對同一 wasm 的上限:simd128 opt 模組 4.29(1.098 倍,落在門檻上,與原生前後兩次的差 ±0.9 % 同量級);另以原生與它交替各跑三次(負載 0.4–0.9)得 1.11 / 1.15 / 1.16 倍,所以不能算在 10 % 內(剩下的差在 wasm 本身,例如線性記憶體的位址運算)。wabt 1.0.41 的 `--enable-tail-call` 輸出有宣告錯誤(4 處局部變數型別與名稱被拆開),探針修補後才可編譯。**simd128 opt**:ludens-wasm-rt 的 opt -O3 沒有 +simd128、C 沒有 -msimd128(只有 llc 有);以 PATH 包裝補上後 SIMD 指令 30,516 → 34,366(+13 %,f32x4 幾乎不變,多為整數迴圈),IR 的浮點旗標只有 contract 沒有 reassoc,向量化只做逐元素運算,雜湊不變(實測相同);node 4.99(1.28)、wasmtime 關 Spectre 5.19(1.33)、wasm2c segue 5.77(1.48)、無檢查 4.29(1.10)。**沒做到的**:Wasmer 7.5.0(conda-forge,有 LLVM 後端)對 memory64 模組 LLVM / Cranelift / Singlepass 都回「backend does not support the required features」;WAMR 沒有 conda-forge / PyPI 套件,wamrc 需 LLVM 開發庫(本機沒有,llvmdev 超過剩餘磁碟),略過。剖析(node --cpu-prof 與 callgrind)兩邊前幾名相同:solve_contact、prepare_into、BVH 查詢 / 建構。**結論:沒有安全設定在 10 % 內;最接近的是 node + simd128 opt 1.28 倍與 wasmtime 關 Spectre 1.31 倍;唯一碰到 10 % 的是拿掉全部邊界檢查的 wasm2c(不安全,1.10–1.16 倍)。**
+> **決定(使用者,2026-11-23)**:(1) ludens-wasm-rt 的 opt 加 `+simd128`、C 加 `-msimd128`(雜湊不變,node −3.5 %、wasm2c −4 %)。
+> (2) 原生外殼出貨的引擎模組視為信任的程式碼,以 wasm2c 事先編譯並拿掉邊界檢查(1.10–1.16 倍),見 17.104。
+> 依據:Mojo 的 `List` / `Span` 索引有檢查(callgrind 中可見 `check_bounds.mojo`);`UnsafePointer` 存取與 C 函式庫的記憶體存取沒有,
+> 這兩類越界在無檢查的模組裡會直接寫到宿主行程的記憶體,而不是 trap。mod 與腳本因此在另一個保留檢查的實例裡執行。
 
 #### 17.90 音訊與視訊 — Wave C
 
@@ -4703,6 +4727,19 @@
 > **遺留**:1.2.0 對 `match` 與浮點捨入的敏感度(`mass_props`)只由 `test_compound` 的逐位元檢查守住,其他鏈的轉換靠 golden 不變(歸因見上);
 > `portability` 仍為非阻擋式(`continue-on-error`)。
 
+#### 17.104 原生外殼:wasm2c 事先編譯的引擎模組
+
+> **狀態**:⬜(2026-11-23)
+> **緣起**:wasm64 為預設交付(平台方向 C,2026-11-23)。Windows、Android 等沒有 Mojo 原生目標的平台由原生外殼執行同一個模組;17.89 的探針量到
+> 執行期 JIT 最好 1.28–1.31 倍原生,wasm2c 事先編譯並拿掉邊界檢查 1.10–1.16 倍。使用者決定出貨的引擎模組視為信任的程式碼,用後者。
+> **做法**:建置時 `wasm2c --enable-tail-call`(WABT 1.0.41 需修補 4 處拆開的局部宣告,見 `scripts/wasm_probe_platform.py` 的 `fix_w2c_decls`;
+> 上游回報),拿掉 memory64 的範圍檢查,`clang -O3 -march=x86-64 -ffp-contract=off`(與參考建置同一浮點政策),連結外殼提供的匯入
+> (時鐘、檔案、音訊、GPU、網路)。mod 與腳本在另一個保留檢查的 runtime 實例(wasmtime 或 wasm2c 有檢查版)執行,不與引擎共用記憶體。
+> **驗收**:同一 `.wasm` 在外殼與瀏覽器、原生參考建置的雜湊相同(`wasm_scenes` 全部場景);每 tick 時間對原生參考建置的比值列表;
+> 越界存取的負面測試:在有檢查的實例 trap,在引擎實例由 Mojo `List` 檢查擋下的部分照常 abort。
+> **相依**:17.89、ludens-engine 的平台接口(`platform/`);Windows 外殼的建置主機(本環境沒有)。
+> **重測(2026-11-25,bench 稽核第 1 項)**:原數字量測時另有建置在跑(負載 1.2–1.6)。同一探針 `scripts/wasm_probe_platform.py --quick --skip-b --aot --simd-opt --reps 9`,Xeon 2.1 GHz 4 核,taskset 單核,無其他工作(開始負載 0.99,即探針本身),9 次中位數,ludens-wasm-rt `6547e7d`。原生參考建置在各列前後各量一次 3.747 / 3.789 ms(平均 3.768)。1012 體 × 120 tick,所有列雜湊與原生相同:wasm2c 拿掉範圍檢查 baseline 4.186 ms(1.11 倍)、simd128 opt 4.066 ms(1.08 倍);保留檢查的 wasm2c 預設 1.48 / 1.44 倍、segue 1.47 / 1.45 倍;node 1.24 / 1.29 倍;wasmtime-py 關 Spectre 堆積緩解 1.25 / 1.30 倍(原量 1.45)。結論:拿掉範圍檢查的 simd128 模組在 10 % 內(1.08 倍),原決定 (2) 的依據成立;範圍檢查本身佔 1.44 → 1.08 倍的差。
+
 #### 17.98 編譯期參數化(位元不變)
 
 > **整理(2026-11-22)**:✅(2026-11-22 整理):第 1、4、7、8 項完成;第 2 項由第 1 項涵蓋;其餘各項皆已量測,記為不做並附理由(第 3、5、6、9 項)。沒有未決項。
@@ -4952,6 +4989,7 @@
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | 嵌入、腳本與平台 | ✅ |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 嵌入、腳本與平台 | 不排 |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 嵌入、腳本與平台 | 🔶 |
+| 17.104 | [原生外殼:wasm2c 事先編譯的引擎模組](#17104-原生外殼wasm2c-事先編譯的引擎模組) | 嵌入、腳本與平台 | ⬜ |
 | 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.99 | [接觸求解器:快取子步內不變的量(位元不變)](#1799-接觸求解器快取子步內不變的量位元不變) | 剛體動力學、接觸與關節 | ✅ |
 | 17.100 | [接觸求解器的遊戲規模效能(改變結果)](#17100-接觸求解器的遊戲規模效能改變結果) | 剛體動力學、接觸與關節 | ⬜ |
