@@ -327,8 +327,9 @@ Generated from Conventional Commit subjects by `scripts/changelog.py` (`pixi run
 
 ### Fixes
 
-- **scripts**: shellcheck findings (df0a659)
-- **scripts**: every subprocess.run says check=; ruff for scripts and python (d8f9af0)
+- **scripts**: zip() says strict=; bind_world checks gravity has 3 components (8adf517)
+- **scripts**: shellcheck findings (9840de6)
+- **scripts**: every subprocess.run says check=; ruff for scripts and python (d4baba2)
 - **scheduler**: a cancelled timer no longer leaves its mark in TimerHeap / TimerWheel (17.98) (#152) (c8a956b)
 - **physics**: combine setters validate their input; dropped frame debt is counted; FMA parity probe in CI (17.96, 17.97) (#138) (f3bc382)
 - **embed**: load refuses a blob saved with water; hash covers the water; save_excludes lists what save does not carry (17.95) (#134) (f2d3399)
@@ -427,7 +428,7 @@ Generated from Conventional Commit subjects by `scripts/changelog.py` (`pixi run
 
 ### Tests
 
-- **benchmarks**: stress and scale scenes (17.100) (0221d60)
+- **benchmarks**: stress and scale scenes; stale_refs check and doc fixes (17.100) (#160) (7049c20)
 - **geometry**: sparse SDF vs dense is within float rounding, exact only without FMA (17.52) (61d0872)
 - **embed**: touching test is integration tier (17.12, #113) (a8e5b5d)
 - golden for the C-ABI function count after ld_world_transfer_* (65 functions) (2d8f247)
@@ -605,9 +606,10 @@ Generated from Conventional Commit subjects by `scripts/changelog.py` (`pixi run
 
 ### Documentation
 
-- **benchmarks**: regenerate the report with the stress and scale section (17.100) (1ddd657)
-- fix stale names and claims in comments and docs; stale_refs allow list (fbcfb45)
-- **benchmarks**: stress and scale section in the report template (17.100) (c329364)
+- regenerate CHANGELOG.md (f88833c)
+- ROADMAP 17.100 stress baseline; new 17.102 (static checks) and 17.103 (sleeping pairs) (411f5a2)
+- **tests**: test_hull's per-case functions: the width-3 crash is history (37fa958)
+- regenerate docs/STRUCTURE.md (0421b35)
 - regenerate docs/STRUCTURE.md (d5e65fa)
 - ROADMAP 2026-11-22 cleanup of the 23 open entries (#156) (a78df0a)
 - regenerate docs/STRUCTURE.md (4aed07d)
@@ -830,8 +832,7 @@ Generated from Conventional Commit subjects by `scripts/changelog.py` (`pixi run
 
 ### Chores
 
-- **scripts**: pixi run lint (code rules, stale refs, ruff, shellcheck) (ef1212d)
-- **scripts**: stale_refs check and bench cache from the report (f3226ce)
+- **scripts**: pixi run lint (code rules, stale refs, ruff, shellcheck) (5372957)
 - **wasm**: pass core's mojo to the driver with --mojo; wasm-rt pin 6547e7d (17.89) (#142) (4e779b9)
 - **wasm**: import ludens-wasm-rt's public wasmtime host; CI pins the wasm-rt commit (17.89) (#141) (0004b4d)
 - repository renames: this repo is ludens-core, the shell is ludens-engine (50e6dd7)

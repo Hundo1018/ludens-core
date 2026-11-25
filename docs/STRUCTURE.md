@@ -1607,8 +1607,8 @@ counted, not listed.
 - struct `Inertia3` — 8 methods
 - struct `InvInertiaW` — 3 methods
 - struct `Pose6` — 0 methods
-- struct `QuatBody6` : Body6 — 25 methods
-- struct `ScrewBody6` : Body6 — 27 methods
+- struct `QuatBody6` : Body6 — 26 methods
+- struct `ScrewBody6` : Body6 — 28 methods
 
 ### `physics/rigid_air_part.mojo`
 - struct `RigidPart` : CoupledPart — 9 methods

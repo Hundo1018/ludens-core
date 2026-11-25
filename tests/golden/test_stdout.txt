@@ -941,7 +941,8 @@ saddle: implicit -0.3460207901198977  central difference -0.34594534184484516
 [PASS] inverse_dynamics - 7 / 7 checks
 --- tests/test_islands_par.mojo ---
   islands: 6
-[PASS] islands_par - 6 / 6 checks
+  pairs with both ends asleep or static: 13 of 13
+[PASS] islands_par - 10 / 10 checks
 --- tests/test_iso_collision.mojo ---
 box SDF: triangles 7872  open edges 0  volume 3.9744866
 box dropped on the mesh: rests at 0.100401856 0.5999942 -0.19986793  (bottom 0.4999942 )
