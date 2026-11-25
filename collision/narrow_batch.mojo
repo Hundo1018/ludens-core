@@ -95,7 +95,7 @@ def narrow_pair(inp: FPtr, res: FPtr, k: Int):
     var infl = _ld3(inp, r + P_INFL)
     var m = ContactManifold[3]()
     if ka == SHAPE_BOX and kb == SHAPE_BOX:
-        m = box_box_manifold(pa, axa, ha + infl, pb, axb, hb + infl)
+        m = box_box_manifold(pa, axa, ha, pb, axb, hb, infl[0])
     elif ka == SHAPE_BOX and kb == SHAPE_SPHERE:
         m = sphere_box_manifold(pb, hb[0] + mr, pa, axa, ha + infl)
         m.normal = -m.normal

@@ -883,9 +883,11 @@ struct ColliderSet(Movable, Deinitable):
             m = self.ellipsoid_pair_d(db, pb, da, pa, mr * 2)
             m.normal = -m.normal
         elif ka == SHAPE_BOX and kb == SHAPE_BOX:
+            # inflated extents for the test and the depths, real boxes for
+            # the points (`box_box_manifold`'s `spec`; infl is uniform)
             m = box_box_manifold(
-                pa.position, pa.axes, da.half + infl,
-                pb.position, pb.axes, db.half + infl,
+                pa.position, pa.axes, da.half,
+                pb.position, pb.axes, db.half, infl[0],
             )
         elif ka == SHAPE_BOX and kb == SHAPE_SPHERE:
             # sphere_box normal is sphere->box == b->a: flip once more
