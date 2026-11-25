@@ -160,6 +160,10 @@ def precommit_plan(staged, added, dirs, decl_changed=False):
         checks.append(("floating-point flag policy", script("flag_policy.py")))
     if any(f.endswith(".mojo") for f in added) or "scripts/orphans_allow.txt" in staged:
         checks.append(("unwired modules", script("orphans.py")))
+    # issue #159: a module added, removed or newly imported by embed/ needs its
+    # entry in the exposure list (開放清單); the check is pure Python and fast
+    if touches_mojo or "scripts/exposure.toml" in staged:
+        checks.append(("exposure list (scripts/exposure.toml)", script("exposure.py")))
     return checks, regen
 
 
@@ -238,6 +242,7 @@ def cmd_pre_push():
         ("layer tables match arch_layers.toml", script("layers_sync.py")),
         ("ROADMAP subsystem table matches the index", script("roadmap_status.py", "--check")),
         ("unwired modules", script("orphans.py")),
+        ("exposure list (scripts/exposure.toml)", script("exposure.py")),
         ("floating-point flag policy", script("flag_policy.py")),
         ("benchmark template / files / report", script("perf.py", "governance")),
         ("benchmark report not older than any bench", script("bench_fresh.py")),
@@ -376,7 +381,10 @@ def selftest():
 
     dirs = {"physics", "collision", "harness"}
     checks, regen = precommit_plan(["physics/solver6.mojo"], [], dirs)
-    assert [c[0] for c in checks] == ["arch check (layers, cycles, reach-through)", "test tier headers", "text names code that exists (stale_refs)", "CLAUDE.md code rules"] and not regen
+    assert [c[0] for c in checks] == [
+        "arch check (layers, cycles, reach-through)", "test tier headers", "text names code that exists (stale_refs)",
+        "CLAUDE.md code rules", "exposure list (scripts/exposure.toml)",
+    ] and not regen
     assert not precommit_plan(["physics/solver6.mojo"], [], dirs, decl_changed=True)[1], "commits never regenerate the doc"
     assert not precommit_plan(["scripts/arch_layers.toml"], [], dirs)[1]
     body_only = "+++ b/physics/solver6.mojo\n@@ -1 +1 @@\n-    x = 1\n+    x = 2\n"
@@ -395,6 +403,8 @@ def selftest():
     assert [c[0] for c in checks] == ["floating-point flag policy"]
     checks, _ = precommit_plan(["physics/new.mojo"], ["physics/new.mojo"], dirs)
     assert "unwired modules" in [c[0] for c in checks]
+    assert "exposure list (scripts/exposure.toml)" in [c[0] for c in checks], "a new module is checked against the exposure list"
+    assert "exposure list (scripts/exposure.toml)" in [c[0] for c in precommit_plan(["scripts/exposure.toml"], [], dirs)[0]]
     checks, regen = precommit_plan(["python/ludens/_capi.py"], [], dirs)
     assert [c[0] for c in checks] == ["ruff"] and not regen
     checks, _ = precommit_plan(["scripts/run_tests.sh"], [], dirs)

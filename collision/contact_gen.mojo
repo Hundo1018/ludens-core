@@ -623,7 +623,7 @@ def _sdf_pair_kid(
 
 def try_compound_pair(
     colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3,
-    margin: Real, mut out: List[RawContact],
+    margin: Real, mut out: List[RawContact], margin_base: Real = SPEC_BASE,
 ):
     """A compound (ROADMAP 17.44) against a convex collider or another
     compound: every child pair whose child boxes (each grown by half the
@@ -643,7 +643,7 @@ def try_compound_pair(
             var pb = colliders.kid_pose(j, b, pose_j)
             if not ba.overlaps(colliders.kid_box(db, pb, margin * 0.5)):
                 continue
-            var m = colliders.shape_pair(da, pa, db, pb, margin * 0.5, infl)
+            var m = colliders.shape_pair(da, pa, db, pb, margin * 0.5, infl, margin_base)
             if not m.hit:
                 continue
             if margin > 0:
@@ -697,7 +697,7 @@ def try_pair(
         if is_sensor_pair:
             try_compound_pair(colliders, i, j, pose_i, pose_j, 0, sensors)
         else:
-            try_compound_pair(colliders, i, j, pose_i, pose_j, margin, out)
+            try_compound_pair(colliders, i, j, pose_i, pose_j, margin, out, margin_base)
         return
 
     if is_sensor_pair:
@@ -709,7 +709,7 @@ def try_pair(
             sensors.append(RawContact(i, j, 0, sm))
         return
 
-    var m = colliders.pair_manifold(i, j, pose_i, pose_j, margin * 0.5, infl)
+    var m = colliders.pair_manifold(i, j, pose_i, pose_j, margin * 0.5, infl, margin_base)
     if m.hit and margin > 0:
         for k in range(m.count):
             m.depths[k] -= margin

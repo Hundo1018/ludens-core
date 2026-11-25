@@ -63,6 +63,8 @@ hooks-selftest = "python3 scripts/hooks.py --selftest && python3 scripts/gen_str
 flag-policy = "python3 scripts/flag_policy.py"
 # Engine modules nothing in the engine or examples imports, gated by scripts/orphans_allow.txt (ROADMAP 17.82).
 orphans = "python3 scripts/orphans.py"
+# 開放清單 (issue #159): every engine module outside embed/ is exposed / pending / internal; checked against the imports.
+exposure = "python3 scripts/exposure.py"
 # Seed sweeps over randomised tests via LUDENS_SEED (scripts/fuzz.py; ROADMAP 17.82).
 fuzz = { cmd = "python3 scripts/fuzz.py", depends-on = ["build"] }
 # Each test twice: run-to-run differences + per-file run time (scripts/stability.py; ROADMAP 17.82).
@@ -79,6 +81,8 @@ wasm-gate = { cmd = "bash scripts/wasm_gate.sh", depends-on = ["build"] }
 # geometry.trig == musl sinf / cosf bit for bit (17.89 / #75; scripts/trig_parity.py)
 trig-parity = { cmd = "python3 scripts/trig_parity.py", depends-on = ["build"] }
 wasm-probe = { cmd = "python3 scripts/wasm_probe.py", depends-on = ["build"] }
+# wasm as the first platform: native vs node vs wasmtime cost and knobs, engine + game module linking (scripts/wasm_probe_platform.py).
+wasm-platform-probe = { cmd = "python3 scripts/wasm_probe_platform.py", depends-on = ["build"] }
 # Regenerate CHANGELOG.md from Conventional Commit subjects (scripts/changelog.py; ROADMAP 17.81).
 changelog = "python3 scripts/changelog.py"
 # Build twice and compare build/*.mojoc checksums (scripts/repro_probe.py; ROADMAP 17.81).

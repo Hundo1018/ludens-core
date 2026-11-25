@@ -241,4 +241,22 @@ def main() raises:
         wall.step(DT, Vec3(0, -9.8, 0, 0), wcfg)
     print("bullet released touching a wall, after 1 s: y", wall.pose(bl).pos[1])
     s.check(abs(wall.pose(bl).pos[1] - 0.05) < 0.01, "a CCD bullet touching a wall falls to the floor (was frozen at y 1.5)")
+    # A spinning CCD bullet landing: the swept box sees only the linear
+    # travel, so clamping it would also freeze the rotation that the
+    # contact uses to settle; it must come to rest (17.19).
+    var spin = ContactScene6[QuatBody6]()
+    _ = spin.add(QuatBody6.at_rest(Vec3(0, -0.5, 0, 0), Inertia3.box(1, 50, 0.5, 50)), Vec3(50, 0.5, 50, 0), True)
+    var sb = QuatBody6.at_rest(Vec3(0, 0.3, 0, 0), Inertia3.box(0.2, 0.05, 0.05, 0.05))
+    sb.set_velocity(Vec3(0.3, -1, 0.5, 0), Vec3(5, 3, 40, 0))
+    var sbi = spin.add(sb^, Vec3(0.05, 0.05, 0.05, 0), False)
+    spin.set_ccd_mode(sbi, CCD_BULLET)
+    var scfg = SolverConfig()
+    scfg.ccd = True
+    var slept_at = -1
+    for k in range(300):
+        spin.step(DT, Vec3(0, -9.8, 0, 0), scfg)
+        if slept_at < 0 and spin.is_sleeping(sbi):
+            slept_at = k
+    print("spinning CCD bullet dropped on the floor: asleep at step", slept_at, " y", spin.pose(sbi).pos[1])
+    s.check(slept_at >= 0 and abs(spin.pose(sbi).pos[1] - 0.05) < 0.005, "a spinning CCD bullet settles on the floor (was stuck above it)")
     s.finish()

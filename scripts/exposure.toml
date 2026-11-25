@@ -1,0 +1,320 @@
+# 開放清單 (issue #159): one entry per engine module outside embed/ and oop/.
+# exposed = embed/ imports it directly (checked); pending = not reachable from the host yet (issue);
+# internal = not meant for the host (reason). `pixi run exposure` checks this file against the imports.
+
+[modules]
+"ai.blackboard" = { status = "pending", issue = 159 }
+"ai.bt" = { status = "pending", issue = 159 }
+"ai.decision" = { status = "pending", issue = 159 }
+"ai.eqs" = { status = "pending", issue = 159 }
+"ai.influence" = { status = "pending", issue = 159 }
+"ai.perception" = { status = "pending", issue = 159 }
+"ai.planner" = { status = "pending", issue = 159 }
+"ai.smart_objects" = { status = "pending", issue = 159 }
+"ai.steering" = { status = "pending", issue = 159 }
+"ai.utility" = { status = "pending", issue = 159 }
+"collision.bp_bvh" = { status = "exposed" }
+"collision.bp_dbvh" = { status = "pending", issue = 159 }
+"collision.bp_gpu" = { status = "pending", issue = 159 }
+"collision.bp_hashgrid" = { status = "pending", issue = 159 }
+"collision.bp_sap" = { status = "pending", issue = 159 }
+"collision.bp_tree" = { status = "pending", issue = 159 }
+"collision.broadphase" = { status = "exposed" }
+"collision.clip" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.collider_set" = { status = "exposed" }
+"collision.contact_events" = { status = "exposed" }
+"collision.contact_gen" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.gpu_narrow" = { status = "pending", issue = 159 }
+"collision.gpu_raycast" = { status = "pending", issue = 159 }
+"collision.hull" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.manifold" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.narrow_batch" = { status = "pending", issue = 159 }
+"collision.narrowphase" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.pipeline" = { status = "pending", issue = 159 }
+"collision.queries" = { status = "pending", issue = 159 }
+"collision.toi" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.trimesh" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"collision.world_query" = { status = "exposed" }
+"diag.arena" = { status = "pending", issue = 159 }
+"diag.counters" = { status = "exposed" }
+"diag.draw" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"diag.invariant" = { status = "pending", issue = 159 }
+"diag.level" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"diag.log" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"diag.outbox" = { status = "pending", issue = 159 }
+"diag.trace" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"ecs.archetype" = { status = "pending", issue = 159 }
+"ecs.bitset_backend" = { status = "pending", issue = 159 }
+"ecs.chunked_backend" = { status = "pending", issue = 159 }
+"ecs.commands" = { status = "pending", issue = 159 }
+"ecs.component" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"ecs.entity" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"ecs.entity_undo" = { status = "pending", issue = 159 }
+"ecs.hierarchy" = { status = "pending", issue = 159 }
+"ecs.host_components" = { status = "pending", issue = 159 }
+"ecs.motor_transform" = { status = "pending", issue = 159 }
+"ecs.naive_backend" = { status = "pending", issue = 159 }
+"ecs.pool" = { status = "pending", issue = 159 }
+"ecs.query" = { status = "pending", issue = 159 }
+"ecs.reactive_backend" = { status = "pending", issue = 159 }
+"ecs.relations" = { status = "pending", issue = 159 }
+"ecs.schema" = { status = "pending", issue = 159 }
+"ecs.sparse_backend" = { status = "pending", issue = 159 }
+"ecs.sparse_set" = { status = "pending", issue = 159 }
+"ecs.storage" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"ecs.system" = { status = "pending", issue = 159 }
+"ecs.transform" = { status = "pending", issue = 159 }
+"ecs.transform_systems" = { status = "pending", issue = 159 }
+"ecs.world" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"fluid.d3q19" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"fluid.lbm" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"fluid.lbm_cumulant" = { status = "pending", issue = 159 }
+"fluid.lbm_gpu" = { status = "pending", issue = 159 }
+"fluid.lbm_mrt" = { status = "pending", issue = 159 }
+"gameplay.abilities" = { status = "pending", issue = 159 }
+"gameplay.achievements" = { status = "pending", issue = 159 }
+"gameplay.aircraft" = { status = "pending", issue = 159 }
+"gameplay.animator" = { status = "pending", issue = 159 }
+"gameplay.balance" = { status = "pending", issue = 159 }
+"gameplay.bike" = { status = "pending", issue = 159 }
+"gameplay.blackbox" = { status = "pending", issue = 159 }
+"gameplay.camera_rig" = { status = "pending", issue = 159 }
+"gameplay.character" = { status = "pending", issue = 159 }
+"gameplay.checkpoint" = { status = "pending", issue = 159 }
+"gameplay.combat" = { status = "pending", issue = 159 }
+"gameplay.dialogue" = { status = "pending", issue = 159 }
+"gameplay.explosion" = { status = "pending", issue = 159 }
+"gameplay.flow" = { status = "pending", issue = 159 }
+"gameplay.force_element" = { status = "pending", issue = 159 }
+"gameplay.helicopter" = { status = "pending", issue = 159 }
+"gameplay.hit_pipeline" = { status = "pending", issue = 159 }
+"gameplay.host_inbox" = { status = "pending", issue = 159 }
+"gameplay.interpolation" = { status = "pending", issue = 159 }
+"gameplay.inventory" = { status = "pending", issue = 159 }
+"gameplay.large_world" = { status = "pending", issue = 159 }
+"gameplay.level_flow" = { status = "pending", issue = 159 }
+"gameplay.loc_keys" = { status = "pending", issue = 159 }
+"gameplay.movement" = { status = "pending", issue = 159 }
+"gameplay.netcode" = { status = "pending", issue = 159 }
+"gameplay.objectives" = { status = "pending", issue = 159 }
+"gameplay.phys_character" = { status = "pending", issue = 159 }
+"gameplay.projectile" = { status = "pending", issue = 159 }
+"gameplay.ragdoll" = { status = "pending", issue = 159 }
+"gameplay.ragdoll_ctl" = { status = "pending", issue = 159 }
+"gameplay.replay" = { status = "pending", issue = 159 }
+"gameplay.rules" = { status = "pending", issue = 159 }
+"gameplay.rules_ecs" = { status = "pending", issue = 159 }
+"gameplay.rules_table" = { status = "pending", issue = 159 }
+"gameplay.runtime" = { status = "pending", issue = 159 }
+"gameplay.save" = { status = "pending", issue = 159 }
+"gameplay.sequence_player" = { status = "pending", issue = 159 }
+"gameplay.skin_link" = { status = "pending", issue = 159 }
+"gameplay.terrain_stream" = { status = "pending", issue = 159 }
+"gameplay.tiers" = { status = "pending", issue = 159 }
+"gameplay.vehicle" = { status = "pending", issue = 159 }
+"gameplay.vehicle_drive" = { status = "pending", issue = 159 }
+"gameplay.vehicle_element" = { status = "pending", issue = 159 }
+"gameplay.vehicle_kinds" = { status = "pending", issue = 159 }
+"gameplay.vehicle_seat" = { status = "pending", issue = 159 }
+"gameplay.vehicle_tire" = { status = "pending", issue = 159 }
+"gameplay.vehicle_truck" = { status = "pending", issue = 159 }
+"gameplay.vehicle_tunnel" = { status = "pending", issue = 159 }
+"gameplay.vehicle_wheel" = { status = "pending", issue = 159 }
+"gameplay.watercraft" = { status = "pending", issue = 159 }
+"geometry.aabb" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.abc_file" = { status = "pending", issue = 159 }
+"geometry.blosc" = { status = "pending", issue = 159 }
+"geometry.cga" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.checkpoint" = { status = "pending", issue = 159 }
+"geometry.convex_decomp" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.dcga" = { status = "pending", issue = 159 }
+"geometry.distance_field" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.dualquat" = { status = "pending", issue = 159 }
+"geometry.epa" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.field" = { status = "pending", issue = 159 }
+"geometry.fracture_cut" = { status = "exposed" }
+"geometry.galie" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.gjk" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.gjk_distance" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.gmv" = { status = "pending", issue = 159 }
+"geometry.inflate" = { status = "pending", issue = 159 }
+"geometry.isosurface" = { status = "pending", issue = 159 }
+"geometry.mat" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.mat3" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.mesh_bake" = { status = "pending", issue = 159 }
+"geometry.morph" = { status = "pending", issue = 159 }
+"geometry.motor" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.multivector" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.obb" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.pip" = { status = "pending", issue = 159 }
+"geometry.polytope" = { status = "exposed" }
+"geometry.pose_space" = { status = "pending", issue = 159 }
+"geometry.predicates" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.quat" = { status = "exposed" }
+"geometry.quickhull" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.ray" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.sat" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.sdf" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.sdf3" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.sdf_grid" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.shape" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.skinning" = { status = "pending", issue = 159 }
+"geometry.sparse_sdf" = { status = "pending", issue = 159 }
+"geometry.sparse_volume" = { status = "pending", issue = 159 }
+"geometry.spline" = { status = "pending", issue = 159 }
+"geometry.support" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.tetmesh" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"geometry.trig" = { status = "exposed" }
+"geometry.vdb_file" = { status = "pending", issue = 159 }
+"geometry.vec" = { status = "exposed" }
+"nav.crowd" = { status = "pending", issue = 159 }
+"nav.heightfield" = { status = "exposed" }
+"nav.hpa" = { status = "pending", issue = 159 }
+"nav.nav_input" = { status = "pending", issue = 159 }
+"nav.navmesh" = { status = "exposed" }
+"nav.path" = { status = "exposed" }
+"nav.volume" = { status = "pending", issue = 159 }
+"numerics.bicgstab" = { status = "pending", issue = 159 }
+"numerics.cg" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"numerics.cholesky" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"numerics.dense" = { status = "pending", issue = 159 }
+"numerics.fft" = { status = "pending", issue = 159 }
+"numerics.gmres" = { status = "pending", issue = 159 }
+"numerics.implicit" = { status = "pending", issue = 159 }
+"numerics.minres" = { status = "pending", issue = 159 }
+"numerics.multigrid" = { status = "pending", issue = 159 }
+"numerics.multigrid3" = { status = "pending", issue = 159 }
+"numerics.sparse" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"numerics.vecops" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.actuator" = { status = "pending", issue = 159 }
+"physics.adjoint" = { status = "pending", issue = 159 }
+"physics.artic_batch" = { status = "pending", issue = 159 }
+"physics.body_set" = { status = "exposed" }
+"physics.capture" = { status = "exposed" }
+"physics.ccd6" = { status = "exposed" }
+"physics.chain" = { status = "pending", issue = 159 }
+"physics.chain_scene" = { status = "pending", issue = 159 }
+"physics.chain_shapes" = { status = "pending", issue = 159 }
+"physics.cloth" = { status = "pending", issue = 159 }
+"physics.cloth_air" = { status = "pending", issue = 159 }
+"physics.cloth_air_parts" = { status = "pending", issue = 159 }
+"physics.cloth_anchor" = { status = "pending", issue = 159 }
+"physics.cloth_gas" = { status = "pending", issue = 159 }
+"physics.collide_par" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.combustion" = { status = "pending", issue = 159 }
+"physics.constraints" = { status = "pending", issue = 159 }
+"physics.contact6" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.continuum" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.cosserat_rod" = { status = "pending", issue = 159 }
+"physics.coupler" = { status = "pending", issue = 159 }
+"physics.coupling" = { status = "pending", issue = 159 }
+"physics.diffrigid" = { status = "pending", issue = 159 }
+"physics.diffsim" = { status = "pending", issue = 159 }
+"physics.diffsolver" = { status = "pending", issue = 159 }
+"physics.fem" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.fem_material" = { status = "pending", issue = 159 }
+"physics.fem_pd" = { status = "pending", issue = 159 }
+"physics.fem_scene" = { status = "pending", issue = 159 }
+"physics.fem_visco" = { status = "pending", issue = 159 }
+"physics.fields" = { status = "pending", issue = 159 }
+"physics.flip" = { status = "exposed" }
+"physics.flip3" = { status = "pending", issue = 159 }
+"physics.flip_apic" = { status = "pending", issue = 159 }
+"physics.flip_diffuse" = { status = "exposed" }
+"physics.floating" = { status = "pending", issue = 159 }
+"physics.fracture" = { status = "exposed" }
+"physics.fsi" = { status = "pending", issue = 159 }
+"physics.gpu_artic" = { status = "pending", issue = 159 }
+"physics.gpu_cloth" = { status = "pending", issue = 159 }
+"physics.gpu_contact" = { status = "pending", issue = 159 }
+"physics.integrator6" = { status = "pending", issue = 159 }
+"physics.islands" = { status = "exposed" }
+"physics.joint_ext" = { status = "exposed" }
+"physics.joints6" = { status = "exposed" }
+"physics.lod" = { status = "pending", issue = 159 }
+"physics.mac_body" = { status = "pending", issue = 159 }
+"physics.mac_fluid" = { status = "pending", issue = 159 }
+"physics.mac_fluid3" = { status = "pending", issue = 159 }
+"physics.mac_levelset" = { status = "pending", issue = 159 }
+"physics.mac_levelset3" = { status = "pending", issue = 159 }
+"physics.mac_levelset_particles" = { status = "pending", issue = 159 }
+"physics.mac_levelset_particles3" = { status = "pending", issue = 159 }
+"physics.mass_props" = { status = "exposed" }
+"physics.material" = { status = "exposed" }
+"physics.mpm" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.mpm_melt" = { status = "pending", issue = 159 }
+"physics.mpm_rigid" = { status = "pending", issue = 159 }
+"physics.multiphase" = { status = "pending", issue = 159 }
+"physics.muscle_ad" = { status = "pending", issue = 159 }
+"physics.muscle_tendon" = { status = "pending", issue = 159 }
+"physics.pbf" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.pbf_unified" = { status = "pending", issue = 159 }
+"physics.resources" = { status = "pending", issue = 159 }
+"physics.rigid6" = { status = "exposed" }
+"physics.rigid_air_part" = { status = "pending", issue = 159 }
+"physics.rope" = { status = "pending", issue = 159 }
+"physics.rope_twist" = { status = "pending", issue = 159 }
+"physics.screw" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.sediment" = { status = "pending", issue = 159 }
+"physics.self_collide" = { status = "pending", issue = 159 }
+"physics.sensors" = { status = "pending", issue = 159 }
+"physics.serialize" = { status = "exposed" }
+"physics.sim_cache" = { status = "pending", issue = 159 }
+"physics.soft_couple" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.soft_water" = { status = "pending", issue = 159 }
+"physics.softbody" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.solver6" = { status = "exposed" }
+"physics.solver_config" = { status = "exposed" }
+"physics.sph" = { status = "pending", issue = 159 }
+"physics.sph_rigid" = { status = "pending", issue = 159 }
+"physics.state_io" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"physics.strand" = { status = "pending", issue = 159 }
+"physics.strand_air" = { status = "pending", issue = 159 }
+"physics.strand_ext" = { status = "pending", issue = 159 }
+"physics.strand_gas" = { status = "pending", issue = 159 }
+"physics.tendon" = { status = "pending", issue = 159 }
+"physics.thermal" = { status = "pending", issue = 159 }
+"physics.thermal_float" = { status = "pending", issue = 159 }
+"physics.thermal_smoke" = { status = "pending", issue = 159 }
+"physics.vbd_cloth" = { status = "pending", issue = 159 }
+"physics.water" = { status = "pending", issue = 159 }
+"procedural.anim" = { status = "pending", issue = 159 }
+"procedural.anim_compress" = { status = "pending", issue = 159 }
+"procedural.anim_events" = { status = "pending", issue = 159 }
+"procedural.anim_graph" = { status = "pending", issue = 159 }
+"procedural.anim_state" = { status = "pending", issue = 159 }
+"procedural.camera_math" = { status = "pending", issue = 159 }
+"procedural.delaunay" = { status = "pending", issue = 159 }
+"procedural.fsm" = { status = "pending", issue = 159 }
+"procedural.ik" = { status = "pending", issue = 159 }
+"procedural.ik_pose" = { status = "pending", issue = 159 }
+"procedural.inertialize" = { status = "pending", issue = 159 }
+"procedural.levelgen" = { status = "pending", issue = 159 }
+"procedural.motion_match" = { status = "pending", issue = 159 }
+"procedural.noise" = { status = "pending", issue = 159 }
+"procedural.scatter" = { status = "pending", issue = 159 }
+"procedural.sequence" = { status = "pending", issue = 159 }
+"procedural.terrain_gen" = { status = "pending", issue = 159 }
+"procedural.tween" = { status = "pending", issue = 159 }
+"scheduler.build_opts" = { status = "exposed" }
+"scheduler.dispatch" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"scheduler.entity_actor" = { status = "pending", issue = 159 }
+"scheduler.events" = { status = "pending", issue = 159 }
+"scheduler.gameloop" = { status = "pending", issue = 159 }
+"scheduler.jobgraph" = { status = "pending", issue = 159 }
+"scheduler.message" = { status = "pending", issue = 159 }
+"scheduler.policy" = { status = "pending", issue = 159 }
+"scheduler.rng" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"scheduler.scheduler" = { status = "pending", issue = 159 }
+"scheduler.sequential" = { status = "pending", issue = 159 }
+"scheduler.system_actor" = { status = "pending", issue = 159 }
+"scheduler.tiered" = { status = "pending", issue = 159 }
+"scheduler.timers" = { status = "pending", issue = 159 }
+"scheduler.workstealing" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"spatial.bvh" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"spatial.cell_sort" = { status = "internal", reason = "只經由已開放的模組使用（自動分類，待確認）" }
+"spatial.gpu_lbvh" = { status = "pending", issue = 159 }
+"spatial.hash_grid" = { status = "pending", issue = 159 }
+"spatial.oct_tree" = { status = "pending", issue = 159 }
+"spatial.quad_tree" = { status = "pending", issue = 159 }
+"spatial.tree_core" = { status = "pending", issue = 159 }
