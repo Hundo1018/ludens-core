@@ -15,13 +15,13 @@ cooldown: refused with 4  allowed again at tick 60
 channel: on True  re-cast while channelling 3  cancel True False  uncancelled ends after 90 ticks
 [PASS] abilities - 8 / 8 checks
 --- tests/test_active_edges.mojo ---
-  speed 2  n 80  vx without flags -0.19034894  with 1.9996731  max|vy| with 6.5279644e-05
-  speed 2  n 400  vx without flags -0.031186096  with 2.0  max|vy| with 6.763532e-05
-  speed 8  n 80  vx without flags 0.41341063  with 7.9999476  max|vy| with 0.0004252678
-  speed 8  n 400  vx without flags 0.13389727  with 8.0  max|vy| with 9.2505536e-05
-  wall at x = 10: final x 9.74859  vx -0.0025089732
-  heightfield 0.5 m cells, 8 m/s: vx without flags 0.78984094  max|vy| 2.8262107   with 7.9999347  max|vy| 0.00053363835
-  heightfield with a 0.1 slope along z (crossing x at 4 m/s): final x -2.0018723  vx 3.9983861
+  speed 2  n 80  vx without flags -0.03620541  with 1.9996742  max|vy| with 6.525923e-05
+  speed 2  n 400  vx without flags -0.024828756  with 2.0  max|vy| with 6.196215e-05
+  speed 8  n 80  vx without flags -0.71969193  with 7.999949  max|vy| with 0.00044916704
+  speed 8  n 400  vx without flags -0.28967884  with 8.0  max|vy| with 7.331034e-05
+  wall at x = 10: final x 9.748264  vx -0.0030930869
+  heightfield 0.5 m cells, 8 m/s: vx without flags 0.04152651  max|vy| 2.8262184   with 7.999927  max|vy| 0.000519004
+  heightfield with a 0.1 slope along z (crossing x at 4 m/s): final x -2.0019593  vx 3.998324
 [PASS] active_edges - 15 / 15 checks
 --- tests/test_actor.mojo ---
   actor 0 after one tick — sum 136  count 16  first 1  rounds 1
@@ -82,7 +82,7 @@ channel: on True  re-cast while channelling 3  cancel True False  uncancelled en
   inertialized switch: largest position jump 0.003391862 (one tick of motion)
 [PASS] anim_runtime - 14 / 14 checks
 --- tests/test_animator.mojo ---
-  walk clip, 3 s: box at x 2.999972 z -1.9920857e-10  events 3 (tagged 3 ) root x in pose 0.0
+  walk clip, 3 s: box at x 2.999972 z -1.9889804e-10  events 3 (tagged 3 ) root x in pose 0.0
   turned 90 deg about y: box at x -5.5879355e-07 z -2.9999948
   two animators without bodies, 2 s: events speed 1 2  speed 2 4
   SimState with an animator, snapshot 10 ticks into a 0.5 s transition: checksum uninterrupted 7769961127015832253  restored 7769961127015832253
@@ -126,7 +126,7 @@ balanced at 2 m/s 3.1414902  at 6 m/s 0.15588109
   momentum book residual (relative to m g t) 0.013473158  speed change over last 0.5 s 0.00060595496  drag / weight 0.9933764
 [PASS] body_drag - 4 / 4 checks
 --- tests/test_body_removal.mojo ---
-broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.24971199
+broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.24971181
 [PASS] body_removal - 16 / 16 checks
 --- tests/test_body_set.mojo ---
 [PASS] body_set - 171 / 171 checks
@@ -156,37 +156,37 @@ broadphase items before / after removing 400: 401 1   re-added box slot 1  y 0.2
   target past the end (x 20.000086 ): camera x 11.999986  s 24.00001 of 24.00002
 [PASS] camera_spring - 8 / 8 checks
 --- tests/test_capi.mojo ---
-  gen_bindings: up to date (86 functions);  rust host hash f9ee8a5019dfe119  c host hash f9ee8a5019dfe119
+  gen_bindings: up to date (86 functions);  rust host hash 7061401158c6b391  c host hash 7061401158c6b391
 [PASS] capi - 110 / 110 checks
 --- tests/test_capture.mojo ---
-  120 frames, 4 keyframes: 61208 bytes ( 501 per frame incl. keyframes )
+  120 frames, 4 keyframes: 61832 bytes ( 506 per frame incl. keyframes )
   draw_frame(100): 18 commands = 5 body points + 13 contact arrows
   tampered frame 70: verify reports 70
-  240 frames: version 1 210324 bytes, version 2 (delta) 96272 ; frames 180-239 (stack asleep): 48480 vs 13096 bytes
+  240 frames: version 1 210324 bytes, version 2 (delta) 96896 ; frames 180-239 (stack asleep): 48480 vs 13096 bytes
   region capture: bodies 3  contacts 3  frame bytes 48 vs 196
 [PASS] capture - 12 / 12 checks
 --- tests/test_ccd6.mojo ---
-  bullet: max x = -0.14999912679195404 final x = -0.1592652052640915 final vx = -0.010275724
-  rest height with speculative margin: 0.24971100687980652
-  fast drop: min y = 0.24970968067646027
-  swept bullet: max x = -0.14999912679195404 final vx = -0.010275724
-  rest height with TOI stage: 0.24971100687980652
+  bullet: max x = -0.1499948650598526 final x = -0.15792901813983917 final vx = -0.008902505
+  rest height with speculative margin: 0.24971099197864532
+  fast drop: min y = 0.2497093677520752
+  swept bullet: max x = -0.1499948650598526 final vx = -0.008902505
+  rest height with TOI stage: 0.24971099197864532
 touching at t=0: slide hit False  leave hit False  into hit True t 0.0
-bullet released touching a wall, after 1 s: y 0.049960453
-spinning CCD bullet dropped on the floor: asleep at step 57  y 0.049884323
+bullet released touching a wall, after 1 s: y 0.04996001
+spinning CCD bullet dropped on the floor: asleep at step 65  y 0.049880482
 [PASS] ccd6 - 23 / 23 checks
 --- tests/test_ccd_shapes.mojo ---
-   hull bullet at 60 m/s: max x with CCD -0.124988936  without 10.816078
+   hull bullet at 60 m/s: max x with CCD -0.12489834  without 10.816081
    ellipsoid bullet at 60 m/s: max x with CCD -0.125  without -0.125
-   compound bullet at 60 m/s: max x with CCD -0.12517649  without -0.1294935
+   compound bullet at 60 m/s: max x with CCD -0.12514651  without -0.1294935
   box bullet at a one-quad trimesh wall: max x -0.10834397
-  spinning plank (36 rad/s) at a post: max |w| without CCD 253.40468  with CCD 36.0
+  spinning plank (36 rad/s) at a post: max |w| without CCD 36.0  with CCD 36.0
   hull sliding at 8 m/s (mu 0) with CCD: vx after 1 s 8.0  x -1.9999795
-  hull bullet at 1e4 m/s: max x -0.5282442
-  two hull bullets head-on: final x -0.42673644 0.42673644
+  hull bullet at 1e4 m/s: max x -0.52828056
+  two hull bullets head-on: final x -0.9737886 0.9737886
   hull bullet at 300 m/s vs a 0.2 m SDF slab: max x with CCD -0.2000036  without -0.20000713
-  8 hull bullets at static walls, island-parallel vs serial CCD: same bits True  max x -0.12509112  parallel fallbacks 0
-  per-body CCD: BULLET with cfg.ccd off -> max x -0.124988936 ; OFF with cfg.ccd on -> 10.816078
+  8 hull bullets at static walls, island-parallel vs serial CCD: same bits True  max x -0.13130021  parallel fallbacks 0
+  per-body CCD: BULLET with cfg.ccd off -> max x -0.12489834 ; OFF with cfg.ccd on -> 10.816081
 [PASS] ccd_shapes - 15 / 15 checks
 --- tests/test_cga_circle.mojo ---
   worst random-point error: 1.4305115e-06
@@ -232,7 +232,7 @@ spinning CCD bullet dropped on the floor: asleep at step 57  y 0.049884323
 [PASS] chain_props - 10 / 10 checks
 --- tests/test_chain_scene.mojo ---
   pendulum strikes a box: impulse given 1.4562793  box momentum 1.4562793  pendulum peak 3.6763508 rad/s, after -1.0988176
-  5 kg leg on a 1 kg box: foot y 0.49832302  box top 0.49832368  push on the box -49.0 N (weight -49)
+  5 kg leg on a 1 kg box: foot y 0.49832302  box top 0.49832368  push on the box -49.000023 N (weight -49)
   leg falling on a static box: couple_contacts vs resolve_contacts max |dq| 0.0  rest q 2.2700988e-08
 [PASS] chain_scene - 5 / 5 checks
 --- tests/test_chain_shapes.mojo ---
@@ -317,8 +317,8 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
 [PASS] cloth_models - 11 / 11 checks
 --- tests/test_collide_par.mojo ---
   1024-box pile: contacts 1024
-  heightfield scene: contacts 805
-  200 bullets at 40 m/s onto a 2 cm plate: lowest body y 0.09447543 (plate top 0)
+  heightfield scene: contacts 831
+  200 bullets at 40 m/s onto a 2 cm plate: lowest body y 0.09207911 (plate top 0)
   brute: 1500 boxes, candidate pairs serial 1889  parallel 1889
   BVH: 1500 boxes, candidate pairs serial 1889  parallel 1889
   DBVH: 1500 boxes, candidate pairs serial 1889  parallel 1889
@@ -327,8 +327,8 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
   octree: 1500 boxes, candidate pairs serial 1889  parallel 1889
 [PASS] collide_par - 25 / 25 checks
 --- tests/test_colored.mojo ---
-  colored vs serial GS worst position delta: 0.000629425048828125
-  pyramid top y: 2.746122121810913 expected settled: 2.75
+  colored vs serial GS worst position delta: 0.0008454491617158055
+  pyramid top y: 2.7461726665496826 expected settled: 2.75
   colored iters=8: sleeping 21 of 21
 [PASS] colored - 6 / 6 checks
 --- tests/test_combat.mojo ---
@@ -343,12 +343,12 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
 --- tests/test_compound.mojo ---
   box + sphere: mass 73.51033 want 73.51032163829112  com 0.22792937 0.13675761 want 0.22792936346530543 0.13675761807918324
   principal moments 1.3993801 9.605963 10.202511  hand sum 1.3993802 9.605963 10.202511  product of inertia -2.7351523
-  L after 4 s: lowest corner y -0.00017425418  speed 3.5113445e-07
-  single child vs plain box after 2 s: y 0.19964485 0.19964485
-  two halves y 0.24984786  whole box y 0.24958688
+  L after 4 s: lowest corner y -0.00017431378  speed 2.5200615e-07
+  single child vs plain box after 2 s: y 0.19964452 0.19964452
+  two halves y 0.24984786  whole box y 0.24958686
   L queries: ray down onto the upright t 2.1  ray along -x t 2.5  distance from (0.2, 1, 0) 0.50990194
-  1000-sphere compound after 1 s: y 0.49998987  speed 1.2528174e-06
-  rolling at 3 m/s for 2 s on a 20 m floor: sphere body 3.0  two-sphere compound 3.0000005  capsule-child compound 2.9999974 m/s
+  1000-sphere compound after 1 s: y 0.4999899  speed 1.2984667e-06
+  rolling at 3 m/s for 2 s on a 20 m floor: sphere body 3.0  two-sphere compound 3.0000024  capsule-child compound 3.0000053 m/s
 [PASS] compound - 19 / 19 checks
 --- tests/test_constraints.mojo ---
   equality residual: 0.0
@@ -378,33 +378,33 @@ pinned sheet in 0.4 m/s upward flow, 0.2 s: vy above it 0.18906158  beside 0.414
   krylov (BiCGStab) vs dense LU: rounds 3 dense rounds 3 max |force diff| 1.7881393e-07
 [PASS] constraints_newton - 31 / 31 checks
 --- tests/test_contact_block.mojo ---
-  sphere, 2 s: GS x 3.17142 y 0.4997246 ;  block x 3.17142 y 0.4997246
+  sphere, 2 s: GS x 3.17142 y 0.4997247 ;  block x 3.17142 y 0.4997247
   box at rest, 2 s: GS y 0.4997162 ;  block y 0.49972403
-  resting box, 1 iteration: largest / smallest point impulse GS 1.2910836 ;  block 1.0015296
-  10-box stack, iters 1 , 4 s: top drop GS 0.028375626 m, drift 0.004117765 ;  block 0.027694702 m, drift 2.951736e-06
-  10-box stack, iters 2 , 4 s: top drop GS 0.028388977 m, drift 0.00384896 ;  block 0.027659416 m, drift 2.3260998e-06
-  100 kg on 1 kg, iters 1 , 3 s: penetration GS 0.028669298 m;  block 0.027918875
-  100 kg on 1 kg, iters 4 , 3 s: penetration GS 0.028689444 m;  block 0.027917981
-  scaled, resting box, 1 iteration: largest / smallest point impulse GS 1.2910836 ;  block 1.0015296
+  resting box, 1 iteration: largest / smallest point impulse GS 1.2910757 ;  block 1.0002246
+  10-box stack, iters 1 , 4 s: top drop GS 0.02837658 m, drift 0.0039639613 ;  block 0.027693748 m, drift 1.4023942e-06
+  10-box stack, iters 2 , 4 s: top drop GS 0.028388977 m, drift 0.0037801422 ;  block 0.027659416 m, drift 3.2883313e-06
+  100 kg on 1 kg, iters 1 , 3 s: penetration GS 0.028670013 m;  block 0.027918816
+  100 kg on 1 kg, iters 4 , 3 s: penetration GS 0.02868265 m;  block 0.027917981
+  scaled, resting box, 1 iteration: largest / smallest point impulse GS 1.2910757 ;  block 1.0002246
   scaled, box at rest, 2 s: GS y 0.4997162 ;  block y 0.49972403
-  scaled, 100 kg on 1 kg, 4 iters, 3 s: penetration GS 0.0031241179 m;  block 0.0030393004
+  scaled, 100 kg on 1 kg, 4 iters, 3 s: penetration GS 0.0031240582 m;  block 0.0030393004
 [PASS] contact_block - 11 / 11 checks
 --- tests/test_contact_model.mojo ---
   30 deg slope, mu 0.3, 1 s: analytic 1.1769427  pyramid 45 deg analytic 0.6496251
-    elliptic: along axis 1.1818475  diagonal 1.1983188    pyramid: along axis 1.1818465  diagonal 0.6523278
-  ball r 0.5 at 2 m/s, rolling resistance 0.05: stops after 2.8529627 m (analytic 2.8571427 )  without: 9.999933 m in 5 s
-  ball spinning at 10 rad/s, spin resistance 0.05: omega after 1 s 5.1000214 (analytic 5.1 )  without: 10.0
-  25 deg slope, mu_k 0.3: with mu_s 0.6 moved 0.00012386066  without 2.9603834   started at 1 m/s: 1.7416296 (kinetic analytic 1.7385571 )
-  resting box, pyramid vs elliptic: worst position gap 3.0791727e-07
-  rule friction 0.05 over mu_s 0.9 on 25 deg: moved 1.8565265
-  box dropped 0.5 m: peak penetration default 0.00028905272  soft pad (3 Hz) 0.013220772
-  1 kg box under a ceiling: drop in 2 s with adhesion 20 N -5.9604645e-08  5 N 19.065327
-  mu 0: slide 2.4602058    mu 1e3 elliptic: slide 0.0001460324
+    elliptic: along axis 1.1818478  diagonal 1.1983359    pyramid: along axis 1.1818446  diagonal 0.6523282
+  ball r 0.5 at 2 m/s, rolling resistance 0.05: stops after 2.8529644 m (analytic 2.8571427 )  without: 9.999933 m in 5 s
+  ball spinning at 10 rad/s, spin resistance 0.05: omega after 1 s 5.1000223 (analytic 5.1 )  without: 10.0
+  25 deg slope, mu_k 0.3: with mu_s 0.6 moved 0.00012386256  without 2.9603584   started at 1 m/s: 1.7416315 (kinetic analytic 1.7385571 )
+  resting box, pyramid vs elliptic: worst position gap 3.0583703e-07
+  rule friction 0.05 over mu_s 0.9 on 25 deg: moved 1.8565267
+  box dropped 0.5 m: peak penetration default 0.00028908253  soft pad (3 Hz) 0.013222635
+  1 kg box under a ceiling: drop in 2 s with adhesion 20 N 1.6093254e-06  5 N 19.065327
+  mu 0: slide 2.4602058    mu 1e3 elliptic: slide 0.00014603585
 [PASS] contact_model - 22 / 22 checks
 --- tests/test_contact_rules.mojo ---
   one-way: highest 3.548625  rest 2.2997062
   conveyor: crate vx 2.0
-  friction override: mu=0 3.0  default 0.54999524  mu=1 -0.00012494484
+  friction override: mu=0 3.0  default 0.549997  mu=1 -0.00012402353
 [PASS] contact_rules - 9 / 9 checks
 --- tests/test_continuum.mojo ---
   soft body: NaN particle -> nonfinite 1  CONTINUUM_NAN 1  particle 0 y after 1 s hanging from the pinned particle 0.52814436  pinned particle y 0.8
@@ -468,8 +468,8 @@ state_io snapshot of the pair: 16744 bytes
   crowd: spawn/force time 7.7000003 min sep -0.5642853 late 0.088178396
 [PASS] crowd - 52 / 52 checks
 --- tests/test_cylinder.mojo ---
-  rolling down 20 deg: 8 segments 2.2345252  16 segments 2.2345262  analytic 2/3 g sin 2.2345319
-  standing r 0.3 hl 0.7 on a 16-gon base: y 0.6998981  axis y 1.0
+  rolling down 20 deg: 8 segments 2.234519  16 segments 2.234518  analytic 2/3 g sin 2.2345319
+  standing r 0.3 hl 0.7 on a 16-gon base: y 0.69989836  axis y 1.0
   lying on the floor: y 0.29950675
 [PASS] cylinder - 7 / 7 checks
 --- tests/test_dbvh.mojo ---
@@ -573,10 +573,10 @@ lattice: 50 / 50  ring: 12
 --- tests/test_ellipsoid.mojo ---
   equal radii 0.5 on a box floor: y 0.4997246  sphere r 0.5: y 0.49972457
   radii (1, 0.5, 0.7) lying: y 0.4997246
-  prolate (1, 0.4, 0.4) from 45 deg, angular damping 2: y 0.39973497  long axis . up 0.0033021832
+  prolate (1, 0.4, 0.4) from 45 deg, angular damping 2: y 0.39973497  long axis . up 0.0033021967
   undamped rocking from 10 deg: release y 0.43049866  centre y range 0.39926988 .. 0.43010688
-  rolling down 20 deg after 1 s: ellipsoid 2.3941398  sphere 2.3941417  5/7 g sin 2.3941412
-  stack: lower y 0.5012987  upper y 1.2961437  (0.5 and 1.3)
+  rolling down 20 deg after 1 s: ellipsoid 2.3941398  sphere 2.3941402  5/7 g sin 2.3941412
+  stack: lower y 0.50130415  upper y 1.2961445  (0.5 and 1.3)
   on a trimesh floor: y 0.49972367  on an SDF plane: y 0.49972457
   ray down t 4.5  ray along x t 4.0  distance from (0, 2, 0) 1.5000011  from (0.9, 0, 0) -0.099973984
   density 2: mass 2.9321532  2 * 4/3 pi a b c 2.9321532
@@ -683,10 +683,10 @@ displacement grid vs exact sums: worst 8.2701445e-06 m
 --- tests/test_fifth_wheel.mojo ---
 [PASS] fifth_wheel - 5 / 5 checks
 --- tests/test_filter_events.mojo ---
-  gap — unfiltered 0.49890056  same-layer excluded 0.4  one-sided mask 0.4
+  gap — unfiltered 0.49889883  same-layer excluded 0.4  one-sided mask 0.4
   sensor: crate y at step 30 1.764792  free-fall reference 1.764792
   first contact step: began 1.0  stay 0.0 | next step: began 0.0  stay 1.0 | after teleport: ended 1.0
-  seam — brute p1.x -0.6000607  events 635.0 | broadphase p1.x -0.6000607  events 635.0
+  seam — brute p1.x -0.6000593  events 635.0 | broadphase p1.x -0.6000593  events 635.0
   round trip — original gap 0.4  reloaded gap 0.4
   mesh events — contacts in the last step 2.0  began total 2.0
   zero mask, crate after 2s: -19.04086
@@ -791,20 +791,20 @@ recorder: bag at 240 20  at 130 18  first divergence -1  after editing tick 100 
 [PASS] force_elements - 19 / 19 checks
 --- tests/test_fracture.mojo ---
   wall: 40 fragments 135 bonds 8 footing anchors
-  shot: broke 114 bonds, thrown through 38 , left in line 0 , live bonds 29 of 143 , ball z -1.0444616
-  bricks: 81 fragments, asleep 54 of 54 on rigid bodies, islands 20 , on crate 27 , on ledge 24 , lowest centre 0.16578863561153412 , soft top moved -0.05242908000946045 , crate sag 0.011397063732147217 , max speed 0.02491091750562191
-  shards: 72 fragments, asleep 48 of 48 on rigid bodies, islands 19 , on crate 20 , on ledge 18 , lowest centre 0.053670573979616165 , soft top moved -0.04931533336639404 , crate sag 0.01059781014919281 , max speed 0.0
+  shot: broke 110 bonds, thrown through 37 , left in line 0 , live bonds 33 of 143 , ball z -0.9990313
+  bricks: 81 fragments, asleep 54 of 54 on rigid bodies, islands 19 , on crate 27 , on ledge 27 , lowest centre 0.16576169431209564 , soft top moved -0.049093425273895264 , crate sag 0.011515125632286072 , max speed 0.05227866768836975
+  shards: 72 fragments, asleep 48 of 48 on rigid bodies, islands 18 , on crate 20 , on ledge 16 , lowest centre 0.03980549797415733 , soft top moved -0.049301743507385254 , crate sag 0.010637655854225159 , max speed 0.0
   L chain: parts 2 fragments 36 volume 1.2000000000000002 parts volume 1.2
   L chain: bonds within parts 104 across parts 24
   L grouped: cells 36 -> bodies 27 ( 9 compounds ) vs 36 hull bodies; mass 1199.9999 vs 1200.0 ; bonds within parts 104 across parts 11 (hulls: 24 )
   rotated box: worst world-tensor entry error 5.5025018923515745e-06
   voronoi: 1000 cells, volume 8.000000000000002 of 8.0
   one cut: 1000 pieces, volume error 3.26405569239796e-14
-  snapshot: bonds broken after restore 14 vs 14 , live 15 vs 15
+  snapshot: bonds broken after restore 6 vs 6 , live 23 vs 23
 [PASS] fracture - 89 / 89 checks
 --- tests/test_fracture_save.mojo ---
-saved at tick 30: 82308 bytes, 52 fracture events so far, 66 welds live
-after 120 more ticks: events 7 / 7 live welds 59 / 59
+saved at tick 30: 82664 bytes, 52 fracture events so far, 66 welds live
+after 120 more ticks: events 25 / 25 live welds 41 / 41
 [PASS] fracture_save - 9 / 9 checks
 --- tests/test_fsi.mojo ---
   settling sphere: velocity -0.002730783  mean fluid 3.9152066e-05  relative -0.0027699352  Stokes-Hasimoto -0.0027770284  ratio 0.99744576  max spin 4.278299e-06
@@ -879,8 +879,8 @@ query_host[Tag](Health, Mana): 13 entities
 --- tests/test_hull.mojo ---
   face-face: hit 1.0  count 4.0  |n.y| 1.0  depth 0.19999999
   box-box reference: |n.y| 1.0  depth 0.19999999
-  rest y — hull 0.24971156  real box 0.24971078   hull speed 0.0
-  mixed — hull 0.24971156  box 0.24971078  sphere 0.24972892
+  rest y — hull 0.24971157  real box 0.24971077   hull speed 0.0
+  mixed — hull 0.24971148  box 0.24971077  sphere 0.24972892
   tetrahedron rest y: 0.19966602  (spawned at 0.6)
   collinear-hull contact count: 1.0
   duplicated-vertex |n.y|: 1.0
@@ -890,7 +890,7 @@ query_host[Tag](Health, Mana): 13 entities
   box fast path: values compared 12600  bits differing 0
 [PASS] hull - 25 / 25 checks
 --- tests/test_hull_irregular.mojo ---
-  prism apex-down: lowest vertex -0.0003291964530944824 asleep 1.0
+  prism apex-down: lowest vertex -0.00032920390367507935 asleep 1.0
   14-vertex balls: rested 6 of 6, asleep 6
   jittered cubes: rested 8 of 8, asleep 8
 [PASS] hull_irregular - 13 / 13 checks
@@ -906,15 +906,15 @@ sphere collision: gradient -0.021412198 1.1984232 RevReal -0.021412198 1.1984232
 --- tests/test_impact_report.mojo ---
   drop e = 0.0 : began impulse 5.163334  want (1+e) m v + m g dt = 5.1633334  approach 5.0  v 5.0
   drop e = 0.5 : began impulse 7.663334  want (1+e) m v + m g dt = 7.6633334  approach 5.0  v 5.0
-  stack stay forces: floor-1 29.400019  1-2 19.600006  2-3 9.799999
-  top box net contact force 9.475056e-06 9.799999 -2.2946742e-05
-  stack, steps 120-600: worst sideways force on the top box 7.182402e-05  worst |omega| 4.6623677e-06
+  stack stay forces: floor-1 29.39998  1-2 19.599987  2-3 9.7999935
+  top box net contact force 1.0622196e-05 9.7999935 -2.1776661e-06
+  stack, steps 120-600: worst sideways force on the top box 5.4241616e-05  worst |omega| 4.127488e-06
   hanging 2 kg: joint reaction on the box 0.0 19.6 0.0
-  at rest, last-substep estimate floor-1 29.399992  vs sum 29.400019
+  at rest, last-substep estimate floor-1 29.400003  vs sum 29.39998
   impact 5 m/s: substep sum 5.163334  last substep x 4 0.16333334  momentum change 5.1633334
   sleeping box: asleep True  stay events 1  their impulse 0.0
   bouncing ball: began impulse 11.5633335  ended peak 11.5633335
-  box on the centre vertex of a 4-triangle mesh: 4 triangle events, impulses sum 0.1633335  m g dt 0.16333334
+  box on the centre vertex of a 4-triangle mesh: 4 triangle events, impulses sum 0.16333342  m g dt 0.16333334
 [PASS] impact_report - 24 / 24 checks
 --- tests/test_implicit.mojo ---
 compliance: adjoint CG 79 iterations; worst |implicit - exact| / max 3.0212198109613665e-09
@@ -946,7 +946,7 @@ saddle: implicit -0.3460207901198977  central difference -0.34594534184484516
 [PASS] islands_par - 10 / 10 checks
 --- tests/test_iso_collision.mojo ---
 box SDF: triangles 7872  open edges 0  volume 3.9744866
-box dropped on the mesh: rests at 0.100401856 0.5999942 -0.19986793  (bottom 0.4999942 )
+box dropped on the mesh: rests at 0.10040132 0.599994 -0.19986826  (bottom 0.499994 )
 sphere SDF: open edges 0  volume 2.1380851  ( 2.1446605 )
 [PASS] iso_collision - 3 / 3 checks
 --- tests/test_isosurface.mojo ---
@@ -1002,7 +1002,7 @@ sphere SDF: open edges 0  volume 2.1380851  ( 2.1446605 )
   rope 2 m: ball rests at y 2.9997275
   thrown up at 4 m/s: peak 3.8075621  free flight 3.8163266
   jointed overlapping boxes, collide False : top moved 0.0
-  jointed overlapping boxes, collide True : top moved 0.0978779
+  jointed overlapping boxes, collide True : top moved 0.097877875
 [PASS] joints_ext - 18 / 18 checks
 --- tests/test_joints_lib.mojo ---
   prismatic along gravity: q = -4.910215  qd = -9.799982
@@ -1022,9 +1022,9 @@ sphere SDF: open edges 0  volume 2.1380851  ( 2.1446605 )
   box resting across two cells at 9 offsets, 2 s: worst drift 3.671646e-05
 [PASS] kinematic_mesh - 6 / 6 checks
 --- tests/test_large_world.mojo ---
-  stack 1e6 m out: absolute f32 rest speed 0.0 settle 0.022493047639727592 | rebased 0.0 0.022566961124539375 | at origin 0.0 0.022566961124539375
+  stack 1e6 m out: absolute f32 rest speed 0.0 settle 0.02249290980398655 | rebased 0.0 0.022568821907043457 | at origin 0.0 0.022568821907043457
   0.5 m/s body for 1 s at 1e6 m: |travel - 0.5| absolute 0.5  rebased 3.8743019104003906e-07
-  rebase at tick 120: max top speed after 0.0  max |moved + d - plain| 3.499868626022362e-06
+  rebase at tick 120: max top speed after 0.0  max |moved + d - plain| 5.89156843489036e-06
   CCD across a rebase: sphere world x 1.8499984741210938  (wall face at 1.95)
 [PASS] large_world - 22 / 22 checks
 --- tests/test_laws.mojo ---
@@ -1193,26 +1193,26 @@ iterations over 100 steps: Jacobi PCG 10623  MGPCG 400
 --- tests/test_mat.mojo ---
 [PASS] mat - 34 / 34 checks
 --- tests/test_material_contact.mojo ---
-  slide from 3 m/s: material-0.05 mesh 9.177368 m, body-0.05 box floor 9.177199 m (v^2/2 mu g = 9.18);  with a 0.5 friction rule 0.9121282 m
-  drop on 3 Hz material triangles: deepest 0.027545974 m;  3 Hz on the mesh body 0.027545974 m;  default 0.00031003356 m
+  slide from 3 m/s: material-0.05 mesh 9.177361 m, body-0.05 box floor 9.177171 m (v^2/2 mu g = 9.18);  with a 0.5 friction rule 0.9121277 m
+  drop on 3 Hz material triangles: deepest 0.027546763 m;  3 Hz on the mesh body 0.027546763 m;  default 0.00031003356 m
 [PASS] material_contact - 6 / 6 checks
 --- tests/test_materials.mojo ---
-  slide distances -- multiply: 3.803211212158203  min: 3.7539873123168945  average: 1.9125382900238037  max: 1.0121031999588013
+  slide distances -- multiply: 3.803211212158203  min: 3.7539854049682617  average: 1.912537693977356  max: 1.012102723121643
 [PASS] materials - 16 / 16 checks
 --- tests/test_mesh_bake.mojo ---
   bumpy: largest original-vertex distance to the baked surface 0.02160774916410446
 [PASS] mesh_bake - 24 / 24 checks
 --- tests/test_mesh_reduce.mojo ---
-sliding on 0.25 m heightfield: manifolds per box off 38.0  on 1.0   up-facing off 38.0  on 1.0   rest y 0.29999322 0.2992253   travel 0.4040016 0.40502024
-V valley: manifolds off 22  on 3   rest x -0.10976763 -0.10977338
+sliding on 0.25 m heightfield: manifolds per box off 38.0  on 1.0   up-facing off 38.0  on 1.0   rest y 0.29999322 0.29923514   travel 0.4040015 0.4049804
+V valley: manifolds off 22  on 3   rest x -0.10977148 -0.10975707
 material boundary: up-facing manifolds 2
-trimesh 0.25 m grid slide: no guard 0.099208355  guard 0.4040029
+trimesh 0.25 m grid slide: no guard 0.0992012  guard 0.4040029
 [PASS] mesh_reduce - 5 / 5 checks
 --- tests/test_mesh_round.mojo ---
-  slope: speed after 1 s 2.3941429  analytic 2.3941412  normal offset -6.2555075e-05
+  slope: speed after 1 s 2.3941443  analytic 2.3941412  normal offset -4.2170286e-05
   ball on a triangle's middle: y 0.499728
   capsule on 400-quad floor: y 0.29999298  axis y-component 5.9604645e-08
-  ball rolling across 400 quads: vx 2.9999533  max|vy| 0.0002853861
+  ball rolling across 400 quads: vx 2.999961  max|vy| 0.00030326843
   control, no flags: vx 1.9417392
   instanced tiles: ball heights 0.49972802 1.4997282
 [PASS] mesh_round - 12 / 12 checks
@@ -1358,7 +1358,7 @@ round trip: quantize_rotation 10000 / 10000 ; plain rounding off on 161 of 10000
 [PASS] net_pose - 5 / 5 checks
 --- tests/test_netcode.mojo ---
   netcode: rollback peer 0 181 rollbacks, 1094 re-simulated ticks, 477 mispredicted inputs
-  netcode: snapshot 5488 bytes full, 1551 bytes per frame to all clients (delta), frames 249
+  netcode: snapshot 5488 bytes full, 1590 bytes per frame to all clients (delta), frames 249
 [PASS] netcode - 28 / 28 checks
 --- tests/test_noise.mojo ---
   perlin3 range: -0.7781262993812561 0.7502906322479248  value3: -0.9594535231590271 0.9886789321899414  fbm3: -0.4969649016857147 0.49642840027809143
@@ -1370,7 +1370,7 @@ round trip: quantize_rotation 10000 / 10000 ; plain rounding off on 161 of 10000
 --- tests/test_np_reuse.mojo ---
   tiered stacks (200 boxes): candidates copied over 120 steps 16358
   sleeping stacks + filter change at step 150: copied after the change 2848
-  heightfield raised under resting boxes at step 120: box at x 0, y 0.29994217
+  heightfield raised under resting boxes at step 120: box at x 0, y 0.2999422
 [PASS] np_reuse - 8 / 8 checks
 --- tests/test_numerics.mojo ---
   poisson n 8  iters 4  residual 0.0  worst error 0.0
@@ -1440,7 +1440,7 @@ CG n 16384 : serial 154 iterations, parallel 154
   Delaunay of 400 Poisson points: 784 triangles, hull 14  2n - 2 - h = 784
   12-gon + centre: 12 triangles; 6 x 6 lattice: 50 triangles (2n - 2 - h = 50)
   thermal erosion (talus 0.8): max slope 2.9228673 -> 0.80000097   total height 288.16943539120257 -> 288.169481894467
-  box on the generated heightfield: y 0.48338082  terrain under it 0.1413984  speed 0.0
+  box on the generated heightfield: y 0.49504468  terrain under it 0.15201929  speed 0.0
 [PASS] pcg - 13 / 13 checks
 --- tests/test_phys_character.mojo ---
   settled centre y 1.0 (ride 1.0)  vy -0.061247706  on ground True
@@ -1499,20 +1499,20 @@ falloff: health 960 975 990  total 75  events 3
   manifold points — polygon 2  cloud 2
 [PASS] quickhull - 17 / 17 checks
 --- tests/test_ragdoll.mojo ---
-  driven: worst joint error (deg) 3.7804108
-  driven at 20 Hz: worst joint error (deg) 0.7241538
+  driven: worst joint error (deg) 3.791576
+  driven at 20 Hz: worst joint error (deg) 0.7219889
   limp: worst joint error (deg) 29.999954
   walking: pelvis tracking error 1.1920929e-07  hip gap 0.0010780024
-  hit: before 3.7804108  peak 17.599688  after 1.5 s 4.58981
+  hit: before 3.791576  peak 17.370735  after 1.5 s 4.5940723
   1000 Hz drive: error 0.0
-  limp leg, knee limited to +-0.2 rad: worst knee angle 0.2037002  unlimited ball knee 1.5227244
+  limp leg, knee limited to +-0.2 rad: worst knee angle 0.2037002  unlimited ball knee 1.4868366
 [PASS] ragdoll - 14 / 14 checks
 --- tests/test_ragdoll_ctl.mojo ---
 ragdoll body masses 9.999999 19.999998
 get-up blend: 0.5 0.25 0.0  mode at end 0
-assist: COM x 0.0 -> 0.099397406  (support centre 0.1)
-after a 60 N s push: capture point x 0.8691256  margin -0.6191256  need step True
-after 1 steps: margin 0.14997107  COM x 0.86903346  (support centre 0.8691256 )  speed 0.00016673408
+assist: COM x 0.0 -> 0.09939742  (support centre 0.1)
+after a 60 N s push: capture point x 0.8691259  margin -0.6191259  need step True
+after 1 steps: margin 0.14997101  COM x 0.8690336  (support centre 0.8691259 )  speed 0.00016682946
 carried box at 0.5999999 1.7997258  (hand at 0.6, 2.0)
 released box fell 1.988128 m in 0.5 s
 [PASS] ragdoll_ctl - 13 / 13 checks
@@ -1533,7 +1533,7 @@ released box fell 1.988128 m in 0.5 s
   e=0.8 first apex: 0.5816684365272522 (analytic 0.64)
   e=0.4 first apex: 0.1435960829257965 (analytic 0.16)
   e=0.0 first apex: 0.0
-  apex ratio 2/1: 0.5992163093313708 (analytic 0.64)
+  apex ratio 2/1: 0.5728396664638112 (analytic 0.64)
 [PASS] restitution - 7 / 7 checks
 --- tests/test_rev_batch.mojo ---
 world 5: RevReal dx/dvx0 1.1130941 dx/dmu -0.10699005 ;  RevBatch lane 5 1.1130941 -0.10699005
@@ -1556,9 +1556,9 @@ rigid in air, 0.3 s: v 0.13973546 0.18008771 6.20904e-09  w_z 3.7921658  max imb
   gravity scale 0 / 2 / 1: vy 0.0 -9.799998 -4.899999
   density 1000: box 1000.0  sphere 523.5988  capsule 452.3894
   60 N for 1/60 s: 1.0  impulse 1: 1.0  accel 60 on 5 kg: 1.0000001
-  2.5D locked box after 2 s: pos 1.1842702 0.34833795 0.0
+  2.5D locked box after 2 s: pos 1.2066532 0.3483389 0.0
   capped fall: max speed 3.0  clamps counted 42
-  QuatBody6 vs ScrewBody6 with damping / locks / scale / force: worst position gap 0.0019125567  control without parameters 0.0009906468
+  QuatBody6 vs ScrewBody6 with damping / locks / scale / force: worst position gap 0.0018782171  control without parameters 0.002501307
 [PASS] rigid_params - 32 / 32 checks
 --- tests/test_rng.mojo ---
 [PASS] rng - 15 / 15 checks
@@ -1576,9 +1576,9 @@ rigid in air, 0.3 s: v 0.13973546 0.18008771 6.20904e-09  w_z 3.7921658  max imb
 [PASS] rod_strand_twist - 3 / 3 checks
 --- tests/test_rolling_sphere.mojo ---
   sphere v0=3 mu=0.5: vx(1.5 s) = 2.1428554  vx(4 s) = 2.1428554  omega*r(4 s) = 2.1428554  y(4 s) = 0.49972457
-  capsule: vx = 2.0339036  want 2.0338984  omega*r = 2.0339036  y = 0.2996532
+  capsule: vx = 2.0338936  want 2.0338984  omega*r = 2.0338936  y = 0.2996541
   spin-only: vx = 1.1428576  omega*r = 1.1428576
-  ball on dynamic slab: relative vx = 2.1429048  omega*r = 2.142905  height above slab centre = 0.6996724
+  ball on dynamic slab: relative vx = 2.14291  omega*r = 2.1429103  height above slab centre = 0.6996724
 [PASS] rolling_sphere - 11 / 11 checks
 --- tests/test_rope.mojo ---
   catenary sag 1.0052663  rope 1.0072956  length 3.0027258
@@ -1655,7 +1655,7 @@ replay: scripted run equals live True  posts one frame later differ True
 --- tests/test_sat.mojo ---
 [PASS] sat - 9 / 9 checks
 --- tests/test_save.mojo ---
-  one second after loading: save vs snapshot max position difference 2.0802021e-05
+  one second after loading: save vs snapshot max position difference 2.0861626e-05
 [PASS] save - 11 / 11 checks
 --- tests/test_save_checkpoint.mojo ---
   tick 60: save checkpoint 1008 bytes, full checkpoint (scene snapshot) 2729 bytes
@@ -1710,9 +1710,9 @@ water : hash differs after one more tick
   sphere on the SDF plane: y 0.49972457
   box on 13^3 grid: y 0.24972451  contacts 4  | 49^3: y 0.24972454  contacts 4
   same box on an analytic box floor: y 0.24970748
-  20 boxes in an SDF bowl after 5 s: max speed 0.0  lowest centre above the surface 0.17202556
+  20 boxes in an SDF bowl after 5 s: max speed 0.0  lowest centre above the surface 0.17202629
   ray down onto the SDF plane from y = 5: t 4.99995
-  8 m/s sphere: lowest y 0.29972798  capsule lying: y 0.29989338
+  8 m/s sphere: lowest y 0.29972798  capsule lying: y 0.29990256
 [PASS] sdf_shape - 12 / 12 checks
 --- tests/test_sediment.mojo ---
 Stokes rate 1086.7925 /s  settling speed 0.0056145834 m/s   grain vy after 0.1 s -0.0056145834
@@ -1742,10 +1742,10 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571327
 --- tests/test_sequence_player.mojo ---
   at 1.125 s: clip 8 t 0.1875 weight 0.5 ; from clip 7 t 1.125 ;  at 3.5 s: clip 9 t 0.5 weight 1.0
   events 2 : 11 at tick 31   12 at tick 91 (sequence 3 )
-  platform end x 4.0333285  box x 3.832529  released at vx 1.9999468 ;  0.5 s later x 5.0332947 (free flight 5.033302 ) y -0.31862292 ( -0.3083986 )
+  platform end x 4.0333285  box x 3.8325293  released at vx 1.9999471 ;  0.5 s later x 5.0332947 (free flight 5.0333023 ) y -0.31862202 ( -0.30839866 )
 [PASS] sequence_player - 8 / 8 checks
 --- tests/test_serialize.mojo ---
-  blob bytes: 21030
+  blob bytes: 21029
 [PASS] serialize - 8 / 8 checks
 --- tests/test_shallow_bed.mojo ---
   lake over a 0.5 m bump, 2 s: well balanced surface dev 2.3841858e-07  max |u| 5.0202283e-07 ;  naive source 0.018750906 0.17940608
@@ -1761,7 +1761,7 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571327
 --- tests/test_shape.mojo ---
 [PASS] shape - 7 / 7 checks
 --- tests/test_shape_dispatch.mojo ---
-  F3 heightfield off-centre: brute y 0.2499947  bp y 0.2499947
+  F3 heightfield off-centre: brute y 0.24998233  bp y 0.24998233
   F3 trimesh off-centre: brute y 0.24984655  bp y 0.24984655
   F4a sensor overlapping mesh: began 2.0  stay 18.0  ended 0.0
   F4a sensor clear of mesh: began 0.0  stay 0.0  ended 0.0
@@ -1769,16 +1769,16 @@ cloud of 400 grains, 0.3 s: sank one-way 0.0016791671  two-way 0.0034571327
   F4b off-centre trimesh: bottom y 0.049999997  max speed 0.001059859
   F4c sensor passthrough: final x 5.8333344
   F4c filtered wall: final x 5.8333344
-  F4c mesh bbox: final y 0.099362545
-  extreme degenerate triangle: brute y 0.24984659  bp y 0.24984659
+  F4c mesh bbox: final y 0.0993622
+  extreme degenerate triangle: brute y 0.24984655  bp y 0.24984655
   extreme edge-seam rest: y 0.24981955  speed 0.0
 [PASS] shape_dispatch - 22 / 22 checks
 --- tests/test_shapes6.mojo ---
   sphere rest y: 0.29972830414772034 (radius 0.3)
   sphere e=0.8 apex: 0.5816709518432617 (analytic 0.64)
   sphere-sphere: v1 1.5 v2 1.5 sum 3.0
-  capsule rest y: 0.19965341687202454 axis up-component: -1.50203705e-05
-  sphere-on-box: y 0.7993004322052002 x -1.8993774574482813e-05
+  capsule rest y: 0.19965395331382751 axis up-component: -1.3947487e-05
+  sphere-on-box: y 0.7993003726005554 x -1.8983662812388502e-05
 [PASS] shapes6 - 10 / 10 checks
 --- tests/test_sim_cache.mojo ---
   cloth 256 points x 240 frames: cache 197486 bytes vs raw 737280 ( 26.785753038194443 % )  max error 0.0009999871
@@ -1875,8 +1875,8 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 --- tests/test_softccd.mojo ---
   no-ccd max particle x: 9.205572128295898
   ccd max particle x: -0.9510559439659119
-  plate ccd: min bottom 0.32929912209510803 cube top 0.6564057469367981
-  plate no-ccd: min bottom -0.0007605929858982563
+  plate ccd: min bottom 0.22981829941272736 cube top 0.6493445634841919
+  plate no-ccd: min bottom -0.0007658270187675953
    hull wall: max particle x without ccd 9.205572128295898  with ccd -1.0223491191864014
    trimesh wall: max particle x without ccd 9.205572128295898  with ccd -0.9995356798171997
 [PASS] softccd - 8 / 8 checks
@@ -1901,22 +1901,22 @@ checksum DLB 4194817077280392444  LBS 15795418236146614043
 [PASS] solver_bp_seam - 36 / 36 checks
 --- tests/test_solver_broadphase.mojo ---
   brute cache pairs: 16  bp cache pairs: 16
-  fast faller y: 0.2497090846300125
+  fast faller y: 0.24970890581607819
 [PASS] solver_broadphase - 4 / 4 checks
 --- tests/test_solver_stress.mojo ---
-  1:100   light box floor penetration 0.02953063  overlap with heavy 0.029556155  drift 0.00081143714  sag law 0.02758188
-  1:1000  light box floor penetration 0.25098103  overlap with heavy 0.27522972  drift 0.01186669  sag law 0.2758188
-  1:1e4   light box floor penetration 0.25132212  overlap with heavy 0.28463852  drift 0.0024085667
-  max_mass_ratio 10:  1:1000 penetration 0.0031626374  overlap 0.0031921864  drift 0.0005835799    1:1e4 penetration 0.0031631738  overlap 0.0031923652
-  floor force under 1000 kg on 1 kg (true 9809.8 N): off 8408.604  ratio 10 9810.122
-  1000 / 1 / 1 tower: worst overlap off 0.6182629  ratio 10 0.006403774   top drop off 1.0002914  ratio 10 0.013089895
-  (ratio off) asleep at step 62  woke True  bullet max x -0.28928492  worst sink 0.2513441  asleep again 46
-  1000 on 1 kg + sleep + CCD bullet: asleep at step 37  woke True  bullet max x -0.29868332  worst sink 0.003216803  asleep again at step 31
+  1:100   light box floor penetration 0.029534727  overlap with heavy 0.029536515  drift 0.00061966816  sag law 0.02758188
+  1:1000  light box floor penetration 0.251524  overlap with heavy 0.27653554  drift 0.002844115  sag law 0.2758188
+  1:1e4   light box floor penetration 0.2524103  overlap with heavy 0.2853863  drift 0.0026546011
+  max_mass_ratio 10:  1:1000 penetration 0.0031629503  overlap 0.0031921566  drift 0.0005837441    1:1e4 penetration 0.0031634271  overlap 0.0031925142
+  floor force under 1000 kg on 1 kg (true 9809.8 N): off 8365.224  ratio 10 9810.156
+  1000 / 1 / 1 tower: worst overlap off 0.5395317  ratio 10 0.006403625   top drop off 1.0002921  ratio 10 0.013089657
+  (ratio off) asleep at step 91  woke True  bullet max x -0.3003057  worst sink 0.2516019  asleep again 50
+  1000 on 1 kg + sleep + CCD bullet: asleep at step 37  woke True  bullet max x -0.29870507  worst sink 0.0032170117  asleep again at step 31
   20-link chain + 100 kg: length 11.504181  rest 10.3  stretch 11.691074 %   max_mass_ratio 10: 2.1438782 %
-  1000-box block, 300 steps: lowest centre 0.24607512 (rest 0.25)  max speed 0.0  finite True
+  1000-box block, 300 steps: lowest centre 0.24607535 (rest 0.25)  max speed 0.0  finite True
   60 dominoes after 15 s: fallen 60
-  box teleported 10 cm into a stack: max speed 0.32238674  horizontal separation after 1 s 0.4990606
-  two boxes at the same point: separation after 2 s 0.49971262
+  box teleported 10 cm into a stack: max speed 0.332193  horizontal separation after 1 s 0.49905947
+  two boxes at the same point: separation after 2 s 0.49973232
 [PASS] solver_stress - 11 / 11 checks
 --- tests/test_solvers.mojo ---
   Poisson 32 x 32: Cholesky error 7.1525574e-07  nnz(L) 23344 ;  CG 69 iterations error 4.10527e-06 ;  IC(0)-PCG 22 iterations error 5.170703e-06 shifted 0
@@ -2013,7 +2013,7 @@ first mode T1 0.9441842 ;  rope 0.9636574 ;  strand ftl_damping 0.5 0.7913368  0
   heightfield: ray at cell (1, 1) -> triangle 6  material 8
   braking from 15 m/s: mesh asphalt 13.6419325 m (wheel material 0 ) vs box road mu 0.5 13.641933 m
                        mesh ice     150.08862 m (wheel material 1 ) vs box road mu 0.05 150.08842 m
-  restored mid-run: mesh vertex 0 x -1.9209576  (uninterrupted -1.9209576 )  box y 1.5498761  same bits True
+  restored mid-run: mesh vertex 0 x -1.9209576  (uninterrupted -1.9209576 )  box y 1.5499171  same bits True
 [PASS] surface_material - 8 / 8 checks
 --- tests/test_system_determinism.mojo ---
 [PASS] system_determinism - 4 / 4 checks
@@ -2024,7 +2024,7 @@ first mode T1 0.9441842 ;  rope 0.9636574 ;  strand ftl_damping 0.5 0.7913368  0
 --- tests/test_system_stack.mojo ---
 [PASS] system_stack - 9 / 9 checks
 --- tests/test_system_tiers.mojo ---
-  system_tiers: tier changes 3430 max dp 0.006805539 max dv 0.32666668 pen gap 0.0044184606 bodies solved per step full 1800 tiered 627
+  system_tiers: tier changes 3430 max dp 0.006805539 max dv 0.32666668 pen gap 0.0044201147 bodies solved per step full 1800 tiered 627
 [PASS] system_tiers - 7 / 7 checks
 --- tests/test_taylor_green.mojo ---
   MAC 32^2: amplitude 0.010000002 -> 0.0036610516  decay rate 0.10048348  analytic 0.1  worst divergence 4.7431867e-09 (U/dx 0.05092958 )
@@ -2046,11 +2046,11 @@ first mode T1 0.9441842 ;  rope 0.9636574 ;  strand ftl_damping 0.5 0.7913368  0
   relative: 0.002744175924799969
 [PASS] tendon - 12 / 12 checks
 --- tests/test_terrain_deform.mojo ---
-  crate after the crater: -0.7463816  edited corners 45
+  crate after the crater: -0.74637157  edited corners 45
 [PASS] terrain_deform - 11 / 11 checks
 --- tests/test_terrain_stream.mojo ---
 loaded cells 12  colliders 12
-box rests at y 1.0384569  bottom 0.7884569  terrain there 0.7824683
+box rests at y 1.7043021  bottom 1.4543021  terrain there 1.4939256
 after moving 1 km: removed 12 of 12  now 11 colliders, 11 loaded
 [PASS] terrain_stream - 5 / 5 checks
 --- tests/test_tetmesh.mojo ---
@@ -2105,7 +2105,7 @@ after 3 s: gas excess heat 9043.518577069044 J/m  centroid y 0.40095794523649525
 [PASS] tiers - 26 / 26 checks
 --- tests/test_tiers_aggregate.mojo ---
 proxies 16  first: members 2  mass 2.0  centroid 40.0 0.4999094
-hit stack: lower box moved 0.11167145  vs untiered 0.11230469  diff 0.00063323975
+hit stack: lower box moved 0.11216736  vs untiered 0.11225891  diff 9.1552734e-05
 observer at x = 100: proxies 13
 [PASS] tiers_aggregate - 4 / 4 checks
 --- tests/test_tiers_parity.mojo ---
@@ -2133,15 +2133,15 @@ observer at x = 100: proxies 13
 --- tests/test_trig.mojo ---
 [PASS] trig - 11 / 11 checks
 --- tests/test_trimesh.mojo ---
-  flat mesh rest y 0.24984673  box-floor reference 0.24971078  speed 0.0
-  ramp: y 0.1726033  above surface 0.26551944  speed 0.0
-  bowl rest y — heightfield 0.2834223  triangle soup 0.28341693
-  on mesh — box 0.24969396  sphere 0.24986403  hull 0.24969396
-  round trip — original 0.24984673  loaded 0.24984673
+  flat mesh rest y 0.24984632  box-floor reference 0.24971077  speed 0.0
+  ramp: y 0.17258322  above surface 0.26551953  speed 0.0
+  bowl rest y — heightfield 0.28342468  triangle soup 0.28341693
+  on mesh — box 0.24969366  sphere 0.24986403  hull 0.24969366
+  round trip — original 0.24984632  loaded 0.24984632
   empty mesh, crate after 1s: -4.3204203
   zero-area mesh, crate after 1s: -4.3204203
   heightfield candidates — outside 0.0  straddling 2.0
-  valley — y 0.38483456  speed 0.0  up.y 0.9987999
+  valley — y 0.3849137  speed 0.0  up.y 0.9989443
 [PASS] trimesh - 18 / 18 checks
 --- tests/test_tween.mojo ---
 [PASS] tween - 359 / 359 checks
@@ -2155,7 +2155,7 @@ observer at x = 100: proxies 13
   s = 2^4: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
   s = 2^7: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
   s = 2^10: per body |pos/s - pos_1|: 0.0 0.0 0.0 0.0 0.0 0.0
-  s = 2^7 without UnitScale: worst |pos/s - pos_1| = 0.24893641471862793
+  s = 2^7 without UnitScale: worst |pos/s - pos_1| = 0.24852663278579712
 [PASS] unit_scale - 12 / 12 checks
 --- tests/test_vbd_cloth.mojo ---
   max horizontal neighbour distance: 0.05003960536909161
@@ -2185,11 +2185,11 @@ coasting from 5 m/s, 1 s: without rocket -0.10789461  with 3 kN rocket 1.6183065
 --- tests/test_vehicle_kinds.mojo ---
 mixer: roll torque 0.39999998 (0.4)  total 8.0   yaw reaction 0.05 (0.05)
 hover after 4 s: y 2.000018  up.y 1.0  heading 0.9999979
-tracks 2 / 2 m/s, 3 s: forward speed 1.9999998  yaw rate 4.7097287e-16
-tracks +1 / -1 m/s from rest, 3 s: centre moved 0.00045151822  yaw rate 0.22685188  (no-slip 1.1111111111111112 )
-ramp climb, tracks 2 m/s, 10 s: slope 0.2 z 12.264299  vz 1.8041087 ; slope 0.4 z 9.532884  vz 1.5753446
-ramp hold, tracks stopped, slope 0.15: vz -0.11980487  viscous creep W sin(a) / (n k) -0.12114471
-parked on the ramp, drift 1 s -> 5 s: slope 0.15 -2.861023e-06  m; 0.6 -8.34465e-06  m; slope 0.9 ends at z -3.277102  (from 3)
+tracks 2 / 2 m/s, 3 s: forward speed 1.9999998  yaw rate 1.2917912e-15
+tracks +1 / -1 m/s from rest, 3 s: centre moved 0.0004539387  yaw rate 0.22685188  (no-slip 1.1111111111111112 )
+ramp climb, tracks 2 m/s, 10 s: slope 0.2 z 12.264352  vz 1.8041089 ; slope 0.4 z 9.480202  vz 1.5753449
+ramp hold, tracks stopped, slope 0.15: vz -0.11980486  viscous creep W sin(a) / (n k) -0.12114471
+parked on the ramp, drift 1 s -> 5 s: slope 0.15 -2.6226044e-06  m; 0.6 -8.821487e-06  m; slope 0.9 ends at z -3.3496275  (from 3)
 hitch: trailer moved 3.9998922 m, worst anchor gap 0.00029503176
 [PASS] vehicle_kinds - 12 / 12 checks
 --- tests/test_vehicle_seat.mojo ---
@@ -2221,8 +2221,8 @@ wall on the left: exit ok True  at x 1.6
 [PASS] water_seam - 3 / 3 checks
 --- tests/test_weld.mojo ---
   weld drift 0.009460454  ball drift 1.2818149  weld tilt 0.0022981348
-  landed pair: gap 0.4998336 heights 0.24970833 0.24971324
-  overlap 0.4: welded spacing 0.6000000238418579  free spacing 0.9956425428390503
+  landed pair: gap 0.49983224 heights 0.24970828 0.24971324
+  overlap 0.4: welded spacing 0.6000000238418579  free spacing 0.9956536889076233
 [PASS] weld - 15 / 15 checks
 --- tests/test_wind_lbm.mojo ---
   uniform lattice flow 0.02 at 5 m/s per unit: worst node error 8.940697e-08
@@ -2247,7 +2247,12 @@ plate 90 deg: CL -0.1860167  CD 4.130782
 --- tests/test_world.mojo ---
 [PASS] world - 15 / 15 checks
 --- tests/test_world_f64.mojo ---
-  settling stack, top box |f32 - f64|: 75971 nm
+  settling stack, top box |f32 - f64|: 82168 nm
 [PASS] world_f64 - 5 / 5 checks
 --- tests/test_world_query.mojo ---
 [PASS] world_query - 30 / 30 checks
+--- tests/test_light_cone.mojo ---
+  spinning plank: pair with the box after one step True  pairs 1
+  deepest contact over the next 10 steps 0.005839169
+  tiers graph-only: near 0 inbound 2 outbound 2  with horizons: near 0 inbound 1 outbound 2  arriving 1
+[PASS] light_cone - 7 / 7 checks
