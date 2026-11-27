@@ -853,9 +853,9 @@ counted, not listed.
 - `def collect_bp_pairs[BP: BroadPhase](mut bp: BP, boxes: List[AABB[BP.dim]], statics: List[Bool], mut out: List[Pair], skip: List[Bool] = List())`
 - `def speculative_margin(vel_a: SIMD[.float32, 4], vel_b: SIMD[.float32, 4], spec_dt: Float32, base: Float32 = 0.02) -> Real`
 - `def sphere_triangle_manifold(c: SIMD[.float32, 4], r: Float32, margin: Float32, v0: SIMD[.float32, 4], v1: SIMD[.float32, 4], v2: SIMD[.float32, 4], face_n: SIMD[.float32, 4]) -> ContactManifold[Int(3)]`
-- `def try_compound_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact], margin_base: Float32 = 0.02)`
+- `def try_compound_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact], margin_base: Float32 = 0.02, spin_infl: Float32 = Float32("0"))`
 - `def try_mesh_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact])`
-- `def try_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, vel_i: SIMD[.float32, 4], vel_j: SIMD[.float32, 4], spec_dt: Float32, mut out: List[RawContact], mut sensors: List[RawContact], margin_base: Float32 = 0.02)`
+- `def try_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, vel_i: SIMD[.float32, 4], vel_j: SIMD[.float32, 4], spec_dt: Float32, mut out: List[RawContact], mut sensors: List[RawContact], margin_base: Float32 = 0.02, spin_i: Float32 = Float32("0"), spin_j: Float32 = Float32("0"))`
 - `def try_sdf_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact])`
 
 ### `collision/gpu_narrow.mojo`
@@ -1253,7 +1253,7 @@ counted, not listed.
 - struct `ClothGas2` — 2 methods
 
 ### `physics/collide_par.mojo`
-- `def narrow_parallel(mut colliders: ColliderSet, mut poses: List[Pose3], mut vels: List[SIMD[.float32, 4]], mut ci: List[Int], mut cj: List[Int], spec_dt: Float32, margin_base: Float32, mut raws: List[RawContact], mut sraws: List[RawContact], mut counts: List[Int], mut scounts: List[Int], workers: Int, dispatch: Dispatch)`
+- `def narrow_parallel(mut colliders: ColliderSet, mut poses: List[Pose3], mut vels: List[SIMD[.float32, 4]], mut ci: List[Int], mut cj: List[Int], spec_dt: Float32, margin_base: Float32, mut raws: List[RawContact], mut sraws: List[RawContact], mut counts: List[Int], mut scounts: List[Int], workers: Int, dispatch: Dispatch, mut spins: List[Float32])`
 - `def pairs_parallel[BP: BroadPhase](mut bp: BP, mut boxes: List[AABB[BP.dim]], mut statics: List[Bool], mut out: List[Pair], workers: Int, dispatch: Dispatch, mut skip: List[Bool])`
 - `def prep_parallel[B: Body6](mut bset: BodySet[B], mut colliders: ColliderSet, mut cache: List[ContactConstraint], mut cidx: Dict[Int, Int], mut raws: List[RawContact], warm: Bool, workers: Int, dispatch: Dispatch, match_scale: Float32 = Float32("1")) -> List[ContactConstraint]`
 - aliases: `BP_PAR_MIN`, `NARROW_PAR_MIN`
