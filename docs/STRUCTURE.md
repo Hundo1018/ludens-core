@@ -853,7 +853,7 @@ counted, not listed.
 - `def collect_bp_pairs[BP: BroadPhase](mut bp: BP, boxes: List[AABB[BP.dim]], statics: List[Bool], mut out: List[Pair], skip: List[Bool] = List())`
 - `def speculative_margin(vel_a: SIMD[.float32, 4], vel_b: SIMD[.float32, 4], spec_dt: Float32, base: Float32 = 0.02) -> Real`
 - `def sphere_triangle_manifold(c: SIMD[.float32, 4], r: Float32, margin: Float32, v0: SIMD[.float32, 4], v1: SIMD[.float32, 4], v2: SIMD[.float32, 4], face_n: SIMD[.float32, 4]) -> ContactManifold[Int(3)]`
-- `def try_compound_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact])`
+- `def try_compound_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact], margin_base: Float32 = 0.02)`
 - `def try_mesh_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact])`
 - `def try_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, vel_i: SIMD[.float32, 4], vel_j: SIMD[.float32, 4], spec_dt: Float32, mut out: List[RawContact], mut sensors: List[RawContact], margin_base: Float32 = 0.02)`
 - `def try_sdf_pair(colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3, margin: Float32, mut out: List[RawContact])`
@@ -878,7 +878,7 @@ counted, not listed.
 - struct `GjkManifoldNarrowPhase` : ManifoldNarrowPhase — 2 methods
 - struct `OBBManifoldNarrowPhase` : ManifoldNarrowPhase — 2 methods
 - struct `SATManifoldNarrowPhase` : ManifoldNarrowPhase — 3 methods
-- `def box_box_manifold(ca: SIMD[.float32, 4], axa: Array[SIMD[.float32, 4], Int(3)], ha: SIMD[.float32, 4], cb: SIMD[.float32, 4], axb: Array[SIMD[.float32, 4], Int(3)], hb: SIMD[.float32, 4]) -> ContactManifold[Int(3)]`
+- `def box_box_manifold(ca: SIMD[.float32, 4], axa: Array[SIMD[.float32, 4], Int(3)], ha: SIMD[.float32, 4], cb: SIMD[.float32, 4], axb: Array[SIMD[.float32, 4], Int(3)], hb: SIMD[.float32, 4], spec: Float32 = Float32("0")) -> ContactManifold[Int(3)]`
 - `def capsule_box_manifold(cc: SIMD[.float32, 4], cax: SIMD[.float32, 4], hl: Float32, r: Float32, cb: SIMD[.float32, 4], axb: Array[SIMD[.float32, 4], Int(3)], hb: SIMD[.float32, 4]) -> ContactManifold[Int(3)]`
 - `def capsule_capsule_manifold(ca: SIMD[.float32, 4], axa: SIMD[.float32, 4], ha: Float32, ra: Float32, cb: SIMD[.float32, 4], axb: SIMD[.float32, 4], hb: Float32, rb: Float32) -> ContactManifold[Int(3)]`
 - `def capsule_sphere_manifold(cc: SIMD[.float32, 4], cax: SIMD[.float32, 4], hl: Float32, r: Float32, cs: SIMD[.float32, 4], rs: Float32) -> ContactManifold[Int(3)]`

@@ -108,7 +108,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04-arm, macos-14]
+        os: [ubuntu-24.04-arm, macos-15]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     timeout-minutes: 180
