@@ -94,6 +94,8 @@ rules-icount = "python3 scripts/rules_icount.py"
 # Which CPU target / optimisation factors change simulation bits (scripts/fp_probe.py; ROADMAP 17.76).
 fp-probe = "python3 scripts/fp_probe.py"
 numeric-cost = { cmd = "python3 scripts/numeric_cost_probe.py", depends-on = ["build"] }
+# Light-cone partition of gameplay (projectiles, damage, death) vs fixed cells; no build (scripts/lightcone_sim.py; 17.85).
+lightcone-sim = "python3 scripts/lightcone_sim.py"
 # The C-ABI library vs a native Mojo program on an FMA CPU: same world hash for box / capsule / hull (17.96).
 fma-parity = { cmd = "python3 scripts/fma_parity_probe.py", depends-on = ["build"] }
 alloc-probe = "python3 scripts/alloc_probe.py"
