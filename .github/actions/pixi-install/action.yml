@@ -21,10 +21,11 @@ runs:
         PIXI_VERSION: ${{ inputs.pixi-version }}
       run: |
         set -euo pipefail
-        case "$(uname -m)" in
-          x86_64)  asset=pixi-x86_64-unknown-linux-musl ;;
-          aarch64) asset=pixi-aarch64-unknown-linux-musl ;;
-          *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+        case "$(uname -s)-$(uname -m)" in
+          Linux-x86_64)  asset=pixi-x86_64-unknown-linux-musl ;;
+          Linux-aarch64) asset=pixi-aarch64-unknown-linux-musl ;;
+          Darwin-arm64)  asset=pixi-aarch64-apple-darwin ;;
+          *) echo "unsupported platform: $(uname -s)-$(uname -m)" >&2; exit 1 ;;
         esac
         dir="$HOME/.pixi/bin"
         mkdir -p "$dir"
