@@ -1,6 +1,6 @@
 # tier: component
 from harness.runner import Suite
-from geometry.vec import Vec2, Vec3
+from geometry.vec import Real, Vec2, Vec3
 from geometry.aabb import AABB2, AABB3
 from geometry.shape import Polygon
 from geometry.sat import sat_collide
@@ -231,5 +231,40 @@ def main() raises:
         cx += Float64(tb.points[i][0])
     cx /= Float64(tb.count)
     s.check(cx < -0.1, "tilted bb patch offset to the dipped edge (restoring)")
+
+    # Speculative inflation (`spec`, ROADMAP 17.19, 2026-11-25): the test and
+    # the depths are those of the inflated boxes, the points stay on the real
+    # incident face. A 0.1 m box 0.68 m in front of a 2 x 2 m wall face, spec
+    # 0.427 (the 50 m/s bullet of test_ccd6): inflating the extents had put
+    # the four points at y, z = +-0.527.
+    var sp = Real(0.42666665)
+    var wb = box_box_manifold(
+        Vec3(0, 0, 0, 0), idax, Vec3(0.05, 2, 2, 0),
+        Vec3(-0.83333325, 0, 0, 0), idax, Vec3(0.1, 0.1, 0.1, 0), sp,
+    )
+    var wi = box_box_manifold(
+        Vec3(0, 0, 0, 0), idax, Vec3(0.05 + sp, 2 + sp, 2 + sp, 0),
+        Vec3(-0.83333325, 0, 0, 0), idax, Vec3(0.1 + sp, 0.1 + sp, 0.1 + sp, 0),
+    )
+    s.check(wb.hit and wi.hit, "spec bb hit, like the inflated boxes")
+    s.check(wb.count == 4, "spec bb 4 points")
+    s.check(wb.normal[0] == wi.normal[0], "spec bb normal = inflated normal")
+    for i in range(wb.count):
+        s.almost(Float64(wb.points[i][0]), -0.73333325, "spec bb point on the real face", 1e-5)
+        s.check(abs(wb.points[i][1]) <= 0.1 + 1e-6 and abs(wb.points[i][2]) <= 0.1 + 1e-6,
+            "spec bb point inside the real face")
+        s.almost(Float64(wb.depths[i]), Float64(wi.depths[i]), "spec bb depth = inflated depth", 1e-5)
+    s.check(not box_box_manifold(
+        Vec3(0, 0, 0, 0), idax, Vec3(1, 1, 1, 0),
+        Vec3(5, 0, 0, 0), idax, Vec3(1, 1, 1, 0), 0.4,
+    ).hit, "spec bb miss beyond the margin")
+    var zb = box_box_manifold(
+        Vec3(1, 1, 1, 0), idax, Vec3(1, 1, 1, 0),
+        Vec3(1, 2.9, 1, 0), idax, Vec3(0.75, 1, 0.75, 0), 0,
+    )
+    var same = zb.count == bb.count
+    for i in range(min(zb.count, bb.count)):
+        same = same and zb.depths[i] == bb.depths[i] and zb.points[i][0] == bb.points[i][0]
+    s.check(same, "spec 0 is bit-identical to no spec")
 
     s.finish()

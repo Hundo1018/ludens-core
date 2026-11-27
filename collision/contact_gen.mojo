@@ -623,7 +623,8 @@ def _sdf_pair_kid(
 
 def try_compound_pair(
     colliders: ColliderSet, i: Int, j: Int, pose_i: Pose3, pose_j: Pose3,
-    margin: Real, mut out: List[RawContact],
+    margin: Real, mut out: List[RawContact], margin_base: Real = SPEC_BASE,
+    spin_infl: Real = 0,
 ):
     """A compound (ROADMAP 17.44) against a convex collider or another
     compound: every child pair whose child boxes (each grown by half the
@@ -643,7 +644,7 @@ def try_compound_pair(
             var pb = colliders.kid_pose(j, b, pose_j)
             if not ba.overlaps(colliders.kid_box(db, pb, margin * 0.5)):
                 continue
-            var m = colliders.shape_pair(da, pa, db, pb, margin * 0.5, infl)
+            var m = colliders.shape_pair(da, pa, db, pb, margin * 0.5, infl, margin_base, spin_infl)
             if not m.hit:
                 continue
             if margin > 0:
@@ -656,7 +657,7 @@ def try_pair(
     colliders: ColliderSet, i: Int, j: Int,
     pose_i: Pose3, pose_j: Pose3, vel_i: Vec3, vel_j: Vec3, spec_dt: Real,
     mut out: List[RawContact], mut sensors: List[RawContact],
-    margin_base: Real = SPEC_BASE,
+    margin_base: Real = SPEC_BASE, spin_i: Real = 0, spin_j: Real = 0,
 ):
     """The per-pair body of the candidate enumeration: filtering, mesh vs
     non-mesh dispatch, sensor short-circuit, speculative manifold. Extracted
@@ -675,13 +676,22 @@ def try_pair(
         return
     var margin = speculative_margin(vel_i, vel_j, spec_dt, margin_base)
     var infl = Vec3(margin * 0.5, margin * 0.5, margin * 0.5, 0)
+    # the rotational share of infl (`spin_*`: the |w| r already folded into
+    # vel_* by the light cone, 17.100); box pairs decide on the rest
+    var spin_infl = Real(0)
+    if spec_dt > 0:
+        spin_infl = (spin_i + spin_j) * spec_dt * 0.5
     var is_sensor_pair = colliders.is_sensor(i) or colliders.is_sensor(j)
 
     if colliders.shape[i] == SHAPE_SDF or colliders.shape[j] == SHAPE_SDF:
         if is_sensor_pair:
             try_sdf_pair(colliders, i, j, pose_i, pose_j, 0, sensors)
         else:
-            try_sdf_pair(colliders, i, j, pose_i, pose_j, margin, out)
+            # linear margin only: with the light cone's |w| r the samples a
+            # tumbling cube sends past the slab's kink sank it 0.017 m
+            # deeper (`test_ccd_shapes` SDF slab, -0.199 -> -0.181); the
+            # pair itself still comes from the light-cone fat AABB (17.100)
+            try_sdf_pair(colliders, i, j, pose_i, pose_j, margin - 2 * spin_infl, out)
         return
 
     if _is_mesh(colliders.shape[i]) or _is_mesh(colliders.shape[j]):
@@ -697,7 +707,7 @@ def try_pair(
         if is_sensor_pair:
             try_compound_pair(colliders, i, j, pose_i, pose_j, 0, sensors)
         else:
-            try_compound_pair(colliders, i, j, pose_i, pose_j, margin, out)
+            try_compound_pair(colliders, i, j, pose_i, pose_j, margin, out, margin_base, spin_infl)
         return
 
     if is_sensor_pair:
@@ -709,7 +719,7 @@ def try_pair(
             sensors.append(RawContact(i, j, 0, sm))
         return
 
-    var m = colliders.pair_manifold(i, j, pose_i, pose_j, margin * 0.5, infl)
+    var m = colliders.pair_manifold(i, j, pose_i, pose_j, margin * 0.5, infl, margin_base, spin_infl)
     if m.hit and margin > 0:
         for k in range(m.count):
             m.depths[k] -= margin

@@ -1992,9 +1992,11 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         is the one the plain loop would build, in candidate order."""
         var poses = List[Pose3](capacity=n)
         var vels = List[Vec3](capacity=n)
+        var spins = List[Real](capacity=n)
         for i in range(n):
             poses.append(self._pose(i))
-            vels.append(self.bset.bodies[i].linear_velocity())
+            vels.append(self._reach_vel(i))
+            spins.append(self._reach_spin(i))
         var valid = (
             self._np_epoch == self.colliders.epoch and self._np_spec == spec_dt
             and self._np_margin == margin_base and len(self._np_pose) == n
@@ -2032,7 +2034,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                     sraws.append(self._np_sraws[q].copy())
                 reused += 1
             else:
-                try_pair(self.colliders, i, j, poses[i], poses[j], vels[i], vels[j], spec_dt, raws, sraws, margin_base)
+                try_pair(self.colliders, i, j, poses[i], poses[j], vels[i], vels[j], spec_dt, raws, sraws, margin_base, spins[i], spins[j])
             keys[i * n + j] = c
             nlo.append(a)
             ncnt.append(len(raws) - a)
@@ -2122,7 +2124,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 boxes.append(
                     rebind[AABB[Self.BP.dim]](
                         self.colliders.fat_aabb(
-                            i, self._pose(i), self.bset.bodies[i].linear_velocity(), spec_dt, margin_base
+                            i, self._pose(i), self._reach_vel(i), spec_dt, margin_base
                         )
                     )
                 )
@@ -2195,7 +2197,7 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
             # for 64 real contacts.
             var fat = List[AABB[3]](capacity=n)
             for i in range(n):
-                fat.append(self.colliders.fat_aabb(i, self._pose(i), self.bset.bodies[i].linear_velocity(), spec_dt, margin_base))
+                fat.append(self.colliders.fat_aabb(i, self._pose(i), self._reach_vel(i), spec_dt, margin_base))
             for i in range(n):
                 for j in range(i + 1, n):
                     if not fat[i].overlaps(fat[j]):
@@ -2227,12 +2229,14 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         if fan and not reuse:
             var poses = List[Pose3](capacity=n)
             var vels = List[Vec3](capacity=n)
+            var spins = List[Real](capacity=n)
             for i in range(n):
                 poses.append(self._pose(i))
-                vels.append(self.bset.bodies[i].linear_velocity())
+                vels.append(self._reach_vel(i))
+                spins.append(self._reach_spin(i))
             var cnt = List[Int](length=len(ci), fill=0)
             var scnt = List[Int](length=len(ci), fill=0)
-            narrow_parallel(self.colliders, poses, vels, ci, cj, spec_dt, margin_base, raws, sraws, cnt, scnt, workers, dispatch)
+            narrow_parallel(self.colliders, poses, vels, ci, cj, spec_dt, margin_base, raws, sraws, cnt, scnt, workers, dispatch, spins)
         elif reuse:
             self._narrow_reuse(ci, cj, n, spec_dt, margin_base, raws, sraws)
         else:
@@ -2241,9 +2245,9 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
                 var j = cj[c]
                 try_pair(
                     self.colliders, i, j, self._pose(i), self._pose(j),
-                    self.bset.bodies[i].linear_velocity(),
-                    self.bset.bodies[j].linear_velocity(),
+                    self._reach_vel(i), self._reach_vel(j),
                     spec_dt, raws, sraws, margin_base,
+                    self._reach_spin(i), self._reach_spin(j),
                 )
         self.trace.end()
         self.trace.begin("contact_prep")
@@ -3267,6 +3271,33 @@ struct ContactScene6[B: Body6, BP: BroadPhase = BVHBroadPhase[3]](Movable, Deini
         self._release_overloaded()
         self.cache = pairs^  # impulses persist to the next frame
         self.step_index += 1
+
+    def _reach_spin(self, i: Int) -> Real:
+        """The `|w| r` part of `_reach_vel(i)`'s length (box pairs decide
+        their contact points on the linear part only, ROADMAP 17.19)."""
+        var w = self.bset.bodies[i].omega_world()
+        var hf = self.colliders.half[i]
+        return sqrt(dot(w, w)) * sqrt(dot(hf, hf))
+
+    def _reach_vel(self, i: Int) -> Vec3:
+        """The velocity the speculative margin and the fat AABB see for body
+        `i` (ROADMAP 17.100 / one-step light cone): the linear velocity's
+        direction with length `|v| + |w| r`, where `r` is the length of the
+        collider's half extents (a bound on how far any point of the shape
+        sits from its centre). A spinning plank's tip moves at `|w| r` even
+        when its centre is still; with `|v|` alone its margin missed that.
+        Only the length is read (`speculative_margin`, `fat_aabb`)."""
+        var v = self.bset.bodies[i].linear_velocity()
+        var w = self.bset.bodies[i].omega_world()
+        var wl = sqrt(dot(w, w))
+        if wl == 0:
+            return v
+        var hf = self.colliders.half[i]
+        var spin = wl * sqrt(dot(hf, hf))
+        var vl = sqrt(dot(v, v))
+        if vl == 0:
+            return Vec3(spin, 0, 0, 0)
+        return v * ((vl + spin) / vl)
 
     def _size_island_sweeps(mut self, k: Int):
         """At least `k` island-slot caches before a fan-out (tasks never grow the list)."""

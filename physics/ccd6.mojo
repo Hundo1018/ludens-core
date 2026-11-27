@@ -33,6 +33,7 @@ comptime CCD_PAR_MIN = 64
 
 comptime _CA_TOL: Real = 0.005  # stop conservative advancement this far from contact
 comptime _CA_ITERS = 32
+comptime _CCD_BACKOFF: Real = 0.01  # clamped fraction is backed off by this much (of the substep)
 
 
 comptime CCD_AUTO = 0  # swept when the step's cfg.ccd is on (the default)
@@ -307,7 +308,7 @@ def _ccd_core[B: Body6](
             continue
         var f = frac[i]
         if f < 1:
-            f = max(f - Real(0.01), 0)
+            f = max(f - _CCD_BACKOFF, 0)
         bset.bodies[i].integrate_pose(h * f)
 
 
@@ -358,6 +359,20 @@ def _mover_frac[B: Body6](
                 ha,
                 rel,
             )
+            if r.hit and r.t <= _CCD_BACKOFF:
+                # The clamp would leave this body no motion at all (the
+                # back-off eats the whole fraction), rotation included. The
+                # swept box ignores rotation, so when the pair turns farther
+                # this substep than it travels linearly, the discrete
+                # contact (which sees the rotation) may be separating it:
+                # freezing it would repeat every step and the body would
+                # hang there (ROADMAP 17.19, `test_solver_stress` `_mixed`,
+                # `test_ccd6` spinning bullet).
+                var turn = length(bset.bodies[i].omega_world()) * length(ha) * h
+                if not bset.inactive(j):
+                    turn += length(bset.bodies[j].omega_world()) * length(hb) * h
+                if turn * turn > dot(rel, rel):
+                    continue
             if r.hit and r.t < best:
                 best = r.t
         else:

@@ -64,7 +64,7 @@
 | [角色、載具、破壞與 gameplay 物理](#角色載具破壞與-gameplay-物理) | gameplay:character / ragdoll / vehicle / fracture / interpolation | 11 | 0 | 1 | 1 |
 | [gameplay 服務、AI、導航與網路](#gameplay-服務ai導航與網路) | 規則框架、AI、導航、rollback | 6 | 0 | 1 | 0 |
 | [ECS、排程、執行期與診斷](#ecs排程執行期與診斷) | ecs、scheduler、diag、runtime、存檔 / 回放 | 21 | 1 | 0 | 0 |
-| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 2 | 1 | 4 |
+| [嵌入、腳本與平台](#嵌入腳本與平台) | C-ABI、Python 綁定、宿主整合、平台、wasm、音訊 / 視訊 | 7 | 3 | 1 | 4 |
 | [工程、測試、效能與工具鏈](#工程測試效能與工具鏈) | gate、benchmark、CI、Mojo 版本搬遷、範例 | 14 | 0 | 0 | 1 |
 
 ## 原則與決策
@@ -363,6 +363,7 @@
 
 #### 17.19 生產級 solver 硬化
 
+> **進度註(2026-11-25,快速盒對盒的 speculative 接觸點留在實體上,改變結果)**:`try_pair` 把盒子半邊長加大 margin / 2 再求接觸,點也跟著往側面移 margin / 2;`test_ccd6` 的 0.1 m 子彈以 50 m/s 撞牆(margin 0.853 m),四個點落在 y、z = ±0.527,正面撞擊後以 |ω| ≈ 28 rad/s 自轉。`box_box_manifold` 新增 `spec`:分離軸測試與深度用加大後的盒子,入射面用實際的盒子,參考面側邊外移 `spec`;`spec = 0` 逐位相同。只用在快速的盒對:`ColliderSet.shape_pair` 在 margin / 2 超過 base margin 且超過 base / 4 + 最薄半邊長 / 4(每步相對位移大於兩盒最薄半邊長的一半,與 CCD「可能跳過最薄處」同一條件)時才走 `spec`,其餘照舊加大盒子,所以靜置與慢速場景與 main 逐位相同(`narrow_batch` 未改)。CCD 一併修一處:`_mover_frac` 的盒掃掠只看線位移;截斷後完全不能動(TOI ≤ 退讓量 0.01)且這一子步的旋轉量大於線位移時,交給離散接觸,否則旋轉中的子彈會每步被凍結、懸在地面或箱子旁(本項改動後 `test_solver_stress` `_mixed` 出現,`test_ccd6` 新增旋轉子彈落地測試,沒有此改動時失敗,有則第 57 步入睡)。結果(main `bbfb540` → 本項):`test_ccd6` 只靠 speculative 的子彈最遠 x −0.065 → −0.150(不再越過牆面 −0.15)、末速 −4.26 → −0.010 m/s,TOI 版末速 −2.39 → −0.010;`test_solver_stress` CCD 子彈後再入睡 31 → 31 步,ratio 關 32 → 46 步,質量比漂移、地板力、塔的數字不變;`test_ccd_shapes` 複合子彈無 CCD 最遠 x −0.113 → −0.129;`test_softccd` 無 CCD 的板子最低 −0.096 → −0.0009;`test_ragdoll` 20 Hz 驅動誤差 0.7252 → 0.7220°;`test_stress_solver`、`test_system_stack` 除計時外不變。`test_manifold` 108/108(新增 17 項)、`test_ccd6` 23/23,碰撞 / CCD / 軟體相關 21 個測試全過。球 / 膠囊對盒子仍用加大後的盒子,未改。
 > **整理(2026-11-22)**:🔶(2026-11-22 整理):剩餘:島嶼簿記略超線性(增量 broadphase 已列入 17.100,一起做)、依負載的接觸勁度、未入睡凸殼的振盪。`max_mass_ratio` 與網格接觸 reduction 是否預設開啟,在 17.100 中一起決定(使用者,2026-11-22),因為兩者都會改變既有場景的結果。
 > **進度註(2026-10-28,第二輪分流:未核對列的終態與實跑證據)**:
 > - **會計熱點(coloring / 逐幀 BVH / CCD)**:`experiments/exp_solver_hotspot.mojo`(N = 4050,20 步)。BVH 建樹改用 SAH(`collision/bp_bvh.mojo:25`,`build_boxes(sah=True)`)做了一次交錯量測,5 組各一次,每步毫秒:基線 38.68 / 38.76 / 39.82 / 40.56 / 41.71(中位數 39.82);SAH 38.38 / 39.28 / 40.71 / 41.33 / 42.76(中位數 40.71)。無改善(+2.2 %,在雜訊內),**已還原**。負面結果。**cachegrind 前後(2026-10-28,`pixi run icount`,各 3 次)**:SAH 446 980 896 / 446 995 538 / 446 997 394(均值 446 991 276);還原後的基線 446 970 570 / 446 992 110 / 446 973 280(均值 446 978 653)。差 12 623 條,2.8e-5 相對,落在單次散佈(4.8e-5 相對)內。讀法:`icount_probe` 不經寬相,預期無變化,量測與之相符;這不是 SAH 的效能證據,只說明本 probe 看不見此改動。同一原始碼在本次建置為 446.97 M,與 17.83 注記的 446.57 M 相差 0.09 %,表示跨建置的指令數有此量級的漂移,差異小於 0.1 % 時不作為訊號。
@@ -813,6 +814,7 @@
 >    `test_colored` 6/6、`test_degrade` 3/3、`test_dispatch` 10/10、`test_impact_report` 24/24、`test_runtime_systems` 6/6、`test_tiers` 26/26、`test_tiers_parity` 11/11、
 >    `test_tiers_aggregate` 4/4、`test_system_tiers` 7/7。gate(x86-64,`LUDENS_TEST_JOBS=2`)459 / 459,golden 只有 `test_islands_par` 一段改變(新增 4 項檢查與一行配對計數;待以 `--update-golden` 記錄),其他各段逐位不變。成本未重量:上面 16.2 → 9.2 ms 與驗收要求的 `phys-profile` 前後表仍待量。
 >    後續(因果分離區域的非同步步進)的設計筆記:`docs/design/17.85-async-regions.md`。
+> **光錐(2026-11-23 分支 `lightcone-main`,2026-11-25 併入 main 後量測)**:不在上列七項內,依同一個 golden 破例處理。(a) 一步光錐:speculative margin 與 broadphase fat AABB 讀的速度長度由 `|v|` 改為 `|v| + |ω| r`(`ContactScene6._reach_vel`,r 為碰撞體半邊長向量的長度),中心靜止、以 20 rad/s 自轉的木板原本在 10 步內穿進旁邊 0.1 m 的箱子 0.276 m,改後第一步即有配對,最深接觸 0.011 m。(b) 多步光錐:`CausalReach` 可帶 `horizons`(遞增秒數),物體另依到達觀察者種子半徑的時間分級,取圖分級與到達分級較細者;不帶 `horizons` 與原計畫逐格相同。`tests/test_light_cone.mojo` 7/7、`test_islands_par` 10/10、`test_tiers` 26/26。`phys-profile`(ludens-engine,7 次取最小,原生,main `579e615` 與本項交錯各量兩次):1000 箱 4 × 4 6.706 / 6.484 → 6.691 / 6.423 ms,1 × 4 5.193 / 5.071 → 4.992 / 5.036;200 箱 4 × 4 1.429 / 1.385 → 1.479 / 1.389;差距在兩次量測的散佈(約 3 %)內。wasm64 一次:1000 箱 4 × 4 7.537 → 7.417。靜置箱子的雜湊改變(殘餘角速度放大 margin),所以 golden 會變,依 CI 的 gate 記錄重錄。併入 17.19 的快速盒對接觸點後(2026-11-25)兩處只用線速度那一份:`try_pair` 另收 `spin_i` / `spin_j`(`ContactScene6._reach_spin`,即 `|ω| r`),盒對是否改用實體上的接觸點只看扣掉旋轉後的位移,否則 `test_ccd_shapes` 以 36 rad/s 自轉的木板撞柱後 CCD 版最大 |ω| 36 → 85、`test_ccd6` 自轉子彈不入睡;SDF 對的取樣邊距也扣掉旋轉部分,否則翻滾方塊陷進 SDF 板多 0.017 m(只靠 speculative 最遠 x −0.199 → −0.181,與 CCD 版差 0.012,超出該項 0.01 的容差),扣掉後兩值與 main 逐位相同(−0.19874 / −0.19646);配對仍由光錐的 fat AABB 產生。`test_light_cone` 7/7、`test_ccd_shapes` 15/15、`test_ccd6` 23/23、`test_sdf` 15/15。
 > 7. 兩個改變既有場景結果的預設(由 17.19 移來,使用者 2026-11-22 決定在本項一起決定):`max_mass_ratio` 是否預設開啟、網格接觸 reduction 是否預設開啟;各附開 / 關的穩定性與成本對照。
 > **驗收**(每個 PR):`phys-profile` 的成本表(原生循序、原生平行、wasm64;50 / 200 / 1000 醒著的箱子;4 × 4 與新預設)前後對照;穩定性:
 > 堆疊與金字塔漂移、布娃娃與關節鏈、playground 的 camp 與 quarry 場景,前後比較並在 PR 寫出界限;golden 只在改變它的 PR 重新產生,附理由。
@@ -3864,6 +3866,7 @@
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | ✅ | B | `save_excludes()` 列出 `save` / `hash` 不帶的狀態與理由(重力、求解器、單位比例為宿主設定;宿主材質 id 由 17.91 移交);帶水的世界 `save` 寫入標記、`load` 拒絕;`hash` 涵蓋水粒子;`test_save_coverage` 逐項量測 |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 不排 | B | 保留 FMA 的效能,同時讓同一算式在每個呼叫點、每個建置得到相同位元:明確的 `fma` 呼叫 + 關閉隱式合併,量測速度與位元一致性 |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 🔶 | B | `EmbedWorld` 加入實體與 `ChildOf` 階層、事件冒泡與群組、正規化的換關卡;core 能力逐項開放到宿主入口(入口、存檔 / 雜湊、`scene_io`、C-ABI),以 `scripts/capability_table.py` 量測 |
+| 17.101 | [開放清單:每個引擎模組登記是否開放給宿主](#17101-開放清單每個引擎模組登記是否開放給宿主) | 🔶 | B | `scripts/exposure.toml` 為 `embed/` 以外的每個模組登記 exposed / pending / internal,`pixi run exposure` 以 import 圖檢查(CI、pre-commit、pre-push);其餘模組分批開放(issue #159) |
 | 17.104 | [原生外殼:wasm2c 事先編譯的引擎模組](#17104-原生外殼wasm2c-事先編譯的引擎模組) | ⬜ | B | 每個原生平台執行同一個 wasm64 模組:建置時 wasm2c → clang -O3、拿掉邊界檢查(信任的引擎模組,1.10–1.16 倍原生);mod / 腳本另開有檢查的實例 |
 | 17.105 | [數值策略:逐位相同與快速兩種建置](#17105-數值策略逐位相同與快速兩種建置) | 🔶 | B | `Exact`(跨目標逐位相同,現行)與 `Fast`(允許 FMA 等只在同一建置內可重現的優化)兩種編譯期策略,依子系統選用;先量測各項優化的收益與誤差 |
 
@@ -4728,6 +4731,20 @@
 > **遺留**:1.2.0 對 `match` 與浮點捨入的敏感度(`mass_props`)只由 `test_compound` 的逐位元檢查守住,其他鏈的轉換靠 golden 不變(歸因見上);
 > `portability` 仍為非阻擋式(`continue-on-error`)。
 
+#### 17.101 開放清單:每個引擎模組登記是否開放給宿主
+
+> **狀態**:🔶 部分完成(2026-11-23:清單與檢查完成;其餘模組待分批開放,issue #159)
+> **緣起**:core 的 tween、sequence / 軌道、spline、動畫、AI 等都在,但 `EmbedWorld` 與 C-ABI 沒有開放,引擎與編輯器用不到;這類缺口一再發生,
+> 因為沒有任何機制提醒(`scripts/capability_table.py` 是人工挑選的 33 項,新模組不會出現)。使用者決定:全部開放,並讓之後的開發自動跟上(2026-11-23)。
+> **做法**:`scripts/exposure.toml` 為 `embed/`、`oop/` 以外的每個引擎模組登記一行,狀態三選一:`exposed`(`embed/` 直接 import,有檢查)、
+> `pending`(附 issue)、`internal`(附理由)。`pixi run exposure`(`scripts/exposure.py`)讀 import 圖檢查:沒有登記、登記的模組不存在、
+> exposed 卻沒有被 `embed/` 直接 import、`embed/` 已直接 import 卻還是 pending / internal,都會失敗。CI 的 gate job、pre-push、
+> 以及任何 `.mojo` 變動的 pre-commit 都會跑;`--report` 印各套件計數。
+> **2026-11-23 的量測**(第一版由 `--init` 依 import 圖產生):315 個模組中 exposed 30、internal 59(只被已開放模組間接使用,自動分類待確認)、
+> pending 226(`gameplay` 50、`procedural` 18、`ai` 10、`physics` 67 等)。
+> **待辦**:分批開放,每批補齊入口、存檔 / 雜湊、`scene_io`、C-ABI 四欄並附測試;第一批 tween、sequence / 軌道、spline、`SequencePlayer`;
+> 逐一檢視自動分類為 internal 的 59 項。完成條件:沒有 pending。
+
 #### 17.104 原生外殼:wasm2c 事先編譯的引擎模組
 
 > **狀態**:⬜(2026-11-23)
@@ -4990,6 +5007,7 @@
 | 17.95 | [存檔與雜湊的涵蓋範圍](#1795-存檔與雜湊的涵蓋範圍) | 嵌入、腳本與平台 | ✅ |
 | 17.96 | [FMA 合併與決定論(研究)](#1796-fma-合併與決定論研究) | 嵌入、腳本與平台 | 不排 |
 | 17.97 | [宿主入口:實體、ChildOf 階層、換關卡與能力開放](#1797-宿主入口實體childof-階層換關卡與能力開放) | 嵌入、腳本與平台 | 🔶 |
+| 17.101 | [開放清單:每個引擎模組登記是否開放給宿主](#17101-開放清單每個引擎模組登記是否開放給宿主) | 嵌入、腳本與平台 | 🔶 |
 | 17.104 | [原生外殼:wasm2c 事先編譯的引擎模組](#17104-原生外殼wasm2c-事先編譯的引擎模組) | 嵌入、腳本與平台 | ⬜ |
 | 17.98 | [編譯期參數化(位元不變)](#1798-編譯期參數化位元不變) | 工程、測試、效能與工具鏈 | ✅ |
 | 17.99 | [接觸求解器:快取子步內不變的量(位元不變)](#1799-接觸求解器快取子步內不變的量位元不變) | 剛體動力學、接觸與關節 | ✅ |

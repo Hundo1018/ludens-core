@@ -32,6 +32,8 @@ jobs:
         run: pixi run lint
       - name: unwired modules (scripts/orphans_allow.txt)
         run: pixi run orphans
+      - name: exposure list (scripts/exposure.toml, issue #159)
+        run: pixi run exposure -- --selftest && pixi run exposure
       - name: hook rules and doc generator selftests (17.87)
         run: pixi run hooks-selftest
       - name: package-layer tables match arch_layers.toml (17.87)
@@ -106,7 +108,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04-arm, macos-14]
+        os: [ubuntu-24.04-arm, macos-15]
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     timeout-minutes: 180

@@ -43,6 +43,7 @@ struct _NarrowTask(Task):
     var col: Pointer[ColliderSet, MutUntrackedOrigin]
     var poses: Pointer[List[Pose3], MutUntrackedOrigin]
     var vels: Pointer[List[Vec3], MutUntrackedOrigin]
+    var spins: Pointer[List[Real], MutUntrackedOrigin]
     var ci: Pointer[List[Int], MutUntrackedOrigin]
     var cj: Pointer[List[Int], MutUntrackedOrigin]
     var outs: Pointer[List[List[RawContact]], MutUntrackedOrigin]
@@ -58,6 +59,7 @@ struct _NarrowTask(Task):
         mut col: ColliderSet,
         mut poses: List[Pose3],
         mut vels: List[Vec3],
+        mut spins: List[Real],
         mut ci: List[Int],
         mut cj: List[Int],
         mut outs: List[List[RawContact]],
@@ -71,6 +73,7 @@ struct _NarrowTask(Task):
         self.col = Pointer(to=col).unsafe_origin_cast[MutUntrackedOrigin]()
         self.poses = Pointer(to=poses).unsafe_origin_cast[MutUntrackedOrigin]()
         self.vels = Pointer(to=vels).unsafe_origin_cast[MutUntrackedOrigin]()
+        self.spins = Pointer(to=spins).unsafe_origin_cast[MutUntrackedOrigin]()
         self.ci = Pointer(to=ci).unsafe_origin_cast[MutUntrackedOrigin]()
         self.cj = Pointer(to=cj).unsafe_origin_cast[MutUntrackedOrigin]()
         self.outs = Pointer(to=outs).unsafe_origin_cast[MutUntrackedOrigin]()
@@ -94,6 +97,7 @@ struct _NarrowTask(Task):
             try_pair(
                 self.col[], i, j, self.poses[][i], self.poses[][j],
                 self.vels[][i], self.vels[][j], self.spec_dt, o, so, self.margin_base,
+                self.spins[][i], self.spins[][j],
             )
             self.counts[][c] = len(o) - n0
             self.scounts[][c] = len(so) - s0
@@ -115,12 +119,13 @@ def narrow_parallel(
     mut scounts: List[Int],
     workers: Int,
     dispatch: Dispatch,
+    mut spins: List[Real],
 ):
     """`try_pair` over candidates (ci[c], cj[c]) in chunks, appended to
     `raws` / `sraws` in candidate order (bit-identical to the serial loop).
     `counts[c]` / `scounts[c]` (pre-sized to the candidate count) receive
-    how many contacts candidate c produced. `colliders`, `poses` and `vels`
-    are only read."""
+    how many contacts candidate c produced. `colliders`, `poses`, `vels` and
+    `spins` (the |w| r part of each vel's length, 17.100) are only read."""
     var n = len(ci)
     if n == 0:
         return
@@ -131,7 +136,7 @@ def narrow_parallel(
     for _ in range(nchunk):
         outs.append(List[RawContact]())
         souts.append(List[RawContact]())
-    var task = _NarrowTask(colliders, poses, vels, ci, cj, outs, souts, counts, scounts, chunk, spec_dt, margin_base)
+    var task = _NarrowTask(colliders, poses, vels, spins, ci, cj, outs, souts, counts, scounts, chunk, spec_dt, margin_base)
     dispatch_for(dispatch, task, nchunk, workers)
     for k in range(nchunk):
         for c in range(len(outs[k])):
